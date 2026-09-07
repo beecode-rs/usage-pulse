@@ -3,9 +3,9 @@ import { homedir } from 'node:os'
 import { basename } from 'node:path'
 import { promisify } from 'node:util'
 
+import { sessionsParserService } from '#src/main/business/service/sessions-parser-service'
 import { errorUtil } from '#src/main/util/error-util'
 import { type OsPlatform, osUtil } from '#src/main/util/os-util'
-import { sessionsUtil } from '#src/main/util/sessions-util'
 import { type ISessionFocusSupport, type ISessionInfo, type ISessionSnapshot } from '#src/shared/session-model'
 
 const execFileAsync = promisify(execFile)
@@ -363,7 +363,7 @@ export class SessionsService {
   protected async _listSameCwdSessions(params: { cwd: string }): Promise<ISessionInfo[]> {
     const sessions = await this._runAgentsQuery()
       .then((stdout) => {
-        return sessionsUtil.parseSessionEntries({ stdout })
+        return sessionsParserService.parseSessionEntries({ stdout })
       })
       .catch(() => {
         return []
@@ -570,7 +570,7 @@ export class SessionsService {
 
     return {
       fetchedAt: Date.now(),
-      sessions: sessionsUtil.sortSessions(sessionsUtil.parseSessionEntries({ stdout })),
+      sessions: sessionsParserService.sortSessions(sessionsParserService.parseSessionEntries({ stdout })),
       unreachableHosts: [],
     }
   }

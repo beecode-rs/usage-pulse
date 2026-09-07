@@ -35,6 +35,9 @@
 		"typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
 		"typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false"
 	},
+	"dependencies": {
+		"@beecode/msh-env": "^2.0.3"
+	},
 	"devDependencies": {
 		"@beecode/msh-test-contractor": "^1.0.2",
 		"@eslint/js": "^9.39.5",

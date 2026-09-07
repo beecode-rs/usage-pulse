@@ -1,8 +1,8 @@
-subject: sessionTranscriptUtil
-module: ./session-transcript-util.js
+subject: claudeTranscriptParserService
+module: ./service.js
 subjectType: function
 methods:
-  hasTranscriptSignal:
+  hasSignal:
     terms:
       # Zeroed stats carry nothing worth displaying.
       - params:
@@ -74,7 +74,7 @@ methods:
             userTurnsCount: 0
             version: '2.1.241'
         result: false
-  parseTranscriptStats:
+  parseStats:
     terms:
       # Happy path: turns, two API calls, AI title, last prompt (last wins), branch/version (first wins), last activity.
       - params:

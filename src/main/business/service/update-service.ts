@@ -1,5 +1,5 @@
 import { objectUtil } from '#src/main/util/object-util'
-import { versionCompareUtil } from '#src/main/util/version-compare-util'
+import { VersionCompareUtil } from '#src/main/util/version-compare-util'
 import { type IUpdateStatus, type UpdateStatusListener } from '#src/shared/update-model'
 
 interface ILatestRelease {
@@ -47,7 +47,7 @@ export class UpdateService {
 
   protected _resolveNextStatus(params: { latestRelease: ILatestRelease }): IUpdateStatus {
     const currentVersion = this._status.currentVersion
-    const isUpdateAvailable = versionCompareUtil.resolveIsNewerVersion({
+    const isUpdateAvailable = new VersionCompareUtil().isNewerVersion({
       candidateVersion: params.latestRelease.tagName,
       currentVersion,
     })

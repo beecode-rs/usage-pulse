@@ -2,7 +2,7 @@ import { readFile, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-import { sessionTranscriptUtil } from '#src/main/util/session-transcript-util'
+import { claudeTranscriptParserService } from '#src/main/lib/claude-transcript-parser/service'
 import { type ISessionInfo, type ISessionTranscriptStats } from '#src/shared/session-model'
 
 const CACHE_ENTRY_LIMIT = 500
@@ -48,7 +48,7 @@ export class SessionTranscriptService {
   protected _resolveDisplayableTranscript(params: {
     stats: ISessionTranscriptStats
   }): ISessionTranscriptStats | undefined {
-    if (sessionTranscriptUtil.hasTranscriptSignal(params.stats)) {
+    if (claudeTranscriptParserService.hasSignal(params.stats)) {
       return params.stats
     }
 
@@ -80,7 +80,7 @@ export class SessionTranscriptService {
       }
 
       const content = await readFile(filePath, 'utf8')
-      const parsedStats = sessionTranscriptUtil.parseTranscriptStats({ content })
+      const parsedStats = claudeTranscriptParserService.parseStats({ content })
       const transcript = this._resolveDisplayableTranscript({ stats: parsedStats })
 
       this._storeCacheEntry({ filePath, mtimeMs: fileStat.mtimeMs, transcript })

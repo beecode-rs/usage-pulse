@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
+import { sessionsParserService } from '#src/main/business/service/sessions-parser-service'
 import { errorUtil } from '#src/main/util/error-util'
-import { sessionsUtil } from '#src/main/util/sessions-util'
 import { type ISessionInfo, type ISessionSnapshot, type IUnreachableHost } from '#src/shared/session-model'
 import { type ISshHostConfig } from '#src/shared/settings-model'
 
@@ -80,7 +80,7 @@ export class SshSessionsService {
 
     return {
       fetchedAt: Date.now(),
-      sessions: sessionsUtil.sortSessions([...params.localSnapshot.sessions, ...remoteSessions]),
+      sessions: sessionsParserService.sortSessions([...params.localSnapshot.sessions, ...remoteSessions]),
       unreachableHosts,
     }
   }
@@ -178,7 +178,7 @@ export class SshSessionsService {
 
       return {
         host: params.host,
-        sessions: sessionsUtil.parseSessionEntries({ stdout }),
+        sessions: sessionsParserService.parseSessionEntries({ stdout }),
       }
     } catch (error) {
       return {

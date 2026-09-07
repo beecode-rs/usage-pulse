@@ -6,7 +6,7 @@ const SESSION_ORIGIN_ORDER = {
   ssh: 1,
 }
 
-export const sessionsUtil = {
+export const sessionsParserService = {
   _resolveSessionInfo: (params: { rawEntry: unknown }): ISessionInfo | undefined => {
     const rawRecord = objectUtil.asRecord(params.rawEntry)
 
@@ -33,13 +33,13 @@ export const sessionsUtil = {
     }
 
     return {
-      cwd: sessionsUtil._resolveStringValue(rawRecord['cwd']),
-      kind: sessionsUtil._resolveStringValue(rawRecord['kind']),
-      name: sessionsUtil._resolveStringValue(rawRecord['name']),
+      cwd: sessionsParserService._resolveStringValue(rawRecord['cwd']),
+      kind: sessionsParserService._resolveStringValue(rawRecord['kind']),
+      name: sessionsParserService._resolveStringValue(rawRecord['name']),
       pid,
       sessionId,
       startedAt,
-      status: sessionsUtil._resolveSessionStatus(rawRecord['status']),
+      status: sessionsParserService._resolveSessionStatus(rawRecord['status']),
     }
   },
 
@@ -82,7 +82,7 @@ export const sessionsUtil = {
   _sanitizeSessions: (params: { rawEntries: unknown[] }): ISessionInfo[] => {
     return params.rawEntries
       .map((rawEntry) => {
-        return sessionsUtil._resolveSessionInfo({ rawEntry })
+        return sessionsParserService._resolveSessionInfo({ rawEntry })
       })
       .filter((session): session is ISessionInfo => {
         return session !== undefined
@@ -93,7 +93,7 @@ export const sessionsUtil = {
     try {
       return JSON.parse(params.stdout)
     } catch {
-      return sessionsUtil._tryParseSessionsJsonSlice({ stdout: params.stdout })
+      return sessionsParserService._tryParseSessionsJsonSlice({ stdout: params.stdout })
     }
   },
 
@@ -113,19 +113,19 @@ export const sessionsUtil = {
   },
 
   parseSessionEntries: (params: { stdout: string }): ISessionInfo[] => {
-    const parsed = sessionsUtil._tryParseSessionsJson({ stdout: params.stdout })
+    const parsed = sessionsParserService._tryParseSessionsJson({ stdout: params.stdout })
 
     if (!Array.isArray(parsed)) {
       throw new Error("'claude agents --json' printed unexpected output: expected a JSON array of sessions")
     }
 
-    return sessionsUtil._sanitizeSessions({ rawEntries: parsed })
+    return sessionsParserService._sanitizeSessions({ rawEntries: parsed })
   },
 
   sortSessions: (sessions: ISessionInfo[]): ISessionInfo[] => {
     return [...sessions].sort((left, right) => {
       const originOrderDiff =
-        sessionsUtil._resolveSessionOriginOrder(left) - sessionsUtil._resolveSessionOriginOrder(right)
+        sessionsParserService._resolveSessionOriginOrder(left) - sessionsParserService._resolveSessionOriginOrder(right)
 
       if (originOrderDiff !== 0) {
         return originOrderDiff

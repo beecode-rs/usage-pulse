@@ -1,0 +1,7 @@
+- /writing-clean-ts ok this is not a util @src/main/util/session-transcript-util.ts function, move it to src/lib folder this is the claude specific business logic but this can be extracted at some point, so move it in the library layer and call it something appropriate like claude parser or reader, be creative
+- move it in its own folder and you can break it into service.ts and additional files if needed to group functionalities, currently file is big
+---
+- /writing-clean-ts @src/main/util/sessions-util.ts is not an util, rename it and move to business/service folder the service layer
+---
+- /writing-clean-ts @src/main/util/version-compare-util.ts if we have private functions in our simple object we must convert it into class and have functions starting with _ as protected. rewrite this file
+- if the function returns the boolean functions it must also start as we have the rule for the boolean variables, fix the name resolveIsNewerVersion in @src/main/util/version-compare-util.ts  /writing-clean-ts
