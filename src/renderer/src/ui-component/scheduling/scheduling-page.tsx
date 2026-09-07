@@ -1,3 +1,4 @@
+import { typeUtil } from '@beecode/msh-util'
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { schedulingClientService } from '#src/renderer/src/business/service/scheduling-client-service'
@@ -14,66 +15,68 @@ import { DashboardAddButton } from '#src/renderer/src/ui-component/usage-dashboa
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { type ITriggerRunSummary, triggerRunUtil } from '#src/renderer/src/util/trigger-run-util'
-import { type OsPlatform } from '#src/shared/os-model'
-import { type IAppSettings } from '#src/shared/settings-model'
-import {
-  type ISchedulingInfo,
-  type ITriggerConfig,
-  type ITriggerPreset,
-  type ITriggerRegistrationHealth,
-  type ITriggerRunLogEntry,
-  TRIGGER_DAYS,
-  TRIGGER_RUN_EXIT_CODE_TIMED_OUT,
-  type TriggerDay,
-  type TriggerRunSkipReason,
-  type TriggerRunSource,
-} from '#src/shared/trigger-model'
+import { type TriggerRunSummary, TriggerRunUtil } from '#src/renderer/src/util/trigger-run-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
+import { ScheduleTriggerRunPhaseMapper } from '#src/shared/business/enum/schedule-trigger-run-phase-mapper-enum'
+import { ScheduleTriggerRunSkipReasonMapper } from '#src/shared/business/enum/schedule-trigger-run-skip-reason-mapper-enum'
+import { ScheduleTriggerRunSourceMapper } from '#src/shared/business/enum/schedule-trigger-run-source-mapper-enum'
+import type {
+  ScheduleTriggerConfig,
+  ScheduleTriggerPreset,
+  ScheduleTriggerRegistrationHealth,
+  ScheduleTriggerRunLogEntry,
+  SchedulingInfo,
+} from '#src/shared/business/model/schedule-trigger-model'
+import { type SettingsModel } from '#src/shared/business/model/settings-model'
+import { constant } from '#src/shared/util/constant'
 
-const TRIGGER_DAY_LABELS: Record<TriggerDay, string> = {
-  friday: 'Fri',
-  monday: 'Mon',
-  saturday: 'Sat',
-  sunday: 'Sun',
-  thursday: 'Thu',
-  tuesday: 'Tue',
-  wednesday: 'Wed',
+const TRIGGER_DAY_LABELS: Record<ScheduleTriggerDayMapper, string> = {
+  [ScheduleTriggerDayMapper.FRIDAY]: 'Fri',
+  [ScheduleTriggerDayMapper.MONDAY]: 'Mon',
+  [ScheduleTriggerDayMapper.SATURDAY]: 'Sat',
+  [ScheduleTriggerDayMapper.SUNDAY]: 'Sun',
+  [ScheduleTriggerDayMapper.THURSDAY]: 'Thu',
+  [ScheduleTriggerDayMapper.TUESDAY]: 'Tue',
+  [ScheduleTriggerDayMapper.WEDNESDAY]: 'Wed',
 }
 
-const resolvePlatformLabel = (platform: OsPlatform): string => {
+const resolvePlatformLabel = (platform: OS): string => {
   switch (platform) {
-    case 'linux': {
+    case OS.LINUX: {
       return 'Linux'
     }
 
-    case 'macos': {
+    case OS.MACOS: {
       return 'macOS'
     }
 
-    case 'windows': {
+    case OS.WINDOWS: {
       return 'Windows'
     }
 
     default: {
-      throw new Error(`unsupported platform: ${String(platform)}`)
+      throw typeUtil.exhaustiveError('unsupported platform [platform]', platform)
     }
   }
 }
 
 const resolveFinishedOutcome = (params: { exitCode: number }): { className: string; label: string } => {
-  if (params.exitCode === 0) {
+  const { exitCode } = params
+  if (exitCode === 0) {
     return { className: 'trigger-run-badge is-ok', label: 'OK' }
   }
 
-  if (params.exitCode === TRIGGER_RUN_EXIT_CODE_TIMED_OUT) {
+  if (exitCode === constant.scheduleTrigger.run.exitCodeTimedOut) {
     return { className: 'trigger-run-badge is-failed', label: 'Timed out' }
   }
 
-  return { className: 'trigger-run-badge is-failed', label: `Exit ${String(params.exitCode)}` }
+  return { className: 'trigger-run-badge is-failed', label: `Exit ${String(exitCode)}` }
 }
 
 const resolveCardClassName = (params: { isEnabled: boolean }): string => {
-  if (params.isEnabled) {
+  const { isEnabled } = params
+  if (isEnabled) {
     return 'trigger-card'
   }
 
@@ -81,7 +84,8 @@ const resolveCardClassName = (params: { isEnabled: boolean }): string => {
 }
 
 const resolveRunsButtonClassName = (params: { isExpanded: boolean }): string => {
-  if (params.isExpanded) {
+  const { isExpanded } = params
+  if (isExpanded) {
     return 'trigger-icon-button is-active'
   }
 
@@ -89,7 +93,8 @@ const resolveRunsButtonClassName = (params: { isExpanded: boolean }): string => 
 }
 
 const resolveRunsButtonTitle = (params: { isExpanded: boolean }): string => {
-  if (params.isExpanded) {
+  const { isExpanded } = params
+  if (isExpanded) {
     return 'Hide runs'
   }
 
@@ -97,7 +102,8 @@ const resolveRunsButtonTitle = (params: { isExpanded: boolean }): string => {
 }
 
 const resolveSwitchTitle = (params: { isEnabled: boolean }): string => {
-  if (params.isEnabled) {
+  const { isEnabled } = params
+  if (isEnabled) {
     return 'Pause trigger'
   }
 
@@ -105,30 +111,33 @@ const resolveSwitchTitle = (params: { isEnabled: boolean }): string => {
 }
 
 const resolveMasterSwitchTitle = (params: { isEnabled: boolean }): string => {
-  if (params.isEnabled) {
+  const { isEnabled } = params
+  if (isEnabled) {
     return 'Turn off OS scheduling and unload all registered triggers'
   }
 
   return 'Turn on OS scheduling and register enabled triggers'
 }
 
-const resolveRunDurationPart = (params: { summary: ITriggerRunSummary }): string => {
-  if (params.summary.phase !== 'finished') {
+const resolveRunDurationPart = (params: { summary: TriggerRunSummary }): string => {
+  const { summary } = params
+  if (summary.phase !== ScheduleTriggerRunPhaseMapper.FINISHED) {
     return ''
   }
 
-  return dateUtil.formatPreciseDuration(params.summary.durationMs)
+  return dateUtil.formatPreciseDuration(summary.durationMs)
 }
 
-const resolveRunExitCodePart = (params: { summary: ITriggerRunSummary }): string => {
-  if (params.summary.phase !== 'finished') {
+const resolveRunExitCodePart = (params: { summary: TriggerRunSummary }): string => {
+  const { summary } = params
+  if (summary.phase !== ScheduleTriggerRunPhaseMapper.FINISHED) {
     return ''
   }
 
-  return `exit ${String(params.summary.exitCode)}`
+  return `exit ${String(summary.exitCode)}`
 }
 
-const resolveRunMeta = (summary: ITriggerRunSummary): string => {
+const resolveRunMeta = (summary: TriggerRunSummary): string => {
   return [
     resolveRunDurationPart({ summary }),
     resolveRunExitCodePart({ summary }),
@@ -140,76 +149,77 @@ const resolveRunMeta = (summary: ITriggerRunSummary): string => {
     .join(' · ')
 }
 
-const resolveRunOutcome = (summary: ITriggerRunSummary): { className: string; label: string } => {
+const resolveRunOutcome = (summary: TriggerRunSummary): { className: string; label: string } => {
   switch (summary.phase) {
-    case 'finished': {
+    case ScheduleTriggerRunPhaseMapper.FINISHED: {
       return resolveFinishedOutcome({ exitCode: summary.exitCode })
     }
 
-    case 'skipped': {
+    case ScheduleTriggerRunPhaseMapper.SKIPPED: {
       return resolveSkippedOutcome({ skipReason: summary.skipReason })
     }
 
-    case 'started': {
+    case ScheduleTriggerRunPhaseMapper.STARTED: {
       return { className: 'trigger-run-badge is-running', label: 'Running…' }
     }
 
     default: {
-      throw new Error(`unsupported run phase: ${String(summary.phase)}`)
+      throw typeUtil.exhaustiveError('unsupported run phase [summary.phase]', summary.phase)
     }
   }
 }
 
-const resolveRunSourceLabel = (source: TriggerRunSource): string => {
+const resolveRunSourceLabel = (source: ScheduleTriggerRunSourceMapper): string => {
   switch (source) {
-    case 'manual': {
+    case ScheduleTriggerRunSourceMapper.MANUAL: {
       return 'Manual'
     }
 
-    case 'os-schedule': {
+    case ScheduleTriggerRunSourceMapper.OS_SCHEDULE: {
       return 'OS schedule'
     }
 
     default: {
-      throw new Error(`unsupported run source: ${String(source)}`)
+      throw typeUtil.exhaustiveError('unsupported run source [source]', source)
     }
   }
 }
 
-const resolveSkipReasonLabel = (skipReason: TriggerRunSkipReason): string => {
+const resolveSkipReasonLabel = (skipReason: ScheduleTriggerRunSkipReasonMapper): string => {
   switch (skipReason) {
-    case 'disabled': {
+    case ScheduleTriggerRunSkipReasonMapper.DISABLED: {
       return 'Disabled'
     }
 
-    case 'not-found': {
+    case ScheduleTriggerRunSkipReasonMapper.NOT_FOUND: {
       return 'Trigger removed'
     }
 
-    case 'not-scheduled-day': {
+    case ScheduleTriggerRunSkipReasonMapper.NOT_SCHEDULED_DAY: {
       return 'Day not scheduled'
     }
 
-    case 'stale': {
+    case ScheduleTriggerRunSkipReasonMapper.STALE: {
       return 'Stale fire'
     }
 
     default: {
-      throw new Error(`unsupported skip reason: ${String(skipReason)}`)
+      throw typeUtil.exhaustiveError('unsupported skip reason [skipReason]', skipReason)
     }
   }
 }
 
 const resolveSkippedOutcome = (params: {
-  skipReason: TriggerRunSkipReason | ''
+  skipReason: ScheduleTriggerRunSkipReasonMapper | ''
 }): { className: string; label: string } => {
-  if (params.skipReason === '') {
+  const { skipReason } = params
+  if (skipReason === '') {
     return { className: 'trigger-run-badge is-skipped', label: 'Skipped' }
   }
 
   return {
     className: 'trigger-run-badge is-skipped',
-    label: `Skipped · ${resolveSkipReasonLabel(params.skipReason)}`,
+    label: `Skipped · ${resolveSkipReasonLabel(skipReason)}`,
   }
 }
 
@@ -271,16 +281,16 @@ const renderTrashIcon = (): ReactElement => {
 }
 
 export const SchedulingPage = (): ReactElement => {
-  const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
-  const [schedulingInfo, setSchedulingInfo] = useState<ISchedulingInfo | undefined>(undefined)
-  const [healthByTriggerId, setHealthByTriggerId] = useState<Record<string, ITriggerRegistrationHealth>>({})
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
+  const [schedulingInfo, setSchedulingInfo] = useState<SchedulingInfo | undefined>(undefined)
+  const [healthByTriggerId, setHealthByTriggerId] = useState<Record<string, ScheduleTriggerRegistrationHealth>>({})
   const [healthErrorMessage, setHealthErrorMessage] = useState('')
   const [expandedTriggerIds, setExpandedTriggerIds] = useState<Set<string>>(new Set<string>())
-  const [runsByTriggerId, setRunsByTriggerId] = useState<Record<string, ITriggerRunLogEntry[]>>({})
+  const [runsByTriggerId, setRunsByTriggerId] = useState<Record<string, ScheduleTriggerRunLogEntry[]>>({})
   const [runsErrorMessage, setRunsErrorMessage] = useState('')
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isPlannerOpen, setIsPlannerOpen] = useState(false)
-  const [plannerPreset, setPlannerPreset] = useState<ITriggerPreset | undefined>(undefined)
+  const [plannerPreset, setPlannerPreset] = useState<ScheduleTriggerPreset | undefined>(undefined)
   const [openTriggerId, setOpenTriggerId] = useState<string | undefined>(undefined)
   const [clearingTriggerId, setClearingTriggerId] = useState<string | undefined>(undefined)
 
@@ -289,7 +299,7 @@ export const SchedulingPage = (): ReactElement => {
 
     try {
       const healthEntries = await schedulingClientService.inspectTriggerRegistrations()
-      const nextHealthByTriggerId = healthEntries.reduce<Record<string, ITriggerRegistrationHealth>>(
+      const nextHealthByTriggerId = healthEntries.reduce<Record<string, ScheduleTriggerRegistrationHealth>>(
         (healthRecord, healthEntry) => {
           return { ...healthRecord, [healthEntry.triggerId]: healthEntry }
         },
@@ -317,13 +327,14 @@ export const SchedulingPage = (): ReactElement => {
   }
 
   const loadRuns = async (params: { triggerId: string }): Promise<void> => {
+    const { triggerId } = params
     setRunsErrorMessage('')
 
     try {
-      const entries = await schedulingClientService.getTriggerRunLogs({ triggerId: params.triggerId })
+      const entries = await schedulingClientService.getTriggerRunLogs({ triggerId })
 
       setRunsByTriggerId((previous) => {
-        return { ...previous, [params.triggerId]: entries }
+        return { ...previous, [triggerId]: entries }
       })
     } catch (error) {
       setRunsErrorMessage(errorUtil.resolveMessage(error))
@@ -331,11 +342,12 @@ export const SchedulingPage = (): ReactElement => {
   }
 
   const handleClearRuns = async (params: { triggerId: string }): Promise<void> => {
+    const { triggerId } = params
     setRunsErrorMessage('')
 
     try {
-      await schedulingClientService.clearTriggerRunLogs({ triggerId: params.triggerId })
-      await loadRuns({ triggerId: params.triggerId })
+      await schedulingClientService.clearTriggerRunLogs({ triggerId })
+      await loadRuns({ triggerId })
     } catch (error) {
       setRunsErrorMessage(errorUtil.resolveMessage(error))
     }
@@ -374,29 +386,30 @@ export const SchedulingPage = (): ReactElement => {
     void loadPage()
   }
 
-  const handleCreateFromPlanner = (preset: ITriggerPreset): void => {
+  const handleCreateFromPlanner = (preset: ScheduleTriggerPreset): void => {
     setIsPlannerOpen(false)
     setPlannerPreset(preset)
     setIsAddOpen(true)
   }
 
   const handleToggleRuns = (params: { triggerId: string }): void => {
-    const isExpanded = expandedTriggerIds.has(params.triggerId)
+    const { triggerId } = params
+    const isExpanded = expandedTriggerIds.has(triggerId)
 
     setExpandedTriggerIds((previous) => {
       if (isExpanded) {
         return new Set(
           [...previous].filter((candidateTriggerId) => {
-            return candidateTriggerId !== params.triggerId
+            return candidateTriggerId !== triggerId
           }),
         )
       }
 
-      return new Set([...previous, params.triggerId])
+      return new Set([...previous, triggerId])
     })
 
     if (!isExpanded) {
-      void loadRuns({ triggerId: params.triggerId })
+      void loadRuns({ triggerId })
     }
   }
 
@@ -404,7 +417,7 @@ export const SchedulingPage = (): ReactElement => {
     void loadPage()
   }, [])
 
-  const resolveDayChipClassName = (days: TriggerDay[], day: TriggerDay): string => {
+  const resolveDayChipClassName = (days: ScheduleTriggerDayMapper[], day: ScheduleTriggerDayMapper): string => {
     if (days.includes(day)) {
       return 'trigger-chip is-active'
     }
@@ -412,7 +425,7 @@ export const SchedulingPage = (): ReactElement => {
     return 'trigger-chip'
   }
 
-  const resolveBadge = (trigger: ITriggerConfig): { className: string; label: string } => {
+  const resolveBadge = (trigger: ScheduleTriggerConfig): { className: string; label: string } => {
     if (!schedulingInfo?.isSupported) {
       return { className: 'trigger-badge', label: '—' }
     }
@@ -433,7 +446,8 @@ export const SchedulingPage = (): ReactElement => {
   }
 
   const resolveRunsContent = (params: { triggerId: string }): ReactElement => {
-    const entries = runsByTriggerId[params.triggerId]
+    const { triggerId } = params
+    const entries = runsByTriggerId[triggerId]
 
     if (runsErrorMessage !== '') {
       return <p className="trigger-run-empty">{runsErrorMessage}</p>
@@ -443,7 +457,7 @@ export const SchedulingPage = (): ReactElement => {
       return <p className="trigger-run-empty">Loading runs…</p>
     }
 
-    const summaries = triggerRunUtil.groupRunsByEventId({ entries })
+    const summaries = new TriggerRunUtil().groupRunsByEventId({ entries })
 
     if (summaries.length === 0) {
       return <p className="trigger-run-empty">No runs recorded yet.</p>
@@ -586,7 +600,7 @@ export const SchedulingPage = (): ReactElement => {
                 </label>
               </header>
               <div className="trigger-card-chips">
-                {TRIGGER_DAYS.map((day) => {
+                {constant.scheduleTrigger.days.map((day) => {
                   return (
                     <span className={resolveDayChipClassName(trigger.days, day)} key={day}>
                       {TRIGGER_DAY_LABELS[day]}

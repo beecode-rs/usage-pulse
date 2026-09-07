@@ -1,27 +1,30 @@
 import type { ReactElement } from 'react'
 
-import { DayTimeScheduleFields } from '#src/renderer/src/ui-component/schedule/day-time-schedule-fields'
-import { trackerTokenSourceUtil } from '#src/renderer/src/util/tracker-token-source-util'
-import type { OsPlatform } from '#src/shared/os-model'
-import { PROVIDER_CATALOG } from '#src/shared/provider-catalog'
-import {
-  ClaudeTokenSource,
-  type ITrackerConfig,
-  MAX_REFRESH_INTERVAL_MINUTES,
-  MIN_REFRESH_INTERVAL_MINUTES,
-} from '#src/shared/settings-model'
+import { trackerAccessTokenSourceUtil } from '#src/renderer/src/util/tracker-access-token-source-util'
+import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
+import type { OS } from '#src/shared/business/enum/os-enum'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import type { TrackerConfig } from '#src/shared/business/model/settings-model'
+import { constant } from '#src/shared/util/constant'
+
+const maxTrackerRefreshIntervalMinutes = constant.trackerRefreshInterval.maxMs / 60_000
+
+const minTrackerRefreshIntervalMinutes = constant.trackerRefreshInterval.minMs / 60_000
 
 export const TrackerConfigFields = (props: {
-  config: ITrackerConfig
-  onChange: (config: ITrackerConfig) => void
-  osPlatform: OsPlatform
+  config: TrackerConfig
+  onChange: (config: TrackerConfig) => void
+  osPlatform: OS
 }): ReactElement => {
   const { config, onChange, osPlatform } = props
-  const catalogEntry = PROVIDER_CATALOG.find((entry) => {
+  const catalogEntry = constant.providerCatalog.find((entry) => {
     return entry.id === config.providerId
   })
   const providerDisplayName = catalogEntry?.name ?? config.providerId
-  const { selectedTokenSource, systemTokenOption } = trackerTokenSourceUtil.resolveSelection({ config, osPlatform })
+  const { selectedAccessTokenSource, systemAccessTokenOption } = trackerAccessTokenSourceUtil.resolveSelection({
+    config,
+    osPlatform,
+  })
 
   return (
     <>
@@ -37,36 +40,36 @@ export const TrackerConfigFields = (props: {
           value={config.name}
         />
       </label>
-      {config.providerId === 'claude' && (
+      {config.providerId === ProviderIdMapper.CLAUDE && (
         <div className="settings-field">
           <span className="settings-field-label">Access token</span>
-          <div className="settings-token-source-row">
-            <label className="settings-token-source-option">
+          <div className="settings-access-token-source-row">
+            <label className="settings-access-token-source-option">
               <input
-                checked={selectedTokenSource === ClaudeTokenSource.MANUAL}
-                name={`claude-token-source-${config.id}`}
+                checked={selectedAccessTokenSource === ClaudeAccessTokenSource.MANUAL}
+                name={`claude-access-token-source-${config.id}`}
                 onChange={() => {
-                  onChange({ ...config, tokenSource: ClaudeTokenSource.MANUAL })
+                  onChange({ ...config, accessTokenSource: ClaudeAccessTokenSource.MANUAL })
                 }}
                 type="radio"
               />
               Enter manually
             </label>
-            {systemTokenOption !== undefined && (
-              <label className="settings-token-source-option">
+            {systemAccessTokenOption !== undefined && (
+              <label className="settings-access-token-source-option">
                 <input
-                  checked={selectedTokenSource === ClaudeTokenSource.SYSTEM}
-                  name={`claude-token-source-${config.id}`}
+                  checked={selectedAccessTokenSource === ClaudeAccessTokenSource.SYSTEM}
+                  name={`claude-access-token-source-${config.id}`}
                   onChange={() => {
-                    onChange({ ...config, tokenSource: ClaudeTokenSource.SYSTEM })
+                    onChange({ ...config, accessTokenSource: ClaudeAccessTokenSource.SYSTEM })
                   }}
                   type="radio"
                 />
-                {systemTokenOption.label}
+                {systemAccessTokenOption.label}
               </label>
             )}
           </div>
-          {selectedTokenSource === ClaudeTokenSource.MANUAL && (
+          {selectedAccessTokenSource === ClaudeAccessTokenSource.MANUAL && (
             <input
               className="settings-field-input"
               onChange={(event) => {
@@ -77,12 +80,12 @@ export const TrackerConfigFields = (props: {
               value={config.accessToken}
             />
           )}
-          {selectedTokenSource === ClaudeTokenSource.SYSTEM && systemTokenOption !== undefined && (
-            <p className="settings-hint">{systemTokenOption.hint}</p>
+          {selectedAccessTokenSource === ClaudeAccessTokenSource.SYSTEM && systemAccessTokenOption !== undefined && (
+            <p className="settings-hint">{systemAccessTokenOption.hint}</p>
           )}
         </div>
       )}
-      {config.providerId === 'zai' && (
+      {config.providerId === ProviderIdMapper.ZAI && (
         <label className="settings-field">
           <span className="settings-field-label">Access token</span>
           <input
@@ -96,27 +99,12 @@ export const TrackerConfigFields = (props: {
           />
         </label>
       )}
-      {config.providerId === 'dummy' && (
-        <>
-          <DayTimeScheduleFields
-            days={config.days}
-            onChange={({ days, times }) => {
-              onChange({ ...config, days, times })
-            }}
-            times={config.times}
-          />
-          <p className="settings-hint">
-            Dev-only test tracker: shows a native macOS popup each time this schedule fires and never displays usage
-            data.
-          </p>
-        </>
-      )}
       <label className="settings-field">
         <span className="settings-field-label">Refresh interval (minutes)</span>
         <input
           className="settings-field-input"
-          max={MAX_REFRESH_INTERVAL_MINUTES}
-          min={MIN_REFRESH_INTERVAL_MINUTES}
+          max={maxTrackerRefreshIntervalMinutes}
+          min={minTrackerRefreshIntervalMinutes}
           onChange={(event) => {
             const minutes = Number.parseInt(event.target.value, 10)
 
@@ -125,14 +113,14 @@ export const TrackerConfigFields = (props: {
             }
 
             const clampedMinutes = Math.min(
-              Math.max(minutes, MIN_REFRESH_INTERVAL_MINUTES),
-              MAX_REFRESH_INTERVAL_MINUTES,
+              Math.max(minutes, minTrackerRefreshIntervalMinutes),
+              maxTrackerRefreshIntervalMinutes,
             )
 
-            onChange({ ...config, refreshIntervalSeconds: clampedMinutes * 60 })
+            onChange({ ...config, refreshIntervalMs: clampedMinutes * 60_000 })
           }}
           type="number"
-          value={Math.round(config.refreshIntervalSeconds / 60)}
+          value={Math.round(config.refreshIntervalMs / 60_000)}
         />
         <span className="settings-hint">How often this tracker refreshes automatically.</span>
       </label>

@@ -10,7 +10,10 @@ import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { SchedulingStrategyLinuxContractHarness } from '#src/main/business/component/scheduling-strategy/_linux-contract-harness'
+import { SchedulingStrategyLinuxContractHarness } from '#src/main/business/component/scheduling-strategy/__tests__/_linux-contract-harness'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
+import { osUtil } from '#src/main/util/os-util'
 
 const fakeSystemctlScript = `#!/bin/sh
 if [ -n "$USAGE_PULSE_SYSTEMCTL_ARGS_LOG" ]; then
@@ -58,12 +61,13 @@ const expectedTimerUnitContent = [
 ].join('\n')
 
 const restoreEnvValue = (params: { key: string; value: string | undefined }) => {
-  if (params.value === undefined) {
-    delete process.env[params.key]
+  const { key, value } = params
+  if (value === undefined) {
+    delete process.env[key]
     return
   }
 
-  process.env[params.key] = params.value
+  process.env[key] = value
 }
 
 const installFakeSystemctl = async () => {
@@ -107,10 +111,11 @@ const installSystemctllessPath = async () => {
 }
 
 const readSystemctlInvocations = async (params: { argsLogPath: string }) => {
-  return (await readFile(params.argsLogPath, 'utf8')).trim().split('\n')
+  const { argsLogPath } = params
+  return (await readFile(argsLogPath, 'utf8')).trim().split('\n')
 }
 
-describe.skipIf(process.platform === 'win32')('SchedulingStrategyLinux [contract supplement]', () => {
+describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SchedulingStrategyLinux [contract supplement]', () => {
   it('reports a trigger as registered when its timer unit file exists and systemctl reports it active', async () => {
     const shim = await installFakeSystemctl()
     const unitDir = await mkdtemp(join(tmpdir(), 'usage-pulse-unit-dir-'))
@@ -203,7 +208,7 @@ describe.skipIf(process.platform === 'win32')('SchedulingStrategyLinux [contract
         isSystemdUserAvailable: false,
       })
       await strategy.upsertRegistration({
-        days: ['monday', 'wednesday', 'saturday'],
+        days: [ScheduleTriggerDayMapper.MONDAY, ScheduleTriggerDayMapper.WEDNESDAY, ScheduleTriggerDayMapper.SATURDAY],
         executableArgs: ['--fire-trigger', 'd290f1c9-7d44-4fdd-9d95-1b9d45a8f7e3'],
         executablePath: '/usr/lib/usage-pulse/usage-pulse',
         times: ['09:00', '13:00'],

@@ -1,0 +1,225 @@
+subject: ClaudeTranscriptParserService
+module: ./service.js
+subjectType: class
+constructor:
+  # A fresh instance carries no own fields, so it serializes as an empty object.
+  terms:
+    - params: []
+      result: {}
+methods:
+  hasSignal:
+    terms:
+      # Zeroed stats carry nothing worth displaying.
+      - constructorParams: []
+        params:
+          - aiTitle: ''
+            cacheCreationTokens: 0
+            cacheReadTokens: 0
+            gitBranch: ''
+            inputTokens: 0
+            lastPrompt: ''
+            model: ''
+            outputTokens: 0
+            thinkingTokens: 0
+            userTurnsCount: 0
+            version: ''
+        result: false
+      # Any single token field is enough signal.
+      - constructorParams: []
+        params:
+          - aiTitle: ''
+            cacheCreationTokens: 0
+            cacheReadTokens: 0
+            gitBranch: ''
+            inputTokens: 1
+            lastPrompt: ''
+            model: ''
+            outputTokens: 0
+            thinkingTokens: 0
+            userTurnsCount: 0
+            version: ''
+        result: true
+      # A lone AI title is worth showing.
+      - constructorParams: []
+        params:
+          - aiTitle: 'Fix login bug'
+            cacheCreationTokens: 0
+            cacheReadTokens: 0
+            gitBranch: ''
+            inputTokens: 0
+            lastPrompt: ''
+            model: ''
+            outputTokens: 0
+            thinkingTokens: 0
+            userTurnsCount: 0
+            version: ''
+        result: true
+      # A lone user turn is worth showing.
+      - constructorParams: []
+        params:
+          - aiTitle: ''
+            cacheCreationTokens: 0
+            cacheReadTokens: 0
+            gitBranch: ''
+            inputTokens: 0
+            lastPrompt: ''
+            model: ''
+            outputTokens: 0
+            thinkingTokens: 0
+            userTurnsCount: 2
+            version: ''
+        result: true
+      # Version alone is deliberately not enough signal — every transcript would qualify.
+      - constructorParams: []
+        params:
+          - aiTitle: ''
+            cacheCreationTokens: 0
+            cacheReadTokens: 0
+            gitBranch: ''
+            inputTokens: 0
+            lastPrompt: ''
+            model: ''
+            outputTokens: 0
+            thinkingTokens: 0
+            userTurnsCount: 0
+            version: '2.1.241'
+        result: false
+  parseStats:
+    terms:
+      # Happy path: turns, two API calls, AI title, last prompt (last wins), branch/version (first wins), last activity.
+      - constructorParams: []
+        params:
+          - content: |
+              {"type":"user","isMeta":false,"gitBranch":"main","version":"2.1.241","timestamp":"2026-08-23T21:48:12.177Z"}
+              {"type":"assistant","message":{"id":"msg_a","model":"glm-5.3","usage":{"input_tokens":100,"cache_read_input_tokens":200,"cache_creation_input_tokens":50,"output_tokens":10,"output_tokens_details":{"thinking_tokens":0}}},"timestamp":"2026-08-23T21:53:31.053Z"}
+              {"type":"assistant","message":{"id":"msg_b","model":"glm-5.4","usage":{"input_tokens":1000,"cache_read_input_tokens":5000,"cache_creation_input_tokens":0,"output_tokens":20,"output_tokens_details":{"thinking_tokens":512}}},"timestamp":"2026-08-23T22:03:09.089Z"}
+              {"type":"ai-title","aiTitle":"Fix login bug","sessionId":"s1"}
+              {"type":"last-prompt","lastPrompt":"first prompt"}
+              {"type":"last-prompt","lastPrompt":"second prompt wins"}
+        result:
+          aiTitle: Fix login bug
+          cacheCreationTokens: 50
+          cacheReadTokens: 5200
+          contextSizeTokens: 6000
+          gitBranch: main
+          inputTokens: 1100
+          lastActivityAt: 1787522589089
+          lastPrompt: second prompt wins
+          model: glm-5.4
+          outputTokens: 30
+          thinkingTokens: 512
+          userTurnsCount: 1
+          version: 2.1.241
+      # Duplicate message.id entries are the same API call — usage counted once, context size from the first.
+      - constructorParams: []
+        params:
+          - content: |
+              {"type":"assistant","message":{"id":"msg_dup","model":"glm-5.3","usage":{"input_tokens":100,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens":5,"output_tokens_details":{"thinking_tokens":0}}},"timestamp":"2026-08-23T21:53:31.053Z"}
+              {"type":"assistant","message":{"id":"msg_dup","model":"glm-5.3","usage":{"input_tokens":100,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens":5,"output_tokens_details":{"thinking_tokens":0}}},"timestamp":"2026-08-23T21:53:31.592Z"}
+        result:
+          aiTitle: ''
+          cacheCreationTokens: 0
+          cacheReadTokens: 0
+          contextSizeTokens: 100
+          gitBranch: ''
+          inputTokens: 100
+          lastActivityAt: 1787522011592
+          lastPrompt: ''
+          model: glm-5.3
+          outputTokens: 5
+          thinkingTokens: 0
+          userTurnsCount: 0
+          version: ''
+      # Meta user entries are not turns.
+      - constructorParams: []
+        params:
+          - content: |
+              {"type":"user","isMeta":true,"timestamp":"2026-08-23T21:48:12.177Z"}
+              {"type":"user","isMeta":false,"timestamp":"2026-08-23T21:49:12.177Z"}
+        result:
+          aiTitle: ''
+          cacheCreationTokens: 0
+          cacheReadTokens: 0
+          gitBranch: ''
+          inputTokens: 0
+          lastActivityAt: 1787521752177
+          lastPrompt: ''
+          model: ''
+          outputTokens: 0
+          thinkingTokens: 0
+          userTurnsCount: 1
+          version: ''
+      # No assistant entries means no context size — the key stays absent.
+      - constructorParams: []
+        params:
+          - content: |
+              {"type":"user","gitBranch":"main","version":"2.1.241","timestamp":"2026-08-23T21:48:12.177Z"}
+              {"type":"system","content":"hook","timestamp":"2026-08-23T21:48:30.000Z"}
+        result:
+          aiTitle: ''
+          cacheCreationTokens: 0
+          cacheReadTokens: 0
+          gitBranch: main
+          inputTokens: 0
+          lastActivityAt: 1787521710000
+          lastPrompt: ''
+          model: ''
+          outputTokens: 0
+          thinkingTokens: 0
+          userTurnsCount: 1
+          version: 2.1.241
+      # Empty content yields the zero stats object.
+      - constructorParams: []
+        params:
+          - content: ''
+        result:
+          aiTitle: ''
+          cacheCreationTokens: 0
+          cacheReadTokens: 0
+          gitBranch: ''
+          inputTokens: 0
+          lastPrompt: ''
+          model: ''
+          outputTokens: 0
+          thinkingTokens: 0
+          userTurnsCount: 0
+          version: ''
+      # Invalid JSON lines, non-object JSON, and blank lines are skipped.
+      - constructorParams: []
+        params:
+          - content: |
+              not json
+              {"broken
+              []
+
+              {"type":"user","isMeta":false}
+        result:
+          aiTitle: ''
+          cacheCreationTokens: 0
+          cacheReadTokens: 0
+          gitBranch: ''
+          inputTokens: 0
+          lastPrompt: ''
+          model: ''
+          outputTokens: 0
+          thinkingTokens: 0
+          userTurnsCount: 1
+          version: ''
+      # An assistant entry without usage contributes no numbers but still reports its model.
+      - constructorParams: []
+        params:
+          - content: |
+              {"type":"assistant","message":{"id":"msg_no_usage","model":"glm-5.3"},"timestamp":"2026-08-23T21:53:31.053Z"}
+        result:
+          aiTitle: ''
+          cacheCreationTokens: 0
+          cacheReadTokens: 0
+          gitBranch: ''
+          inputTokens: 0
+          lastActivityAt: 1787522011053
+          lastPrompt: ''
+          model: glm-5.3
+          outputTokens: 0
+          thinkingTokens: 0
+          userTurnsCount: 0
+          version: ''

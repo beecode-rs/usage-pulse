@@ -1,10 +1,10 @@
 /// <reference types="vite/client" />
 
-import type { IUsageApiClient } from '#src/shared/usage-model'
+import type { UsageApiClient } from '#src/renderer/src/business/service/usage-api-client'
 
 declare global {
   interface Window {
-    usageApi: IUsageApiClient
+    usageApi: UsageApiClient
   }
 }
 

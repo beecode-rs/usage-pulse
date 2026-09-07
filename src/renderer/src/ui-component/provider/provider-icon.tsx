@@ -1,7 +1,8 @@
+import { typeUtil } from '@beecode/msh-util'
 import type { ReactElement } from 'react'
 
 import '#src/renderer/src/ui-component/provider/provider-icon.css'
-import { type ProviderId } from '#src/shared/usage-model'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 
 const DEFAULT_ICON_SIZE = 18
 
@@ -11,40 +12,33 @@ const CLAUDE_ICON_PATH =
 const ZAI_ICON_PATH =
   'M12.105 2L9.927 4.953H.653L2.83 2h9.276zM23.254 19.048L21.078 22h-9.242l2.174-2.952h9.244zM24 2L9.264 22H0L14.736 2H24z'
 
-const DUMMY_ICON_PATH = 'M13 2 3 14 12 14 11 22 21 10 12 10Z'
-
-const resolveIconPath = (providerId: ProviderId): string => {
+const resolveIconPath = (providerId: ProviderIdMapper): string => {
   switch (providerId) {
-    case 'claude': {
+    case ProviderIdMapper.CLAUDE: {
       return CLAUDE_ICON_PATH
     }
 
-    case 'dummy': {
-      return DUMMY_ICON_PATH
-    }
-
-    case 'zai': {
+    case ProviderIdMapper.ZAI: {
       return ZAI_ICON_PATH
     }
 
     default: {
-      throw new Error(`unsupported provider: ${String(providerId)}`)
+      throw typeUtil.exhaustiveError('unsupported provider [providerId]', providerId)
     }
   }
 }
 
-export const ProviderIcon = (props: { providerId: ProviderId; size?: number }): ReactElement => {
-  const { providerId, size } = props
-  const resolvedSize = size ?? DEFAULT_ICON_SIZE
+export const ProviderIcon = (props: { providerId: ProviderIdMapper; size?: number }): ReactElement => {
+  const { providerId, size = DEFAULT_ICON_SIZE } = props
 
   return (
     <svg
       aria-hidden="true"
       className={`provider-icon provider-icon-${providerId}`}
       fill="currentColor"
-      height={resolvedSize}
+      height={size}
       viewBox="0 0 24 24"
-      width={resolvedSize}
+      width={size}
     >
       <path d={resolveIconPath(providerId)} />
     </svg>

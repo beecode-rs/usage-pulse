@@ -2,9 +2,12 @@ import { app } from 'electron'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+
 export const devDesktopEntry = {
   install(): void {
-    if (app.isPackaged || process.platform !== 'linux') {
+    if (app.isPackaged || osUtil.resolvePlatform() !== OS.LINUX) {
       return
     }
 

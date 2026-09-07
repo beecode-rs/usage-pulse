@@ -1,154 +1,154 @@
-import { usagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
-import { zaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
-import type { ISessionSnapshot } from '#src/shared/session-model'
-import { FIVE_HOUR_WINDOW_MS, type IUsageSnapshot, UsageStatus } from '#src/shared/usage-model'
+import { MenuStatusDotMapper } from '#src/renderer/src/business/enum/menu-status-dot-mapper-enum'
+import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
+import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
+import type { SessionSnapshot } from '#src/shared/business/model/session-model'
+import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
+import { constant } from '#src/shared/util/constant'
 
 const MAX_ELAPSED_MINUTES = 300
 
-export const MONTH_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
+export class MenuStatusUtil {
+  resolveCombinedStatusDot(params: { dots: (MenuStatusDotMapper | undefined)[] }): MenuStatusDotMapper | undefined {
+    const { dots } = params
 
-export type MenuStatusDot = 'error' | 'peak' | 'waiting' | 'warning'
-
-export const menuStatusUtil = {
-  _resolveWindowResetAt: (params: { elapsedMinutes: number; now: number; windowMs: number }): number => {
-    const elapsedMs = (params.elapsedMinutes * params.windowMs) / MAX_ELAPSED_MINUTES
-
-    return params.now + params.windowMs - elapsedMs
-  },
-
-  resolveCombinedStatusDot: (params: { dots: (MenuStatusDot | undefined)[] }): MenuStatusDot | undefined => {
-    if (params.dots.includes('error')) {
-      return 'error'
+    if (dots.includes(MenuStatusDotMapper.ERROR)) {
+      return MenuStatusDotMapper.ERROR
     }
 
-    if (params.dots.includes('warning')) {
-      return 'warning'
+    if (dots.includes(MenuStatusDotMapper.WARNING)) {
+      return MenuStatusDotMapper.WARNING
     }
 
-    if (params.dots.includes('waiting')) {
-      return 'waiting'
+    if (dots.includes(MenuStatusDotMapper.WAITING)) {
+      return MenuStatusDotMapper.WAITING
     }
 
-    if (params.dots.includes('peak')) {
-      return 'peak'
+    if (dots.includes(MenuStatusDotMapper.PEAK)) {
+      return MenuStatusDotMapper.PEAK
     }
 
     return undefined
-  },
+  }
 
-  resolveDevelopmentStatusDot: (params: {
+  resolveDevelopmentStatusDot(params: {
     elapsedMinutes: number
     now: number
     usedPercent: number
-  }): MenuStatusDot | undefined => {
-    const snapshot: IUsageSnapshot = {
+  }): MenuStatusDotMapper | undefined {
+    const { elapsedMinutes, now, usedPercent } = params
+
+    const snapshot: UsageSnapshot = {
       providers: [
         {
-          providerId: 'zai',
-          status: UsageStatus.OK,
+          providerId: ProviderIdMapper.ZAI,
+          status: UsageActivityStatus.OK,
           trackerId: 'development-zai',
           trackerName: 'z.ai',
           usage: [
             {
               label: '5-hour window',
-              resetAt: menuStatusUtil._resolveWindowResetAt({
-                elapsedMinutes: params.elapsedMinutes,
-                now: params.now,
-                windowMs: FIVE_HOUR_WINDOW_MS,
+              resetAt: this._resolveWindowResetAt({
+                elapsedMinutes,
+                now,
+                windowMs: constant.fiveHourWindowMs,
               }),
-              usedPercent: params.usedPercent,
-              windowMs: FIVE_HOUR_WINDOW_MS,
+              usedPercent,
+              windowMs: constant.fiveHourWindowMs,
             },
             {
               label: 'MCP quota',
-              resetAt: menuStatusUtil._resolveWindowResetAt({
-                elapsedMinutes: params.elapsedMinutes,
-                now: params.now,
-                windowMs: MONTH_WINDOW_MS,
+              resetAt: this._resolveWindowResetAt({
+                elapsedMinutes,
+                now,
+                windowMs: constant.thirtyDayWindowMs,
               }),
-              usedPercent: params.usedPercent,
-              windowMs: MONTH_WINDOW_MS,
+              usedPercent,
+              windowMs: constant.thirtyDayWindowMs,
             },
           ],
         },
       ],
     }
 
-    return menuStatusUtil.resolveUsageStatusDot({ now: params.now, snapshot })
-  },
+    return this.resolveUsageActivityStatusDot({ now, snapshot })
+  }
 
-  resolveIsWindowWarning: (params: {
-    now: number
-    resetAt?: number
-    usedPercent: number
-    windowMs?: number
-  }): boolean => {
-    const { resetAt, windowMs } = params
+  resolveIsWindowWarning(params: { now: number; resetAt?: number; usedPercent: number; windowMs?: number }): boolean {
+    const { now, resetAt, usedPercent, windowMs } = params
 
     if (resetAt === undefined || windowMs === undefined) {
       return false
     }
 
-    return usagePaceUtil.resolveIsUsageOutpacingWindow({
-      now: params.now,
+    return new UsagePaceUtil().resolveIsUsageOutpacingWindow({
+      now,
       resetAt,
-      usedPercent: params.usedPercent,
+      usedPercent,
       windowMs,
     })
-  },
+  }
 
-  resolvePeakStatusDot: (params: { now: number; snapshot?: IUsageSnapshot }): MenuStatusDot | undefined => {
-    const providers = params.snapshot?.providers ?? []
+  resolvePeakStatusDot(params: { now: number; snapshot?: UsageSnapshot }): MenuStatusDotMapper | undefined {
+    const { now, snapshot } = params
+
+    const providers = snapshot?.providers ?? []
 
     const isAnyProviderInPeakHours = providers.some((provider) => {
-      const peakInfo = zaiPeakUtil.resolvePeakInfo({ nowMs: params.now, providerId: provider.providerId })
+      const peakInfo = new ZaiPeakUtil().resolvePeakInfo({ nowMs: now, providerId: provider.providerId })
 
       return peakInfo?.isPeakHour === true
     })
 
     if (isAnyProviderInPeakHours) {
-      return 'peak'
+      return MenuStatusDotMapper.PEAK
     }
 
     return undefined
-  },
+  }
 
-  resolveSessionsStatusDot: (params: {
+  resolveSessionsStatusDot(params: {
     hasLoadError?: boolean
-    snapshot?: ISessionSnapshot
-  }): MenuStatusDot | undefined => {
-    const hasSnapshotError = params.snapshot?.errorMessage !== undefined && params.snapshot.errorMessage !== ''
+    snapshot?: SessionSnapshot
+  }): MenuStatusDotMapper | undefined {
+    const { hasLoadError, snapshot } = params
 
-    if (params.hasLoadError === true || hasSnapshotError) {
-      return 'error'
+    const hasSnapshotError = snapshot?.errorMessage !== undefined && snapshot.errorMessage !== ''
+
+    if (hasLoadError === true || hasSnapshotError) {
+      return MenuStatusDotMapper.ERROR
     }
 
-    const isAnySessionWaiting = (params.snapshot?.sessions ?? []).some((session) => {
-      return session.status === 'waiting'
+    const isAnySessionWaiting = (snapshot?.sessions ?? []).some((session) => {
+      return session.status === SessionStatusMapper.WAITING
     })
 
     if (isAnySessionWaiting) {
-      return 'waiting'
+      return MenuStatusDotMapper.WAITING
     }
 
     return undefined
-  },
+  }
 
-  resolveUsageStatusDot: (params: { now: number; snapshot?: IUsageSnapshot }): MenuStatusDot | undefined => {
-    const providers = params.snapshot?.providers ?? []
+  resolveUsageActivityStatusDot(params: { now: number; snapshot?: UsageSnapshot }): MenuStatusDotMapper | undefined {
+    const { now, snapshot } = params
+
+    const providers = snapshot?.providers ?? []
 
     const isAnyProviderError = providers.some((provider) => {
-      return provider.status === UsageStatus.ERROR
+      return provider.status === UsageActivityStatus.ERROR
     })
 
     if (isAnyProviderError) {
-      return 'error'
+      return MenuStatusDotMapper.ERROR
     }
 
     const isAnyWindowWarning = providers.some((provider) => {
       return (provider.usage ?? []).some((window) => {
-        return menuStatusUtil.resolveIsWindowWarning({
-          now: params.now,
+        return this.resolveIsWindowWarning({
+          now,
           resetAt: window.resetAt,
           usedPercent: window.usedPercent,
           windowMs: window.windowMs,
@@ -157,9 +157,17 @@ export const menuStatusUtil = {
     })
 
     if (isAnyWindowWarning) {
-      return 'warning'
+      return MenuStatusDotMapper.WARNING
     }
 
     return undefined
-  },
+  }
+
+  protected _resolveWindowResetAt(params: { elapsedMinutes: number; now: number; windowMs: number }): number {
+    const { elapsedMinutes, now, windowMs } = params
+
+    const elapsedMs = (elapsedMinutes * windowMs) / MAX_ELAPSED_MINUTES
+
+    return now + windowMs - elapsedMs
+  }
 }

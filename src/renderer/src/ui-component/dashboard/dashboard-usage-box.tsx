@@ -3,27 +3,29 @@ import { type ReactElement, useEffect, useState } from 'react'
 import { PeakIcon } from '#src/renderer/src/ui-component/icon/peak-icon'
 import { UsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
 import { dateUtil } from '#src/renderer/src/util/date-util'
-import { menuStatusUtil } from '#src/renderer/src/util/menu-status-util'
-import { usagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
+import { MenuStatusUtil } from '#src/renderer/src/util/menu-status-util'
+import { usageActivityStatusUtil } from '#src/renderer/src/util/usage-activity-status-util'
+import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
-import { usageStatusUtil } from '#src/renderer/src/util/usage-status-util'
 import { usageWindowUtil } from '#src/renderer/src/util/usage-window-util'
-import { zaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
-import { type IProviderSnapshot, UsageStatus } from '#src/shared/usage-model'
+import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
+import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
+import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
 
 const TICK_INTERVAL_MS = 30_000
 
-const resolveStatusMessage = (params: { providerSnapshot: IProviderSnapshot }): string => {
-  switch (params.providerSnapshot.status) {
-    case UsageStatus.ERROR: {
-      return params.providerSnapshot.errorMessage ?? usageStatusUtil.resolveStatusText(UsageStatus.ERROR)
+const resolveStatusMessage = (params: { providerSnapshot: ProviderSnapshot }): string => {
+  const { providerSnapshot } = params
+  switch (providerSnapshot.status) {
+    case UsageActivityStatus.ERROR: {
+      return providerSnapshot.errorMessage ?? usageActivityStatusUtil.resolveStatusText(UsageActivityStatus.ERROR)
     }
 
-    case UsageStatus.PENDING: {
+    case UsageActivityStatus.PENDING: {
       return 'Loading usage…'
     }
 
-    case UsageStatus.UNCONFIGURED: {
+    case UsageActivityStatus.UNCONFIGURED: {
       return 'Add an access token to track usage.'
     }
 
@@ -33,7 +35,7 @@ const resolveStatusMessage = (params: { providerSnapshot: IProviderSnapshot }): 
   }
 }
 
-export const DashboardUsageBox = (props: { providerSnapshot: IProviderSnapshot }): ReactElement => {
+export const DashboardUsageBox = (props: { providerSnapshot: ProviderSnapshot }): ReactElement => {
   const { providerSnapshot } = props
   const [now, setNow] = useState((): number => {
     return Date.now()
@@ -50,6 +52,7 @@ export const DashboardUsageBox = (props: { providerSnapshot: IProviderSnapshot }
   }, [])
 
   const fiveHourWindow = (providerSnapshot.usage ?? [])[0]
+  const zaiPeakUtil = new ZaiPeakUtil()
   const peakInfo = zaiPeakUtil.resolvePeakInfo({ nowMs: now, providerId: providerSnapshot.providerId })
   const peakRemainingPercent = zaiPeakUtil.resolvePeakRemainingPercent({
     nowMs: now,
@@ -60,7 +63,7 @@ export const DashboardUsageBox = (props: { providerSnapshot: IProviderSnapshot }
     providerId: providerSnapshot.providerId,
   })
 
-  const isWindowWarning = menuStatusUtil.resolveIsWindowWarning({
+  const isWindowWarning = new MenuStatusUtil().resolveIsWindowWarning({
     now,
     resetAt: fiveHourWindow?.resetAt,
     usedPercent: fiveHourWindow?.usedPercent ?? 0,
@@ -114,6 +117,7 @@ export const DashboardUsageBox = (props: { providerSnapshot: IProviderSnapshot }
   }
 
   const renderResetBar = (params: { paceFillColor?: string; windowMs: number }): ReactElement => {
+    const { paceFillColor, windowMs } = params
     const resetAt = fiveHourWindow?.resetAt
 
     if (resetAt === undefined) {
@@ -133,9 +137,9 @@ export const DashboardUsageBox = (props: { providerSnapshot: IProviderSnapshot }
       <UsageBar
         ariaLabel={`time until ${providerSnapshot.trackerName} reset`}
         fillAnchor="right"
-        fillColor={params.paceFillColor}
+        fillColor={paceFillColor}
         label="Reset"
-        percent={usageResetUtil.resolveRemainingPercent({ remainingMs, windowMs: params.windowMs })}
+        percent={usageResetUtil.resolveRemainingPercent({ remainingMs, windowMs })}
         valueText={usageResetUtil.resolveRemainingText({ remainingMs })}
         valueTooltip={`Resets at ${dateUtil.formatDateTime(resetAt)}`}
       />
@@ -143,12 +147,12 @@ export const DashboardUsageBox = (props: { providerSnapshot: IProviderSnapshot }
   }
 
   const renderBars = (): ReactElement | undefined => {
-    if (providerSnapshot.status !== UsageStatus.OK || fiveHourWindow === undefined) {
+    if (providerSnapshot.status !== UsageActivityStatus.OK || fiveHourWindow === undefined) {
       return undefined
     }
 
     const windowMs = fiveHourWindow.windowMs ?? usageResetUtil.fiveHourWindowMs
-    const paceFillColor = usagePaceUtil.resolvePaceColor({
+    const paceFillColor = new UsagePaceUtil().resolvePaceColor({
       now,
       resetAt: fiveHourWindow.resetAt,
       usedPercent: fiveHourWindow.usedPercent,

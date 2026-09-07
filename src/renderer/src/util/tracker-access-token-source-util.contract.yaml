@@ -1,0 +1,147 @@
+# Contract for trackerAccessTokenSourceUtil.
+# Terms cover the per-platform access-token-source decision rules for the tracker config UI:
+# the platform system-access-token option (label + hint), the effective selected source, and the
+# load-time normalization that keeps a stored system source on windows repairable.
+subject: trackerAccessTokenSourceUtil
+module: ./tracker-access-token-source-util.js
+subjectType: function
+methods:
+  normalizeConfig:
+    terms:
+      # A claude tracker stored with the system source on windows is coerced to manual at
+      # load, so the dialog displays manual, the manual radio is genuinely selectable, and a
+      # save persists manual with the typed token instead of leaving a broken system source.
+      - params:
+          - config:
+              accessToken: ''
+              id: tracker-claude
+              isAutoRefreshPaused: false
+              name: Claude
+              providerId: claude
+              refreshIntervalMs: 300000
+              accessTokenSource: SYSTEM
+            osPlatform: WINDOWS
+        result:
+          accessToken: ''
+          id: tracker-claude
+          isAutoRefreshPaused: false
+          name: Claude
+          providerId: claude
+          refreshIntervalMs: 300000
+          accessTokenSource: MANUAL
+      # On linux the stored system source is kept as-is.
+      - params:
+          - config:
+              accessToken: ''
+              id: tracker-claude
+              isAutoRefreshPaused: false
+              name: Claude
+              providerId: claude
+              refreshIntervalMs: 300000
+              accessTokenSource: SYSTEM
+            osPlatform: LINUX
+        result:
+          accessToken: ''
+          id: tracker-claude
+          isAutoRefreshPaused: false
+          name: Claude
+          providerId: claude
+          refreshIntervalMs: 300000
+          accessTokenSource: SYSTEM
+      # A claude tracker already on manual stays manual on windows.
+      - params:
+          - config:
+              accessToken: ''
+              id: tracker-claude
+              isAutoRefreshPaused: false
+              name: Claude
+              providerId: claude
+              refreshIntervalMs: 300000
+              accessTokenSource: MANUAL
+            osPlatform: WINDOWS
+        result:
+          accessToken: ''
+          id: tracker-claude
+          isAutoRefreshPaused: false
+          name: Claude
+          providerId: claude
+          refreshIntervalMs: 300000
+          accessTokenSource: MANUAL
+      # Non-claude trackers pass through untouched.
+      - params:
+          - config:
+              accessToken: 'zai-token'
+              id: tracker-zai
+              isAutoRefreshPaused: false
+              name: z.ai
+              providerId: zai
+              refreshIntervalMs: 300000
+            osPlatform: WINDOWS
+        result:
+          accessToken: 'zai-token'
+          id: tracker-zai
+          isAutoRefreshPaused: false
+          name: z.ai
+          providerId: zai
+          refreshIntervalMs: 300000
+  resolveSelection:
+    terms:
+      # Linux offers the logged-in Claude Code system access token option and keeps the stored source.
+      - params:
+          - config:
+              accessToken: ''
+              id: tracker-claude
+              isAutoRefreshPaused: false
+              name: Claude
+              providerId: claude
+              refreshIntervalMs: 300000
+              accessTokenSource: SYSTEM
+            osPlatform: LINUX
+        result:
+          selectedAccessTokenSource: SYSTEM
+          systemAccessTokenOption:
+            hint: 'Reads the OAuth token from ~/.claude/.credentials.json on every poll, so it tracks the one Claude Code account logged in on this machine.'
+            label: 'Use system access token (logged-in Claude Code)'
+      # macOS offers the Keychain system access token option; no Linux wording appears.
+      - params:
+          - config:
+              accessToken: ''
+              id: tracker-claude
+              isAutoRefreshPaused: false
+              name: Claude
+              providerId: claude
+              refreshIntervalMs: 300000
+              accessTokenSource: MANUAL
+            osPlatform: MACOS
+        result:
+          selectedAccessTokenSource: MANUAL
+          systemAccessTokenOption:
+            hint: 'Reads the OAuth token from the macOS Keychain entry "Claude Code-credentials" on every poll, so it tracks the one Claude Code account logged in on this machine. Not available on Windows yet.'
+            label: 'Use system access token (macOS Keychain)'
+      # Windows offers no system access token option, and even a stored system source resolves to
+      # manual so the rendered radio never claims system support (post-normalization the
+      # config already carries manual; this pins the defensive pre-normalization display).
+      - params:
+          - config:
+              accessToken: ''
+              id: tracker-claude
+              isAutoRefreshPaused: false
+              name: Claude
+              providerId: claude
+              refreshIntervalMs: 300000
+              accessTokenSource: SYSTEM
+            osPlatform: WINDOWS
+        result:
+          selectedAccessTokenSource: MANUAL
+      # Non-claude providers have no token source section at all: manual, no option.
+      - params:
+          - config:
+              accessToken: ''
+              id: tracker-zai
+              isAutoRefreshPaused: false
+              name: z.ai
+              providerId: zai
+              refreshIntervalMs: 300000
+            osPlatform: LINUX
+        result:
+          selectedAccessTokenSource: MANUAL

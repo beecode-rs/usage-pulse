@@ -1,0 +1,100 @@
+# Contract for the pure members of SessionsFocusGhosttyService: the osascript stdout
+# outcome parser and the same-cwd peer ranking that picks which Ghostty tab to focus.
+subject: SessionsFocusGhosttyService
+module: ./ghostty-service.js
+subjectType: class
+constructor:
+  terms:
+    # A fresh instance holds no state beyond the composed query and osascript services.
+    - params: []
+      result:
+        _claudeQueryService: {}
+        _osascriptService:
+          _claudeQueryService: {}
+methods:
+  parseGhosttyFocusOutcome:
+    terms:
+      # The focused outcome reports the terminal window ended up front.
+      - constructorParams: []
+        params:
+          - stdout: "focused\n"
+        result: focused
+      # The hidden outcome reports the window stayed off the front (another desktop, minimized).
+      - constructorParams: []
+        params:
+          - stdout: hidden
+        result: hidden
+      # The missing outcome reports no terminal matched.
+      - constructorParams: []
+        params:
+          - stdout: "missing\n"
+        result: missing
+      # Empty or unexpected stdout counts as no terminal matched.
+      - constructorParams: []
+        params:
+          - stdout: ""
+        result: missing
+  resolvePeerRank:
+    terms:
+      # Same-cwd sessions rank by surface host age: the newer session focuses the second match.
+      - constructorParams: []
+        params:
+          - peers:
+              - hostPid: 5100
+                hostStartedAtMs: 1788357898000
+                pid: 4242
+              - hostPid: 6100
+                hostStartedAtMs: 1788367210000
+                pid: 7777
+            pid: 7777
+        result: 1
+      # The session with the oldest surface host focuses the first match.
+      - constructorParams: []
+        params:
+          - peers:
+              - hostPid: 5100
+                hostStartedAtMs: 1788357898000
+                pid: 4242
+              - hostPid: 6100
+                hostStartedAtMs: 1788367210000
+                pid: 7777
+            pid: 4242
+        result: 0
+      # A peer without a start time sorts as the newest surface.
+      - constructorParams: []
+        params:
+          - peers:
+              - hostPid: 5100
+                hostStartedAtMs: 1788357898000
+                pid: 4242
+              - hostPid: 6100
+                pid: 7777
+            pid: 7777
+        result: 1
+      # Same-start ties order by the lower host pid first.
+      - constructorParams: []
+        params:
+          - peers:
+              - hostPid: 6100
+                hostStartedAtMs: 1000
+                pid: 7777
+              - hostPid: 5100
+                hostStartedAtMs: 1000
+                pid: 4242
+            pid: 4242
+        result: 0
+      # A session missing from the peers focuses the first match.
+      - constructorParams: []
+        params:
+          - peers:
+              - hostPid: 5100
+                hostStartedAtMs: 1788357898000
+                pid: 4242
+            pid: 9999
+        result: 0
+      # No peers at all focuses the first match.
+      - constructorParams: []
+        params:
+          - peers: []
+            pid: 4242
+        result: 0

@@ -1,10 +1,10 @@
 # Contract for the systemd user timer scheduling strategy.
-# The subject is a harness subclass living in _linux-contract-harness.ts whose only change is a
+# The subject is a harness subclass living in __tests__/_linux-contract-harness.ts whose only change is a
 # no-op _assertLinuxOsPlatform override, so the strategy can be constructed on any dev OS.
 # Protected members are addressed directly: the runner resolves them by name at runtime.
 # configDir values for the impure terms are relative to the package root (vitest's working directory).
 subject: SchedulingStrategyLinuxContractHarness
-module: ./_linux-contract-harness.js
+module: ./__tests__/_linux-contract-harness.js
 subjectType: class
 constructor:
   # Constructor terms must compare the whole serialized instance (vitest also rejects an empty
@@ -182,14 +182,14 @@ methods:
         result: "new Error(\"Invalid trigger time '09:60': hour must be within 00-23 and minute within 00-59\")"
   _buildOnCalendarValues:
     terms:
-      # One value per time; days CSV is shared and already in TRIGGER_DAYS order here.
+      # One value per time; days CSV is shared and already in constant.scheduleTrigger.days order here.
       - constructorParams:
           - isSystemdUserAvailable: false
         params:
           - days: [monday, wednesday, saturday]
             times: ['09:00', '13:00']
         result: ['Mon,Wed,Sat 09:00', 'Mon,Wed,Sat 13:00']
-      # Input day order is normalized to TRIGGER_DAYS (monday..sunday) order.
+      # Input day order is normalized to constant.scheduleTrigger.days (monday..sunday) order.
       - constructorParams:
           - isSystemdUserAvailable: false
         params:

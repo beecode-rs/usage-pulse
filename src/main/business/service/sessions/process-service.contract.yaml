@@ -1,0 +1,54 @@
+# Contract for the ps-output helpers of SessionsProcessService: the ppid/comm line
+# parser feeding the ancestor walks and the .app bundle extraction from a macOS ps
+# comm column.
+subject: SessionsProcessService
+module: ./process-service.js
+subjectType: class
+constructor:
+  terms:
+    # A fresh instance holds no state.
+    - params: []
+      result:
+        {}
+methods:
+  _parseProcessLine:
+    terms:
+      # ps ppid/comm output for a live process parses into an entry.
+      - constructorParams: []
+        params:
+          - line: "  777 /usr/bin/usage-pulse-stub"
+        result:
+          comm: /usr/bin/usage-pulse-stub
+          ppid: 777
+      # A line without a leading ppid does not match.
+      - constructorParams: []
+        params:
+          - line: usage-pulse-stub
+        result: !undefined
+      # Empty ps output does not match.
+      - constructorParams: []
+        params:
+          - line: ""
+        result: !undefined
+  _resolveAppBundleFromComm:
+    terms:
+      # A plain terminal bundle path resolves to that bundle.
+      - constructorParams: []
+        params:
+          - comm: /Applications/Ghostty.app/Contents/MacOS/ghostty
+        result: /Applications/Ghostty.app
+      # The leading dash of an Apple Silicon ps comm is not part of the path.
+      - constructorParams: []
+        params:
+          - comm: -/Applications/Ghostty.app/Contents/MacOS/ghostty
+        result: /Applications/Ghostty.app
+      # A helper binary nested in the app frameworks resolves to the outer owning app.
+      - constructorParams: []
+        params:
+          - comm: /Applications/Visual Studio Code.app/Contents/Frameworks/Code Helper.app/Contents/MacOS/Code Helper
+        result: /Applications/Visual Studio Code.app
+      # A segment that merely contains ".app" mid-name is not a bundle boundary.
+      - constructorParams: []
+        params:
+          - comm: /opt/my.app.d/bin/terminal
+        result: !undefined

@@ -377,12 +377,12 @@ body {
   text-transform: uppercase;
 }
 
-.settings-token-source-row {
+.settings-access-token-source-row {
   display: flex;
   gap: 16px;
 }
 
-.settings-token-source-option {
+.settings-access-token-source-option {
   align-items: center;
   color: var(--ink-secondary);
   cursor: pointer;
@@ -391,7 +391,7 @@ body {
   gap: 6px;
 }
 
-.settings-token-source-option input {
+.settings-access-token-source-option input {
   accent-color: var(--meter-accent);
   margin: 0;
 }

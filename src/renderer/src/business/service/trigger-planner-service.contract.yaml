@@ -1,0 +1,195 @@
+# Contract for TriggerPlannerService, the planner window calculation behind the
+# trigger planner dialog. Pinned behaviours: window cadence (nth gap = 301 + n
+# minutes), the work-end start limit, midnight spill staying in the model, the
+# coverage hint edge strictness, and the window -> start time mapping.
+subject: TriggerPlannerService
+module: ./trigger-planner-service.js
+subjectType: class
+constructor:
+  # No constructor params and no own fields: a fresh instance compares as an empty object.
+  terms:
+    - params: []
+      result: {}
+methods:
+  resolveCoverageHint:
+    terms:
+      # Good posture: first window starts strictly before work start AND last ends strictly after work end.
+      - constructorParams: []
+        params:
+          - windows:
+              - endMs: 43200000
+                startMs: 25200000
+                startTime: '07:00'
+              - endMs: 61320000
+                startMs: 43320000
+                startTime: '12:02'
+              - endMs: 79500000
+                startMs: 61500000
+                startTime: '17:05'
+            workEndMs: 64800000
+            workStartMs: 36000000
+        result: !undefined
+      # Strictness boundary: one minute before work start / one minute after work end is still good.
+      - constructorParams: []
+        params:
+          - windows:
+              - endMs: 64860000
+                startMs: 35940000
+                startTime: '09:59'
+            workEndMs: 64800000
+            workStartMs: 36000000
+        result: !undefined
+      # First window starts at work start (not strictly before) while the last covers the work end.
+      - constructorParams: []
+        params:
+          - windows:
+              - endMs: 90000000
+                startMs: 36000000
+                startTime: '10:00'
+            workEndMs: 64800000
+            workStartMs: 36000000
+        result: 'The first window starts at or after work start — slide the first trigger a bit earlier.'
+      # Last window ends exactly at work end (not strictly after) while the first covers the work start.
+      - constructorParams: []
+        params:
+          - windows:
+              - endMs: 64800000
+                startMs: 25200000
+                startTime: '07:00'
+            workEndMs: 64800000
+            workStartMs: 36000000
+        result: 'The last window ends at or before work end — slide the first trigger a bit later.'
+      # Both edges missed at once.
+      - constructorParams: []
+        params:
+          - windows:
+              - endMs: 64800000
+                startMs: 36000000
+                startTime: '10:00'
+            workEndMs: 64800000
+            workStartMs: 36000000
+        result: 'The windows miss the edges of your workday — slide the first trigger so the first window starts before work and the last one ends after it.'
+      # Zero: an empty windows array pins the implementation's no-window hint.
+      - constructorParams: []
+        params:
+          - windows: []
+            workEndMs: 64800000
+            workStartMs: 36000000
+        result: 'No window fits before work ends — slide the first trigger earlier.'
+  resolvePlannerWindows:
+    terms:
+      # Preset equivalence: first trigger 07:00 + work end 18:00 reproduces MAX_WINDOW_SCHEDULE_TRIGGER_PRESET.times
+      # (see src/shared/business/model/schedule-trigger-model.ts), with 5h windows 07:00->12:00, 12:02->17:02, 17:05->22:05.
+      - constructorParams: []
+        params:
+          - firstTriggerMs: 25200000
+            workEndMs: 64800000
+        result:
+          - endMs: 43200000
+            startMs: 25200000
+            startTime: '07:00'
+          - endMs: 61320000
+            startMs: 43320000
+            startTime: '12:02'
+          - endMs: 79500000
+            startMs: 61500000
+            startTime: '17:05'
+      # Gap cadence: consecutive starts grow by +302, +303, +304, +305 minutes (nth gap = 301 + n
+      # minutes; 60000 ms per minute), because each gap is firstWindowGapMs plus one extra minute
+      # per already-collected window.
+      - constructorParams: []
+        params:
+          - firstTriggerMs: 0
+            workEndMs: 86400000
+        result:
+          - endMs: 18000000
+            startMs: 0
+            startTime: '00:00'
+          - endMs: 36120000
+            startMs: 18120000
+            startTime: '05:02'
+          - endMs: 54300000
+            startMs: 36300000
+            startTime: '10:05'
+          - endMs: 72540000
+            startMs: 54540000
+            startTime: '15:09'
+          - endMs: 90840000
+            startMs: 72840000
+            startTime: '20:14'
+      # Windows stop at workEndMs: only starts before the limit are emitted;
+      # the last window body may still extend past the work end (54300000 > 42000000).
+      - constructorParams: []
+        params:
+          - firstTriggerMs: 0
+            workEndMs: 42000000
+        result:
+          - endMs: 18000000
+            startMs: 0
+            startTime: '00:00'
+          - endMs: 36120000
+            startMs: 18120000
+            startTime: '05:02'
+          - endMs: 54300000
+            startMs: 36300000
+            startTime: '10:05'
+      # One window: the next start (60000000 + 302 minutes in ms) lands exactly on workEndMs and is excluded.
+      - constructorParams: []
+        params:
+          - firstTriggerMs: 60000000
+            workEndMs: 78120000
+        result:
+          - endMs: 78000000
+            startMs: 60000000
+            startTime: '16:40'
+      # Zero: a first trigger at work end yields no windows.
+      - constructorParams: []
+        params:
+          - firstTriggerMs: 64800000
+            workEndMs: 64800000
+        result: []
+      # Zero: a first trigger after work end yields no windows.
+      - constructorParams: []
+        params:
+          - firstTriggerMs: 72000000
+            workEndMs: 64800000
+        result: []
+      # Work end above the day length is capped at dayMs, and a window starting before midnight keeps
+      # its true endMs past the day (midnight spill stays in the model; only the UI clips).
+      - constructorParams: []
+        params:
+          - firstTriggerMs: 82800000
+            workEndMs: 120000000
+        result:
+          - endMs: 100800000
+            startMs: 82800000
+            startTime: '23:00'
+  resolveTriggerTimes:
+    terms:
+      # Zero: no windows, no times.
+      - constructorParams: []
+        params:
+          - windows: []
+        result: []
+      # One: a single window maps to its start time.
+      - constructorParams: []
+        params:
+          - windows:
+              - endMs: 100800000
+                startMs: 82800000
+                startTime: '23:00'
+        result: ['23:00']
+      # Many: window starts are mapped in order (preset windows -> MAX_WINDOW_SCHEDULE_TRIGGER_PRESET.times).
+      - constructorParams: []
+        params:
+          - windows:
+              - endMs: 43200000
+                startMs: 25200000
+                startTime: '07:00'
+              - endMs: 61320000
+                startMs: 43320000
+                startTime: '12:02'
+              - endMs: 79500000
+                startMs: 61500000
+                startTime: '17:05'
+        result: ['07:00', '12:02', '17:05']

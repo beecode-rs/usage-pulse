@@ -4,7 +4,8 @@ import { PauseIcon } from '#src/renderer/src/ui-component/icon/pause-icon'
 import { PlayIcon } from '#src/renderer/src/ui-component/icon/play-icon'
 
 const resolveLabel = (params: { isPaused: boolean }): string => {
-  if (params.isPaused) {
+  const { isPaused } = params
+  if (isPaused) {
     return 'Resume sessions auto-refresh'
   }
 
@@ -12,7 +13,8 @@ const resolveLabel = (params: { isPaused: boolean }): string => {
 }
 
 const resolveClassName = (params: { isPaused: boolean }): string => {
-  if (params.isPaused) {
+  const { isPaused } = params
+  if (isPaused) {
     return 'sessions-icon-button is-paused'
   }
 
@@ -20,7 +22,8 @@ const resolveClassName = (params: { isPaused: boolean }): string => {
 }
 
 const renderIcon = (params: { isPaused: boolean }): ReactElement => {
-  if (params.isPaused) {
+  const { isPaused } = params
+  if (isPaused) {
     return <PlayIcon />
   }
 

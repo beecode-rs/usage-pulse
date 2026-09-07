@@ -2,16 +2,16 @@
 
 The dashboard starts empty. **+ Add** in the header opens a dialog that first asks which provider you want, then configures it. You can add any number of trackers, including several for the same provider (e.g. two Claude accounts with different tokens) — each tracker is a card with its own configuration behind the card's gear button (display name, token, remove).
 
-Each tracker is stored in `settings.trackers` as an `ITrackerConfig` (a discriminated union on `providerId`) with a unique `id` that also keys the usage snapshots. Settings saved in the old flat shape (one Claude + one z.ai token) are migrated automatically on first launch.
+Each tracker is stored in `settings.trackers` as an `TrackerConfig` (a discriminated union on `providerId`) with a unique `id` that also keys the usage snapshots. Settings saved in the old flat shape (one Claude + one z.ai token) are migrated automatically on first launch.
 
-The app uses the **strategy pattern** (`src/main/business/service/usage-provider/`). Providers are stateless and held in a `Record<ProviderId, IUsageProvider>` registry; the poll service resolves the provider per tracker and passes that tracker's token on every `fetchUsage` call:
+The app uses the **strategy pattern** (`src/main/business/service/usage-provider/`). Providers are stateless and held in a `Record<ProviderId, UsageProvider>` registry; the poll service resolves the provider per tracker and passes that tracker's token on every `fetchUsage` call:
 
 | Provider | Endpoint | 5-hour window | Long window |
 | --- | --- | --- | --- |
 | Claude | `GET https://api.anthropic.com/api/oauth/usage` (undocumented, OAuth bearer) | `five_hour.utilization` + `resets_at` | `seven_day.utilization` (weekly) |
 | z.ai | `GET https://api.z.ai/api/monitor/usage/quota/limit` | `limits[].type === 'TOKENS_LIMIT'` → `percentage` | `limits[].type === 'TIME_LIMIT'` → `percentage` + `currentValue`/`usage` counts (MCP quota, monthly) |
 
-To add a provider kind: extend `ProviderId` and `PROVIDER_CATALOG` (`src/shared/provider-catalog.ts`), create a class implementing `IUsageProvider` in the `usage-provider/` folder, and register it in `UsagePollService._createDefaultProviders()`.
+To add a provider kind: extend `ProviderId` and `constant.providerCatalog` (`src/shared/util/constant.ts`), create a class implementing `UsageProvider` in the `usage-provider/` folder, and register it in `UsagePollService._createDefaultProviders()`.
 
 ## Getting tokens
 

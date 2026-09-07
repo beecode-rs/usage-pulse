@@ -1,15 +1,12 @@
 import type { ReactElement } from 'react'
 
 import { DayTimeScheduleFields } from '#src/renderer/src/ui-component/schedule/day-time-schedule-fields'
-import {
-  type ITriggerConfig,
-  MAX_TRIGGER_TIMEOUT_MINUTES,
-  MIN_TRIGGER_TIMEOUT_MINUTES,
-} from '#src/shared/trigger-model'
+import { type ScheduleTriggerConfig } from '#src/shared/business/model/schedule-trigger-model'
+import { constant } from '#src/shared/util/constant'
 
 export const TriggerConfigFields = (props: {
-  config: ITriggerConfig
-  onChange: (config: ITriggerConfig) => void
+  config: ScheduleTriggerConfig
+  onChange: (config: ScheduleTriggerConfig) => void
 }): ReactElement => {
   const { config, onChange } = props
 
@@ -51,8 +48,8 @@ export const TriggerConfigFields = (props: {
         <span className="settings-field-label">Timeout (minutes)</span>
         <input
           className="settings-field-input"
-          max={MAX_TRIGGER_TIMEOUT_MINUTES}
-          min={MIN_TRIGGER_TIMEOUT_MINUTES}
+          max={constant.scheduleTrigger.timeout.maxMs / 60_000}
+          min={constant.scheduleTrigger.timeout.minMs / 60_000}
           onChange={(event) => {
             const minutes = Number.parseInt(event.target.value, 10)
 
@@ -60,7 +57,10 @@ export const TriggerConfigFields = (props: {
               return
             }
 
-            const clampedMinutes = Math.min(Math.max(minutes, MIN_TRIGGER_TIMEOUT_MINUTES), MAX_TRIGGER_TIMEOUT_MINUTES)
+            const clampedMinutes = Math.min(
+              Math.max(minutes, constant.scheduleTrigger.timeout.minMs / 60_000),
+              constant.scheduleTrigger.timeout.maxMs / 60_000,
+            )
 
             onChange({ ...config, timeoutMs: clampedMinutes * 60_000 })
           }}

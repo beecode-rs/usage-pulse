@@ -1,0 +1,151 @@
+subject: constantContractHarness
+module: ./__tests__/_constant-contract-harness.js
+subjectType: function
+methods:
+  execAppBundleRegex:
+    terms:
+      # --- macOS app bundle paths ---
+      # Standard bundle path from a process command line; group 1 is the .app directory.
+      - params:
+          - comm: '/Applications/Ghostty.app/Contents/MacOS/Ghostty'
+        result:
+          - '/Applications/Ghostty.app/'
+          - '/Applications/Ghostty.app'
+      # Optional leading dash is skipped and excluded from the capture.
+      - params:
+          - comm: '-/Applications/Visual Studio Code.app/Contents/MacOS/Electron'
+        result:
+          - '-/Applications/Visual Studio Code.app/'
+          - '/Applications/Visual Studio Code.app'
+      # Lazy capture spans parent folders when the .app sits deeper than /Applications.
+      - params:
+          - comm: '/Users/milos/Apps/My Tool.app/Contents/MacOS/Tool'
+        result:
+          - '/Users/milos/Apps/My Tool.app/'
+          - '/Users/milos/Apps/My Tool.app'
+      # --- Non-bundle command lines ---
+      # Plain binary path has no .app segment.
+      - params:
+          - comm: '/usr/bin/python3'
+        result: null
+      # .app must end the path segment; foo.app.bin does not qualify.
+      - params:
+          - comm: '/opt/foo.app.bin/launcher'
+        result: null
+      # A slash must follow the .app segment, so a bare bundle path fails.
+      - params:
+          - comm: '/Applications/Xcode.app'
+        result: null
+  execProcessLineRegex:
+    terms:
+      # --- ps-style pid + command lines ---
+      # Leading indentation is consumed but not captured; group 1 is the pid, group 2 the command.
+      - params:
+          - line: '  4999 /Applications/Ghostty.app/Contents/MacOS/Ghostty'
+        result:
+          - '  4999 /Applications/Ghostty.app/Contents/MacOS/Ghostty'
+          - '4999'
+          - '/Applications/Ghostty.app/Contents/MacOS/Ghostty'
+      # No leading whitespace still matches.
+      - params:
+          - line: '1234 /usr/bin/sleep'
+        result:
+          - '1234 /usr/bin/sleep'
+          - '1234'
+          - '/usr/bin/sleep'
+      # Command keeps its arguments, spaces included.
+      - params:
+          - line: '7 /usr/local/bin/node server.js --port 8080'
+        result:
+          - '7 /usr/local/bin/node server.js --port 8080'
+          - '7'
+          - '/usr/local/bin/node server.js --port 8080'
+      # Any whitespace, tabs included, separates pid from command.
+      - params:
+          - line: "42\t/usr/bin/yes"
+        result:
+          - "42\t/usr/bin/yes"
+          - '42'
+          - '/usr/bin/yes'
+      # --- Malformed lines ---
+      # A pid without a command fails: the command group requires content.
+      - params:
+          - line: '  4999'
+        result: null
+      # A command without a leading pid fails.
+      - params:
+          - line: 'node server.js'
+        result: null
+  execTwoDigitTimeRegex:
+    terms:
+      # --- Valid HH:mm shapes ---
+      - params:
+          - time: '09:30'
+        result:
+          - '09:30'
+          - '09'
+          - '30'
+      - params:
+          - time: '23:59'
+        result:
+          - '23:59'
+          - '23'
+          - '59'
+      # Zero-parsed midnight keeps both groups as text.
+      - params:
+          - time: '00:00'
+        result:
+          - '00:00'
+          - '00'
+          - '00'
+      # --- Invalid shapes ---
+      # One-digit hour fails.
+      - params:
+          - time: '9:30'
+        result: null
+      # One-digit minute fails.
+      - params:
+          - time: '09:5'
+        result: null
+      # Missing colon fails.
+      - params:
+          - time: '0930'
+        result: null
+      # Shape only: ranges are not validated here.
+      - params:
+          - time: '99:99'
+        result:
+          - '99:99'
+          - '99'
+          - '99'
+  isDigitsOnly:
+    terms:
+      # --- Digit-only values ---
+      - params:
+          - segment: '123'
+        result: true
+      # Single digit.
+      - params:
+          - segment: '0'
+        result: true
+      # Leading zeros are still digits.
+      - params:
+          - segment: '007'
+        result: true
+      # --- Non digit-only values ---
+      # Empty string fails: at least one digit is required.
+      - params:
+          - segment: ''
+        result: false
+      # Trailing letters fail.
+      - params:
+          - segment: '12a'
+        result: false
+      # A sign is not a digit.
+      - params:
+          - segment: '-1'
+        result: false
+      # Inner whitespace fails.
+      - params:
+          - segment: '1 2'
+        result: false

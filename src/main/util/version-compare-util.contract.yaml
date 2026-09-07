@@ -1,172 +1,210 @@
-subject: versionCompareUtil
+subject: VersionCompareUtil
 module: ./version-compare-util.js
-subjectType: function
+subjectType: class
+constructor:
+  # All own fields are bound arrow functions, which JSON serialization drops,
+  # so a fresh instance compares as an empty object.
+  terms:
+    - params: []
+      result: {}
 methods:
-  resolveIsNewerVersion:
+  isNewerVersion:
     terms:
       # --- Newer candidate ---
       # Newer patch, v-prefix on candidate only.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: 'v0.3.0'
             currentVersion: '0.2.0'
         result: true
       # Newer minor.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '0.4.0'
             currentVersion: '0.3.9'
         result: true
       # Newer major.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '2.0.0'
             currentVersion: '1.9.9'
         result: true
       # Segments compare numerically, not lexically: 10 > 9.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '0.10.0'
             currentVersion: '0.9.0'
         result: true
       # Single-segment versions still count as newer.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '1'
             currentVersion: '0'
         result: true
       # Bump confined to the last segment.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '0.0.1'
             currentVersion: '0.0.0'
         result: true
       # --- Equal or older candidate ---
       # Identical versions are not newer.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '0.3.0'
             currentVersion: '0.3.0'
         result: false
       # Equal despite mixed v-prefix.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: 'v0.3.0'
             currentVersion: '0.3.0'
         result: false
       # Equal despite uppercase V on the current side.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '0.3.0'
             currentVersion: 'V0.3.0'
         result: false
       # Older patch.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '0.2.9'
             currentVersion: '0.3.0'
         result: false
       # Older major.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '1.9.9'
             currentVersion: '2.0.0'
         result: false
       # Missing segments pad to zero: 1.0 equals 1.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '1.0'
             currentVersion: '1'
         result: false
       # --- Segment-count asymmetry ---
       # Extra segment on the candidate makes it newer: 0.3.1 > 0.3.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '0.3.1'
             currentVersion: '0.3'
         result: true
       # Extra segment on the current side wins: 0.3 < 0.3.1.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '0.3'
             currentVersion: '0.3.1'
         result: false
       # Four segments are handled the same way: 1.0.0.1 > 1.0.0.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '1.0.0.1'
             currentVersion: '1.0.0'
         result: true
       # Four segments on the current side: 1.0.0 < 1.0.0.1.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '1.0.0'
             currentVersion: '1.0.0.1'
         result: false
       # --- Prefix and whitespace stripping ---
       # Surrounding spaces are trimmed on both sides.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '  0.5.0  '
             currentVersion: ' 0.4.0 '
         result: true
       # Tabs and newlines are trimmed too, alongside v/V prefixes.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: "  v1.1.0\n"
             currentVersion: "\tV1.0.0 "
         result: true
-      # Only ONE leading v is stripped — a doubled prefix is malformed.
-      - params:
+      # Only ONE leading v is stripped - a doubled prefix is malformed.
+      - constructorParams: []
+        params:
           - candidateVersion: 'vv1.0.0'
             currentVersion: '1.0.0'
         result: false
       # --- Prerelease suffixes (cores compared, suffix ignored) ---
       # Prerelease candidate with a newer core is still newer.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '1.3.0-beta.1'
             currentVersion: '1.2.4'
         result: true
       # Prerelease candidate with an equal core is not newer.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '1.2.3-beta'
             currentVersion: '1.2.3'
         result: false
       # Prerelease on both sides with equal cores: suffixes are ignored entirely.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '1.2.3-alpha'
             currentVersion: '1.2.3-rc.2'
         result: false
       # Prerelease only on the current side, equal cores.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '1.2.3'
             currentVersion: '1.2.3-beta'
         result: false
       # --- Malformed input never claims an update ---
       # Garbage candidate.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: 'latest'
             currentVersion: '0.3.0'
         result: false
-      # Garbage current version — a good-looking candidate still loses.
-      - params:
+      # Garbage current version - a good-looking candidate still loses.
+      - constructorParams: []
+        params:
           - candidateVersion: '0.9.9'
             currentVersion: 'not-a-version'
         result: false
       # Empty candidate.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: ''
             currentVersion: '0.3.0'
         result: false
       # Empty current version.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '0.4.0'
             currentVersion: ''
         result: false
       # Both empty.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: ''
             currentVersion: ''
         result: false
       # Bare v strips down to an empty core.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: 'v'
             currentVersion: '1.0.0'
         result: false
       # Non-numeric segment in the candidate.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '0.3.x'
             currentVersion: '0.2.0'
         result: false
       # Non-numeric segment in the current version.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '0.3.0'
             currentVersion: '0.2.x'
         result: false
       # Leading dash splits off an empty core.
-      - params:
+      - constructorParams: []
+        params:
           - candidateVersion: '-1.0.0'
             currentVersion: '1.0.0'
         result: false

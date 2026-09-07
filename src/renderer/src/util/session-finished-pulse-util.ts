@@ -1,46 +1,47 @@
-import { sessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
-import { type ISessionInfo } from '#src/shared/session-model'
-
-const MILLISECONDS_PER_SECOND = 1000
+import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { type SessionInfo } from '#src/shared/business/model/session-model'
 
 export const sessionFinishedPulseUtil = {
   resolveFinishedAtBySessionId: (params: {
-    currentSessions: ISessionInfo[]
+    currentSessions: SessionInfo[]
     finishedAtBySessionId: Record<string, number>
     nowMs: number
-    previousSessions?: ISessionInfo[]
+    previousSessions?: SessionInfo[]
   }): Record<string, number> => {
+    const { currentSessions, finishedAtBySessionId, nowMs, previousSessions } = params
     const idleSessionIds = new Set(
-      params.currentSessions
+      currentSessions
         .filter((session) => {
-          return session.status === 'idle'
+          return session.status === SessionStatusMapper.IDLE
         })
         .map((session) => {
           return session.sessionId
         }),
     )
-    const keptEntries = Object.entries(params.finishedAtBySessionId).filter(([sessionId]) => {
+    const keptEntries = Object.entries(finishedAtBySessionId).filter(([sessionId]) => {
       return idleSessionIds.has(sessionId)
     })
-    const finishedEntries = sessionSoundUtil
+    const finishedEntries = new SessionSoundUtil()
       .resolveStatusTransitionSessionIds({
-        currentSessions: params.currentSessions,
-        fromStatus: 'busy',
-        previousSessions: params.previousSessions,
-        toStatus: 'idle',
+        currentSessions,
+        fromStatus: SessionStatusMapper.BUSY,
+        previousSessions,
+        toStatus: SessionStatusMapper.IDLE,
       })
       .map((sessionId): [string, number] => {
-        return [sessionId, params.nowMs]
+        return [sessionId, nowMs]
       })
 
     return Object.fromEntries([...keptEntries, ...finishedEntries])
   },
 
-  resolveIsPulsing: (params: { finishedAtMs?: number; nowMs: number; pulseSeconds: number }): boolean => {
-    if (params.finishedAtMs === undefined || params.pulseSeconds <= 0) {
+  resolveIsPulsing: (params: { finishedAtMs?: number; nowMs: number; pulseMs: number }): boolean => {
+    const { finishedAtMs, nowMs, pulseMs } = params
+    if (finishedAtMs === undefined || pulseMs <= 0) {
       return false
     }
 
-    return params.nowMs - params.finishedAtMs < params.pulseSeconds * MILLISECONDS_PER_SECOND
+    return nowMs - finishedAtMs < pulseMs
   },
 }
