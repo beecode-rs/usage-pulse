@@ -1,52 +1,20 @@
 import { BrowserWindow, app, shell } from 'electron'
 import { join } from 'node:path'
 
+import { config } from '#src/main/util/config'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+
 export type WindowVisibilityChangeListener = (params: { isVisible: boolean }) => void
 
-export const appWindow = {
-  _resolveWindowIconPath(): string | undefined {
-    switch (process.platform) {
-      case 'linux': {
-        return join(__dirname, '../../build/icons/512x512.png')
-      }
-      case 'win32': {
-        return join(__dirname, '../../build/icons/256x256.png')
-      }
-      default: {
-        return undefined
-      }
-    }
-  },
-
-  _setDevelopmentDockIcon(): void {
-    if (app.isPackaged || process.platform !== 'darwin') {
-      return
-    }
-
-    app.dock?.setIcon(join(__dirname, '../../build/icons/512x512.png'))
-  },
-
-  _watchVisibility(params: { browserWindow: BrowserWindow; onVisibilityChange: WindowVisibilityChangeListener }): void {
-    const notifyVisible = (): void => {
-      params.onVisibilityChange({ isVisible: true })
-    }
-
-    const notifyHidden = (): void => {
-      params.onVisibilityChange({ isVisible: false })
-    }
-
-    params.browserWindow.on('show', notifyVisible)
-    params.browserWindow.on('restore', notifyVisible)
-    params.browserWindow.on('hide', notifyHidden)
-    params.browserWindow.on('minimize', notifyHidden)
-  },
-
-  create: (params?: { onVisibilityChange?: WindowVisibilityChangeListener }): BrowserWindow => {
-    appWindow._setDevelopmentDockIcon()
+export class AppWindow {
+  create(params?: { onVisibilityChange?: WindowVisibilityChangeListener }): BrowserWindow {
+    const { onVisibilityChange } = params ?? {}
+    this._setDevelopmentDockIcon()
 
     const browserWindow = new BrowserWindow({
       height: 680,
-      icon: appWindow._resolveWindowIconPath(),
+      icon: this._resolveWindowIconPath(),
       minHeight: 560,
       minWidth: 760,
       show: false,
@@ -63,8 +31,8 @@ export const appWindow = {
       browserWindow.show()
     })
 
-    if (params?.onVisibilityChange !== undefined) {
-      appWindow._watchVisibility({ browserWindow, onVisibilityChange: params.onVisibilityChange })
+    if (onVisibilityChange !== undefined) {
+      this._watchVisibility({ browserWindow, onVisibilityChange })
     }
 
     browserWindow.webContents.setWindowOpenHandler((details) => {
@@ -73,12 +41,55 @@ export const appWindow = {
       return { action: 'deny' }
     })
 
-    if (process.env.ELECTRON_RENDERER_URL !== undefined) {
-      void browserWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
+    const rendererUrl = config.rendererUrl
+
+    if (rendererUrl !== undefined) {
+      void browserWindow.loadURL(rendererUrl)
     } else {
       void browserWindow.loadFile(join(__dirname, '../renderer/index.html'))
     }
 
     return browserWindow
-  },
+  }
+
+  protected _resolveWindowIconPath(): string | undefined {
+    switch (osUtil.resolvePlatform()) {
+      case OS.LINUX: {
+        return join(__dirname, '../../build/icons/512x512.png')
+      }
+      case OS.WINDOWS: {
+        return join(__dirname, '../../build/icons/256x256.png')
+      }
+      default: {
+        return undefined
+      }
+    }
+  }
+
+  protected _setDevelopmentDockIcon(): void {
+    if (app.isPackaged || osUtil.resolvePlatform() !== OS.MACOS) {
+      return
+    }
+
+    app.dock?.setIcon(join(__dirname, '../../build/icons/512x512.png'))
+  }
+
+  protected _watchVisibility(params: {
+    browserWindow: BrowserWindow
+    onVisibilityChange: WindowVisibilityChangeListener
+  }): void {
+    const { browserWindow, onVisibilityChange } = params
+    const notifyVisible = (): void => {
+      onVisibilityChange({ isVisible: true })
+    }
+
+    const notifyHidden = (): void => {
+      onVisibilityChange({ isVisible: false })
+    }
+
+    browserWindow.on('show', notifyVisible)
+    browserWindow.on('restore', notifyVisible)
+    browserWindow.on('hide', notifyHidden)
+    browserWindow.on('minimize', notifyHidden)
+  }
 }

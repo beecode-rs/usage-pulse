@@ -5,6 +5,7 @@ export const developmentPrefsUtil = {
     return window.localStorage.getItem(STORAGE_KEY) === 'true'
   },
   saveIsUnlocked: (params: { isUnlocked: boolean }): void => {
-    window.localStorage.setItem(STORAGE_KEY, String(params.isUnlocked))
+    const { isUnlocked } = params
+    window.localStorage.setItem(STORAGE_KEY, String(isUnlocked))
   },
 }

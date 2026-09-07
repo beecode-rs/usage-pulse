@@ -1,68 +1,64 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-import { IpcChannelMapper } from '#src/shared/ipc-channel'
-import type { OsPlatform } from '#src/shared/os-model'
+import type { UsageApiClient } from '#src/renderer/src/business/service/usage-api-client'
+import { IpcChannelMapper } from '#src/shared/business/enum/ipc-channel-mapper-enum'
+import type { OS } from '#src/shared/business/enum/os-enum'
 import {
-  type ISessionFocusSupport,
-  type ISessionSnapshot,
-  type SessionsUpdateListener,
-} from '#src/shared/session-model'
-import { type IAppSettings } from '#src/shared/settings-model'
+  type ScheduleTriggerRegistrationHealth,
+  type ScheduleTriggerRunLogEntry,
+  type SchedulingInfo,
+} from '#src/shared/business/model/schedule-trigger-model'
+import { type SessionSnapshot, type SessionsUpdateListener } from '#src/shared/business/model/session-model'
+import { type SettingsModel } from '#src/shared/business/model/settings-model'
+import { type UpdateStatus, type UpdateStatusListener } from '#src/shared/business/model/update-model'
 import {
-  type ISchedulingInfo,
-  type ITriggerRegistrationHealth,
-  type ITriggerRunLogEntry,
-} from '#src/shared/trigger-model'
-import { type IUpdateStatus, type UpdateStatusListener } from '#src/shared/update-model'
-import {
-  type IUsageApiClient,
-  type IUsageSnapshot,
   type SettingsUpdateListener,
+  type UsageSnapshot,
   type UsageUpdateListener,
-} from '#src/shared/usage-model'
+} from '#src/shared/business/model/usage-model'
 
-const usageApi: IUsageApiClient = {
+const usageApi: UsageApiClient = {
   clearTriggerRunLogs: (params: { triggerId: string }): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.TRIGGER_CLEAR_RUN_LOGS, params)
   },
   focusSession: (params: { cwd: string; pid: number }): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_FOCUS, params)
   },
-  getPlatform: (): Promise<OsPlatform> => {
+  getPlatform: (): Promise<OS> => {
     return ipcRenderer.invoke(IpcChannelMapper.OS_GET_PLATFORM)
   },
-  getSchedulingInfo: (): Promise<ISchedulingInfo> => {
+  getSchedulingInfo: (): Promise<SchedulingInfo> => {
     return ipcRenderer.invoke(IpcChannelMapper.SCHEDULING_GET_INFO)
   },
-  getSessionFocusSupport: (): Promise<ISessionFocusSupport> => {
-    return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_GET_FOCUS_SUPPORT)
-  },
-  getSessionsSnapshot: (): Promise<ISessionSnapshot | undefined> => {
+  getSessionsSnapshot: (): Promise<SessionSnapshot | undefined> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_GET_SNAPSHOT)
   },
-  getSettings: (): Promise<IAppSettings> => {
+  getSettings: (): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.SETTINGS_GET)
   },
-  getSnapshot: (): Promise<IUsageSnapshot> => {
+  getSnapshot: (): Promise<UsageSnapshot> => {
     return ipcRenderer.invoke(IpcChannelMapper.USAGE_GET_SNAPSHOT)
   },
-  getTriggerRunLogs: (params: { triggerId: string }): Promise<ITriggerRunLogEntry[]> => {
+  getTriggerRunLogs: (params: { triggerId: string }): Promise<ScheduleTriggerRunLogEntry[]> => {
     return ipcRenderer.invoke(IpcChannelMapper.TRIGGER_GET_RUN_LOGS, params)
   },
-  getUpdateStatus: (): Promise<IUpdateStatus> => {
+  getUpdateStatus: (): Promise<UpdateStatus> => {
     return ipcRenderer.invoke(IpcChannelMapper.UPDATE_GET_STATUS)
   },
-  inspectTriggerRegistrations: (): Promise<ITriggerRegistrationHealth[]> => {
+  inspectTriggerRegistrations: (): Promise<ScheduleTriggerRegistrationHealth[]> => {
     return ipcRenderer.invoke(IpcChannelMapper.TRIGGER_OS_INSPECT)
   },
-  installSessionFocusTool: (): Promise<ISessionFocusSupport> => {
+  installSessionFocusTool: (): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_INSTALL_FOCUS_TOOL)
   },
-  listSessions: (): Promise<ISessionSnapshot> => {
+  isSessionFocusSupported: (): Promise<boolean> => {
+    return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_GET_FOCUS_SUPPORT)
+  },
+  listSessions: (): Promise<SessionSnapshot> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_LIST)
   },
   onSessionsUpdate: (listener: SessionsUpdateListener): (() => void) => {
-    const sessionsUpdateListener = (_event: Electron.IpcRendererEvent, snapshot: ISessionSnapshot): void => {
+    const sessionsUpdateListener = (_event: Electron.IpcRendererEvent, snapshot: SessionSnapshot): void => {
       listener(snapshot)
     }
 
@@ -73,7 +69,7 @@ const usageApi: IUsageApiClient = {
     }
   },
   onSettingsUpdate: (listener: SettingsUpdateListener): (() => void) => {
-    const settingsUpdateListener = (_event: Electron.IpcRendererEvent, settings: IAppSettings): void => {
+    const settingsUpdateListener = (_event: Electron.IpcRendererEvent, settings: SettingsModel): void => {
       listener(settings)
     }
 
@@ -84,7 +80,7 @@ const usageApi: IUsageApiClient = {
     }
   },
   onUpdateStatus: (listener: UpdateStatusListener): (() => void) => {
-    const updateStatusListener = (_event: Electron.IpcRendererEvent, status: IUpdateStatus): void => {
+    const updateStatusListener = (_event: Electron.IpcRendererEvent, status: UpdateStatus): void => {
       listener(status)
     }
 
@@ -95,7 +91,7 @@ const usageApi: IUsageApiClient = {
     }
   },
   onUsageUpdate: (listener: UsageUpdateListener): (() => void) => {
-    const usageUpdateListener = (_event: Electron.IpcRendererEvent, snapshot: IUsageSnapshot): void => {
+    const usageUpdateListener = (_event: Electron.IpcRendererEvent, snapshot: UsageSnapshot): void => {
       listener(snapshot)
     }
 
@@ -112,18 +108,20 @@ const usageApi: IUsageApiClient = {
     return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH)
   },
   refreshTracker: (params: { trackerId: string }): Promise<void> => {
-    return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH_TRACKER, params.trackerId)
+    const { trackerId } = params
+
+    return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH_TRACKER, trackerId)
   },
-  saveSettings: (settings: IAppSettings): Promise<IAppSettings> => {
+  saveSettings: (settings: SettingsModel): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.SETTINGS_SAVE, settings)
   },
-  setSchedulingEnabled: (params: { isEnabled: boolean }): Promise<IAppSettings> => {
+  setSchedulingEnabled: (params: { isEnabled: boolean }): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.SCHEDULING_SET_ENABLED, params)
   },
-  setTrackerPaused: (params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<IAppSettings> => {
+  setTrackerPaused: (params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.USAGE_SET_TRACKER_PAUSED, params)
   },
-  setTriggerEnabled: (params: { isEnabled: boolean; triggerId: string }): Promise<IAppSettings> => {
+  setTriggerEnabled: (params: { isEnabled: boolean; triggerId: string }): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.TRIGGER_SET_ENABLED, params)
   },
   testSshHost: (params: { url: string }): Promise<void> => {

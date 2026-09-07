@@ -1,9 +1,9 @@
 import { type ReactElement } from 'react'
 
 import { sessionPresentationUtil } from '#src/renderer/src/util/session-presentation-util'
-import type { ISessionTranscriptStats } from '#src/shared/session-model'
+import type { SessionTranscriptStats } from '#src/shared/business/model/session-model'
 
-export const SessionTranscriptChips = (props: { nowMs: number; transcript: ISessionTranscriptStats }): ReactElement => {
+export const SessionTranscriptChips = (props: { nowMs: number; transcript: SessionTranscriptStats }): ReactElement => {
   const { nowMs, transcript } = props
 
   return (

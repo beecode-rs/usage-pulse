@@ -1,79 +1,84 @@
-export const DIAL_ANGLE_RANGE_DEGREES = 270
+import { constant } from '#src/renderer/src/util/constant'
 
-export const DIAL_START_ANGLE_DEGREES = 135
+export class PlannerDialUtil {
+  resolveDialDeltaDegrees(params: { angleDegrees: number }): number {
+    const { angleDegrees } = params
+    const deltaDegrees = (((angleDegrees - constant.plannerDialStartAngleDegrees) % 360) + 360) % 360
 
-export const plannerDialUtil = {
-  _resolveClampedValue: (params: { max: number; min: number; value: number }): number => {
-    return Math.min(Math.max(params.value, params.min), params.max)
-  },
-
-  resolveDialDeltaDegrees: (params: { angleDegrees: number }): number => {
-    const deltaDegrees = (((params.angleDegrees - DIAL_START_ANGLE_DEGREES) % 360) + 360) % 360
-
-    if (deltaDegrees <= DIAL_ANGLE_RANGE_DEGREES) {
+    if (deltaDegrees <= constant.plannerDialAngleRangeDegrees) {
       return deltaDegrees
     }
 
-    if (deltaDegrees - DIAL_ANGLE_RANGE_DEGREES < 360 - deltaDegrees) {
-      return DIAL_ANGLE_RANGE_DEGREES
+    if (deltaDegrees - constant.plannerDialAngleRangeDegrees < 360 - deltaDegrees) {
+      return constant.plannerDialAngleRangeDegrees
     }
 
     return 0
-  },
+  }
 
-  resolveKeyboardValue: (params: { key: string; max: number; min: number; step: number; value: number }): number => {
-    switch (params.key) {
+  resolveKeyboardValue(params: { key: string; max: number; min: number; step: number; value: number }): number {
+    const { key, max, min, step, value } = params
+    switch (key) {
       case 'ArrowDown':
       case 'ArrowLeft': {
-        return plannerDialUtil._resolveClampedValue({
-          max: params.max,
-          min: params.min,
-          value: params.value - params.step,
+        return this._resolveClampedValue({
+          max,
+          min,
+          value: value - step,
         })
       }
 
       case 'ArrowRight':
       case 'ArrowUp': {
-        return plannerDialUtil._resolveClampedValue({
-          max: params.max,
-          min: params.min,
-          value: params.value + params.step,
+        return this._resolveClampedValue({
+          max,
+          min,
+          value: value + step,
         })
       }
 
       case 'End': {
-        return params.max
+        return max
       }
 
       case 'Home': {
-        return params.min
+        return min
       }
 
       default: {
-        return params.value
+        return value
       }
     }
-  },
+  }
 
-  resolvePointerValue: (params: { dx: number; dy: number; max: number; min: number; step: number }): number => {
-    const pointerAngleDegrees = (Math.atan2(params.dy, params.dx) * 180) / Math.PI
-    const deltaDegrees = plannerDialUtil.resolveDialDeltaDegrees({ angleDegrees: pointerAngleDegrees })
-    const valueFraction = deltaDegrees / DIAL_ANGLE_RANGE_DEGREES
-    const rawValue = params.min + valueFraction * (params.max - params.min)
+  resolvePointerValue(params: { dx: number; dy: number; max: number; min: number; step: number }): number {
+    const { dx, dy, max, min, step } = params
+    const pointerAngleDegrees = (Math.atan2(dy, dx) * 180) / Math.PI
+    const deltaDegrees = this.resolveDialDeltaDegrees({ angleDegrees: pointerAngleDegrees })
+    const valueFraction = deltaDegrees / constant.plannerDialAngleRangeDegrees
+    const rawValue = min + valueFraction * (max - min)
 
-    return plannerDialUtil.resolveSteppedValue({ max: params.max, min: params.min, rawValue, step: params.step })
-  },
+    return this.resolveSteppedValue({ max, min, rawValue, step })
+  }
 
-  resolveSteppedValue: (params: { max: number; min: number; rawValue: number; step: number }): number => {
-    const stepCount = Math.round((params.rawValue - params.min) / params.step)
-    const steppedValue = params.min + stepCount * params.step
+  resolveSteppedValue(params: { max: number; min: number; rawValue: number; step: number }): number {
+    const { max, min, rawValue, step } = params
+    const stepCount = Math.round((rawValue - min) / step)
+    const steppedValue = min + stepCount * step
 
-    return plannerDialUtil._resolveClampedValue({ max: params.max, min: params.min, value: steppedValue })
-  },
+    return this._resolveClampedValue({ max, min, value: steppedValue })
+  }
 
-  resolveValueAngleDegrees: (params: { max: number; min: number; value: number }): number => {
-    const valueFraction = (params.value - params.min) / (params.max - params.min)
+  resolveValueAngleDegrees(params: { max: number; min: number; value: number }): number {
+    const { max, min, value } = params
+    const valueFraction = (value - min) / (max - min)
 
-    return DIAL_START_ANGLE_DEGREES + valueFraction * DIAL_ANGLE_RANGE_DEGREES
-  },
+    return constant.plannerDialStartAngleDegrees + valueFraction * constant.plannerDialAngleRangeDegrees
+  }
+
+  protected _resolveClampedValue(params: { max: number; min: number; value: number }): number {
+    const { max, min, value } = params
+
+    return Math.min(Math.max(value, min), max)
+  }
 }

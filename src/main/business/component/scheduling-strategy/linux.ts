@@ -5,30 +5,34 @@ import { join } from 'node:path'
 import { promisify } from 'node:util'
 
 import type {
-  ISchedulingInspection,
-  ISchedulingRegistrationParams,
-  ISchedulingStrategy,
+  SchedulingInspection,
+  SchedulingRegistrationParams,
+  SchedulingStrategy,
 } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
+import { config } from '#src/main/util/config'
+import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/main/util/error-util'
-import { type OsPlatform, osUtil } from '#src/main/util/os-util'
-import { TRIGGER_DAYS, type TriggerDay } from '#src/shared/trigger-model'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
+import { constant as sharedConstant } from '#src/shared/util/constant'
 
 const execFileAsync = promisify(execFile)
 
-export class SchedulingStrategyLinux implements ISchedulingStrategy {
+export class SchedulingStrategyLinux implements SchedulingStrategy {
   readonly isSupported: boolean
 
   protected readonly _homeDir: string
-  protected readonly _systemctlProbeTimeoutMs = 5000
-  protected readonly _systemctlTimeoutMs = 10000
-  protected readonly _systemdDayByTriggerDay: Record<TriggerDay, string> = {
-    friday: 'Fri',
-    monday: 'Mon',
-    saturday: 'Sat',
-    sunday: 'Sun',
-    thursday: 'Thu',
-    tuesday: 'Tue',
-    wednesday: 'Wed',
+  protected readonly _systemctlProbeTimeoutMs = config.systemctlProbeTimeoutMs
+  protected readonly _systemctlTimeoutMs = config.systemctlTimeoutMs
+  protected readonly _systemdDayByTriggerDay: Record<ScheduleTriggerDayMapper, string> = {
+    [ScheduleTriggerDayMapper.FRIDAY]: 'Fri',
+    [ScheduleTriggerDayMapper.MONDAY]: 'Mon',
+    [ScheduleTriggerDayMapper.SATURDAY]: 'Sat',
+    [ScheduleTriggerDayMapper.SUNDAY]: 'Sun',
+    [ScheduleTriggerDayMapper.THURSDAY]: 'Thu',
+    [ScheduleTriggerDayMapper.TUESDAY]: 'Tue',
+    [ScheduleTriggerDayMapper.WEDNESDAY]: 'Wed',
   }
 
   protected readonly _systemdExecQuoteTriggerCharacters = new Set([
@@ -62,19 +66,21 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   protected readonly _unitDir: string
 
   constructor(params: { configDir?: string; homeDir?: string; isSystemdUserAvailable?: boolean } = {}) {
+    const { configDir, homeDir, isSystemdUserAvailable } = params
     this._assertLinuxOsPlatform()
-    this._homeDir = params.homeDir ?? homedir()
-    this._unitDir = params.configDir ?? this._resolveDefaultUnitDir()
-    this.isSupported = params.isSystemdUserAvailable ?? this._resolveIsSystemdUserAvailable()
+    this._homeDir = homeDir ?? homedir()
+    this._unitDir = configDir ?? this._resolveDefaultUnitDir()
+    this.isSupported = isSystemdUserAvailable ?? this._resolveIsSystemdUserAvailable()
   }
 
-  getSchedulingPlatform(): OsPlatform {
-    return 'linux'
+  getSchedulingPlatform(): OS {
+    return OS.LINUX
   }
 
-  async inspectRegistration(params: { triggerId: string }): Promise<ISchedulingInspection> {
-    const isTimerUnitFilePresent = await this._resolveIsTimerUnitFilePresent({ triggerId: params.triggerId })
-    const isTimerActive = await this._resolveIsTimerActive({ triggerId: params.triggerId })
+  async inspectRegistration(params: { triggerId: string }): Promise<SchedulingInspection> {
+    const { triggerId } = params
+    const isTimerUnitFilePresent = await this._resolveIsTimerUnitFilePresent({ triggerId })
+    const isTimerActive = await this._resolveIsTimerActive({ triggerId })
 
     return { isRegistered: isTimerUnitFilePresent && isTimerActive }
   }
@@ -92,50 +98,51 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   async removeRegistration(params: { triggerId: string }): Promise<void> {
-    await this._disableTimerToleratingAbsence({ triggerId: params.triggerId })
-    await this._resetFailedService({ triggerId: params.triggerId })
-    await this._removeUnitFiles({ triggerId: params.triggerId })
+    const { triggerId } = params
+    await this._disableTimerToleratingAbsence({ triggerId })
+    await this._resetFailedService({ triggerId })
+    await this._removeUnitFiles({ triggerId })
     await this._reloadDaemon()
   }
 
-  async upsertRegistration(params: ISchedulingRegistrationParams): Promise<void> {
+  async upsertRegistration(params: SchedulingRegistrationParams): Promise<void> {
+    const { triggerId } = params
     this._assertRegistrationParams(params)
     await this._writeUnitFiles(params)
     await this._reloadDaemon()
     await this._execSystemctl({
-      args: ['enable', this._resolveTimerUnitName({ triggerId: params.triggerId })],
-      errorMessage: `enabling the systemd user timer for trigger '${params.triggerId}' failed`,
+      args: ['enable', this._resolveTimerUnitName({ triggerId })],
+      errorMessage: `enabling the systemd user timer for trigger '${triggerId}' failed`,
     })
     await this._execSystemctl({
-      args: ['restart', this._resolveTimerUnitName({ triggerId: params.triggerId })],
-      errorMessage: `restarting the systemd user timer for trigger '${params.triggerId}' failed`,
+      args: ['restart', this._resolveTimerUnitName({ triggerId })],
+      errorMessage: `restarting the systemd user timer for trigger '${triggerId}' failed`,
     })
   }
 
   protected _assertLinuxOsPlatform(): void {
     const platform = osUtil.resolvePlatform()
 
-    if (platform !== 'linux') {
+    if (platform !== OS.LINUX) {
       throw new Error('Scheduling triggers with systemd user timers are only supported on Linux for now')
     }
   }
 
-  protected _assertRegistrationParams(params: ISchedulingRegistrationParams): void {
-    if (!/^[A-Za-z0-9_-]+$/.test(params.triggerId)) {
-      throw new Error(
-        `Invalid trigger id '${params.triggerId}': only alphanumerics, underscores and hyphens are allowed`,
-      )
+  protected _assertRegistrationParams(params: SchedulingRegistrationParams): void {
+    const { days, executableArgs, executablePath, times, triggerId } = params
+    if (!/^[A-Za-z0-9_-]+$/.test(triggerId)) {
+      throw new Error(`Invalid trigger id '${triggerId}': only alphanumerics, underscores and hyphens are allowed`)
     }
 
-    if (params.executablePath.trim() === '') {
+    if (executablePath.trim() === '') {
       throw new Error('Trigger registration requires a non-empty executablePath')
     }
 
-    if (params.executableArgs.length === 0) {
+    if (executableArgs.length === 0) {
       throw new Error('Trigger registration requires at least one executable argument')
     }
 
-    const isEmptyArgument = params.executableArgs.some((argument) => {
+    const isEmptyArgument = executableArgs.some((argument) => {
       return argument.trim() === ''
     })
 
@@ -143,11 +150,11 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
       throw new Error('Trigger registration requires non-empty executable arguments')
     }
 
-    if (params.days.length === 0) {
+    if (days.length === 0) {
       throw new Error('Trigger registration requires at least one day')
     }
 
-    const invalidDays = params.days.filter((day) => {
+    const invalidDays = days.filter((day) => {
       return !Object.hasOwn(this._systemdDayByTriggerDay, day)
     })
 
@@ -155,38 +162,41 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
       throw new Error(`Invalid trigger days: ${invalidDays.join(', ')}`)
     }
 
-    if (params.times.length === 0) {
+    if (times.length === 0) {
       throw new Error('Trigger registration requires at least one time')
     }
 
-    params.times.forEach((time) => {
+    times.forEach((time) => {
       this._parseTimeOfDay({ time })
     })
   }
 
-  protected _buildOnCalendarValues(params: { days: TriggerDay[]; times: string[] }): string[] {
-    const daysValue = TRIGGER_DAYS.filter((day) => {
-      return params.days.includes(day)
-    })
+  protected _buildOnCalendarValues(params: { days: ScheduleTriggerDayMapper[]; times: string[] }): string[] {
+    const { days, times } = params
+    const daysValue = sharedConstant.scheduleTrigger.days
+      .filter((day) => {
+        return days.includes(day)
+      })
       .map((day) => {
         return this._systemdDayByTriggerDay[day]
       })
       .join(',')
 
-    return params.times.map((time) => {
+    return times.map((time) => {
       return `${daysValue} ${time}`
     })
   }
 
-  protected _buildServiceUnitContent(params: ISchedulingRegistrationParams): string {
-    const execStartValue = [params.executablePath, ...params.executableArgs]
+  protected _buildServiceUnitContent(params: SchedulingRegistrationParams): string {
+    const { executableArgs, executablePath, triggerId } = params
+    const execStartValue = [executablePath, ...executableArgs]
       .map((argument) => {
         return this._formatSystemdExecArg(argument)
       })
       .join(' ')
     const unitLines = [
       '[Unit]',
-      `Description=Usage Pulse trigger ${params.triggerId}`,
+      `Description=Usage Pulse trigger ${triggerId}`,
       '',
       '[Service]',
       'Type=oneshot',
@@ -196,13 +206,14 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
     return `${unitLines.join('\n')}\n`
   }
 
-  protected _buildTimerUnitContent(params: ISchedulingRegistrationParams): string {
-    const onCalendarLines = this._buildOnCalendarValues({ days: params.days, times: params.times }).map((value) => {
+  protected _buildTimerUnitContent(params: SchedulingRegistrationParams): string {
+    const { days, times, triggerId } = params
+    const onCalendarLines = this._buildOnCalendarValues({ days, times }).map((value) => {
       return `OnCalendar=${value}`
     })
     const unitLines = [
       '[Unit]',
-      `Description=Usage Pulse trigger ${params.triggerId} schedule`,
+      `Description=Usage Pulse trigger ${triggerId} schedule`,
       '',
       '[Timer]',
       ...onCalendarLines,
@@ -216,7 +227,8 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   protected async _disableTimerToleratingAbsence(params: { triggerId: string }): Promise<void> {
-    const isTimerUnitFilePresent = await this._resolveIsTimerUnitFilePresent({ triggerId: params.triggerId })
+    const { triggerId } = params
+    const isTimerUnitFilePresent = await this._resolveIsTimerUnitFilePresent({ triggerId })
 
     if (!isTimerUnitFilePresent) {
       return
@@ -224,8 +236,8 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
 
     try {
       await this._execSystemctl({
-        args: ['disable', '--now', this._resolveTimerUnitName({ triggerId: params.triggerId })],
-        errorMessage: `disabling the systemd user timer for trigger '${params.triggerId}' failed`,
+        args: ['disable', '--now', this._resolveTimerUnitName({ triggerId })],
+        errorMessage: `disabling the systemd user timer for trigger '${triggerId}' failed`,
       })
     } catch (error) {
       if (!this._resolveIsUnitAbsentError(error)) {
@@ -235,10 +247,11 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   protected async _execSystemctl(params: { args: string[]; errorMessage: string }): Promise<void> {
+    const { args, errorMessage } = params
     try {
-      await execFileAsync('systemctl', ['--user', ...params.args], { timeout: this._systemctlTimeoutMs })
+      await execFileAsync('systemctl', ['--user', ...args], { timeout: this._systemctlTimeoutMs })
     } catch (error) {
-      throw new Error(`${params.errorMessage}: ${this._resolveSystemctlErrorMessage(error)}`)
+      throw new Error(`${errorMessage}: ${this._resolveSystemctlErrorMessage(error)}`)
     }
   }
 
@@ -257,19 +270,20 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   protected _parseTimeOfDay(params: { time: string }): { hour: number; minute: number } {
-    const match = /^([0-9]{2}):([0-9]{2})$/.exec(params.time)
+    const { time } = params
+    const match = constant.twoDigitTimeRegex.exec(time)
     const hourText = match?.[1]
     const minuteText = match?.[2]
 
     if (hourText === undefined || minuteText === undefined) {
-      throw new Error(`Invalid trigger time '${params.time}': expected the HH:mm format`)
+      throw new Error(`Invalid trigger time '${time}': expected the HH:mm format`)
     }
 
     const hour = Number.parseInt(hourText, 10)
     const minute = Number.parseInt(minuteText, 10)
 
     if (hour > 23 || minute > 59) {
-      throw new Error(`Invalid trigger time '${params.time}': hour must be within 00-23 and minute within 00-59`)
+      throw new Error(`Invalid trigger time '${time}': hour must be within 00-23 and minute within 00-59`)
     }
 
     return { hour, minute }
@@ -283,15 +297,17 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   protected async _removeUnitFiles(params: { triggerId: string }): Promise<void> {
-    await rm(this._resolveServiceUnitPath({ triggerId: params.triggerId }), { force: true })
-    await rm(this._resolveTimerUnitPath({ triggerId: params.triggerId }), { force: true })
+    const { triggerId } = params
+    await rm(this._resolveServiceUnitPath({ triggerId }), { force: true })
+    await rm(this._resolveTimerUnitPath({ triggerId }), { force: true })
   }
 
   protected async _resetFailedService(params: { triggerId: string }): Promise<void> {
+    const { triggerId } = params
     try {
       await this._execSystemctl({
-        args: ['reset-failed', this._resolveServiceUnitName({ triggerId: params.triggerId })],
-        errorMessage: `resetting the systemd user service state for trigger '${params.triggerId}' failed`,
+        args: ['reset-failed', this._resolveServiceUnitName({ triggerId })],
+        errorMessage: `resetting the systemd user service state for trigger '${triggerId}' failed`,
       })
     } catch {
       return
@@ -299,7 +315,7 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   protected _resolveDefaultUnitDir(): string {
-    return join(process.env.XDG_CONFIG_HOME ?? join(this._homeDir, '.config'), 'systemd', 'user')
+    return join(config.xdgConfigHome ?? join(this._homeDir, '.config'), 'systemd', 'user')
   }
 
   protected _resolveIsSystemdUserAvailable(): boolean {
@@ -312,14 +328,11 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   protected async _resolveIsTimerActive(params: { triggerId: string }): Promise<boolean> {
+    const { triggerId } = params
     try {
-      await execFileAsync(
-        'systemctl',
-        ['--user', 'is-active', this._resolveTimerUnitName({ triggerId: params.triggerId })],
-        {
-          timeout: this._systemctlTimeoutMs,
-        },
-      )
+      await execFileAsync('systemctl', ['--user', 'is-active', this._resolveTimerUnitName({ triggerId })], {
+        timeout: this._systemctlTimeoutMs,
+      })
 
       return true
     } catch {
@@ -328,8 +341,9 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   protected async _resolveIsTimerUnitFilePresent(params: { triggerId: string }): Promise<boolean> {
+    const { triggerId } = params
     try {
-      await stat(this._resolveTimerUnitPath({ triggerId: params.triggerId }))
+      await stat(this._resolveTimerUnitPath({ triggerId }))
 
       return true
     } catch {
@@ -344,11 +358,15 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   protected _resolveServiceUnitName(params: { triggerId: string }): string {
-    return `${this._resolveUnitBaseName({ triggerId: params.triggerId })}.service`
+    const { triggerId } = params
+
+    return `${this._resolveUnitBaseName({ triggerId })}.service`
   }
 
   protected _resolveServiceUnitPath(params: { triggerId: string }): string {
-    return join(this._unitDir, this._resolveServiceUnitName({ triggerId: params.triggerId }))
+    const { triggerId } = params
+
+    return join(this._unitDir, this._resolveServiceUnitName({ triggerId }))
   }
 
   protected _resolveSystemctlErrorMessage(error: unknown): string {
@@ -362,15 +380,21 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   protected _resolveTimerUnitName(params: { triggerId: string }): string {
-    return `${this._resolveUnitBaseName({ triggerId: params.triggerId })}.timer`
+    const { triggerId } = params
+
+    return `${this._resolveUnitBaseName({ triggerId })}.timer`
   }
 
   protected _resolveTimerUnitPath(params: { triggerId: string }): string {
-    return join(this._unitDir, this._resolveTimerUnitName({ triggerId: params.triggerId }))
+    const { triggerId } = params
+
+    return join(this._unitDir, this._resolveTimerUnitName({ triggerId }))
   }
 
   protected _resolveUnitBaseName(params: { triggerId: string }): string {
-    return `${this._systemdUnitNamePrefix}${params.triggerId}`
+    const { triggerId } = params
+
+    return `${this._systemdUnitNamePrefix}${triggerId}`
   }
 
   protected async _resolveUnitDirFileNames(): Promise<string[]> {
@@ -381,17 +405,10 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
     }
   }
 
-  protected async _writeUnitFiles(params: ISchedulingRegistrationParams): Promise<void> {
+  protected async _writeUnitFiles(params: SchedulingRegistrationParams): Promise<void> {
+    const { triggerId } = params
     await mkdir(this._unitDir, { recursive: true })
-    await writeFile(
-      this._resolveServiceUnitPath({ triggerId: params.triggerId }),
-      this._buildServiceUnitContent(params),
-      'utf8',
-    )
-    await writeFile(
-      this._resolveTimerUnitPath({ triggerId: params.triggerId }),
-      this._buildTimerUnitContent(params),
-      'utf8',
-    )
+    await writeFile(this._resolveServiceUnitPath({ triggerId }), this._buildServiceUnitContent(params), 'utf8')
+    await writeFile(this._resolveTimerUnitPath({ triggerId }), this._buildTimerUnitContent(params), 'utf8')
   }
 }

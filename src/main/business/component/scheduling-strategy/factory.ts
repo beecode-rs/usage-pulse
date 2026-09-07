@@ -1,32 +1,36 @@
+import { typeUtil } from '@beecode/msh-util'
+
 import { SchedulingStrategyLinux } from '#src/main/business/component/scheduling-strategy/linux'
 import { SchedulingStrategyMacLaunchd } from '#src/main/business/component/scheduling-strategy/mac-launchd'
-import { type ISchedulingStrategy } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
+import { type SchedulingStrategy } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
 import { SchedulingStrategyWindows } from '#src/main/business/component/scheduling-strategy/windows'
-import { type OsPlatform, osUtil } from '#src/main/util/os-util'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
 
 export class SchedulingStrategyFactory {
-  resolve(params: { platform?: OsPlatform } = {}): ISchedulingStrategy {
-    const platform = params.platform ?? osUtil.resolvePlatform()
+  resolve(params: { platform: OS } = { platform: osUtil.resolvePlatform() }): SchedulingStrategy {
+    const { platform } = params
 
     return this._resolveForPlatform({ platform })
   }
 
-  protected _resolveForPlatform(params: { platform: OsPlatform }): ISchedulingStrategy {
-    switch (params.platform) {
-      case 'linux': {
+  protected _resolveForPlatform(params: { platform: OS }): SchedulingStrategy {
+    const { platform } = params
+    switch (platform) {
+      case OS.LINUX: {
         return new SchedulingStrategyLinux()
       }
 
-      case 'macos': {
+      case OS.MACOS: {
         return new SchedulingStrategyMacLaunchd()
       }
 
-      case 'windows': {
+      case OS.WINDOWS: {
         return new SchedulingStrategyWindows()
       }
 
       default: {
-        throw new Error('Scheduling is not supported on the resolved platform')
+        throw typeUtil.exhaustiveError('unsupported platform [platform]', platform)
       }
     }
   }

@@ -1,4 +1,4 @@
-# Contract for zaiPeakUtil peak countdown methods.
+# Contract for ZaiPeakUtil peak countdown methods.
 # Terms pin the peak countdown: z.ai peak hours span 14:00-18:00 UTC+8, a 4-hour window.
 # resolvePeakRemainingPercent is the share of that window still remaining, so it reads
 # 100 the moment peak begins and drains toward 0 as peak ends. resolvePeakRemainingText
@@ -7,80 +7,99 @@
 # Instants outside the window clamp to the nearest bound. All terms use Wednesday
 # 2026-08-26's UTC+8 wall clock day, where peak starts at 1787724000000 (06:00 UTC)
 # and ends at 1787738400000 (10:00 UTC).
-subject: zaiPeakUtil
+subject: ZaiPeakUtil
 module: ./zai-peak-util.js
-subjectType: function
+subjectType: class
+constructor:
+  # A fresh instance carries no own fields, so it serializes as an empty object.
+  terms:
+    - params: []
+      result: {}
 methods:
   resolvePeakRemainingPercent:
     terms:
       # Peak start: the full 4-hour window remains.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787724000000
             providerId: zai
         result: 100
       # 15 minutes into peak: 3h45m of the 4h window remain.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787724900000
             providerId: zai
         result: 93.75
       # Halfway through the window: 2h of 4h remain.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787731200000
             providerId: zai
         result: 50
       # One hour left of four.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787734800000
             providerId: zai
         result: 25
       # Peak end: nothing remains.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787738400000
             providerId: zai
         result: 0
       # An hour past peak end clamps at zero.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787742000000
             providerId: zai
         result: 0
       # An hour before peak start clamps at the full window.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787720400000
             providerId: zai
         result: 100
   resolvePeakRemainingText:
     terms:
       # Peak start: the full window remains.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787724000000
             providerId: zai
         result: 4h 0m
       # 15 minutes into peak.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787724900000
             providerId: zai
         result: 3h 45m
       # Halfway through the window.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787731200000
             providerId: zai
         result: 2h 0m
       # One hour left, with 30 spare seconds floored away.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787734770000
             providerId: zai
         result: 1h 0m
       # 20 minutes left: the minutes-only branch.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787737200000
             providerId: zai
         result: 20m
       # Peak end and beyond clamps at the sub-minute floor.
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787738400000
             providerId: zai
         result: under 1m
-      - params:
+      - constructorParams: []
+        params:
           - nowMs: 1787742000000
             providerId: zai
         result: under 1m

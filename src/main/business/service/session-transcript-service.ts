@@ -2,74 +2,80 @@ import { readFile, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-import { sessionTranscriptUtil } from '#src/main/util/session-transcript-util'
-import { type ISessionInfo, type ISessionTranscriptStats } from '#src/shared/session-model'
+import { ClaudeTranscriptParserService } from '#src/main/lib/claude-transcript-parser/service'
+import { constant } from '#src/main/util/constant'
+import { type SessionInfo, type SessionTranscriptStats } from '#src/shared/business/model/session-model'
 
-const CACHE_ENTRY_LIMIT = 500
-
-interface ITranscriptCacheEntry {
+type TranscriptCacheEntry = {
   mtimeMs: number
-  transcript: ISessionTranscriptStats | undefined
+  transcript: SessionTranscriptStats | undefined
 }
 
 export class SessionTranscriptService {
-  protected readonly _cacheByPath = new Map<string, ITranscriptCacheEntry>()
+  protected readonly _cacheByPath = new Map<string, TranscriptCacheEntry>()
   protected readonly _homeDir: string
 
-  constructor(params: { homeDir?: string } = {}) {
-    this._homeDir = params.homeDir ?? homedir()
+  constructor(params: { homeDir: string } = { homeDir: homedir() }) {
+    const { homeDir } = params
+    this._homeDir = homeDir
   }
 
-  async enrichSessions(params: { sessions: ISessionInfo[] }): Promise<ISessionInfo[]> {
+  async enrichSessions(params: { sessions: SessionInfo[] }): Promise<SessionInfo[]> {
+    const { sessions } = params
+
     return Promise.all(
-      params.sessions.map((session) => {
+      sessions.map((session) => {
         return this._enrichSession({ session })
       }),
     )
   }
 
-  protected async _enrichSession(params: { session: ISessionInfo }): Promise<ISessionInfo> {
-    if (params.session.hostId !== undefined) {
-      return params.session
+  protected async _enrichSession(params: { session: SessionInfo }): Promise<SessionInfo> {
+    const { session } = params
+    if (session.hostId !== undefined) {
+      return session
     }
 
     const transcript = await this._resolveTranscript({
-      cwd: params.session.cwd,
-      sessionId: params.session.sessionId,
+      cwd: session.cwd,
+      sessionId: session.sessionId,
     })
 
     if (transcript === undefined) {
-      return params.session
+      return session
     }
 
-    return { ...params.session, transcript }
+    return { ...session, transcript }
   }
 
   protected _resolveDisplayableTranscript(params: {
-    stats: ISessionTranscriptStats
-  }): ISessionTranscriptStats | undefined {
-    if (sessionTranscriptUtil.hasTranscriptSignal(params.stats)) {
-      return params.stats
+    stats: SessionTranscriptStats
+  }): SessionTranscriptStats | undefined {
+    const { stats } = params
+    if (new ClaudeTranscriptParserService().hasSignal(stats)) {
+      return stats
     }
 
     return undefined
   }
 
   protected _resolveTranscriptFilePath(params: { cwd: string; sessionId: string }): string {
-    const projectDirName = params.cwd.replaceAll('/', '-')
+    const { cwd, sessionId } = params
+    const projectDirName = cwd.replaceAll('/', '-')
 
-    return join(this._homeDir, '.claude', 'projects', projectDirName, `${params.sessionId}.jsonl`)
+    return join(this._homeDir, '.claude', 'projects', projectDirName, `${sessionId}.jsonl`)
   }
 
   protected async _resolveTranscript(params: {
     cwd: string
     sessionId: string
-  }): Promise<ISessionTranscriptStats | undefined> {
-    if (params.cwd === '' || params.sessionId === '') {
+  }): Promise<SessionTranscriptStats | undefined> {
+    const { cwd, sessionId } = params
+    if (cwd === '' || sessionId === '') {
       return undefined
     }
 
-    const filePath = this._resolveTranscriptFilePath({ cwd: params.cwd, sessionId: params.sessionId })
+    const filePath = this._resolveTranscriptFilePath({ cwd, sessionId })
 
     try {
       const fileStat = await stat(filePath)
@@ -80,7 +86,7 @@ export class SessionTranscriptService {
       }
 
       const content = await readFile(filePath, 'utf8')
-      const parsedStats = sessionTranscriptUtil.parseTranscriptStats({ content })
+      const parsedStats = new ClaudeTranscriptParserService().parseStats({ content })
       const transcript = this._resolveDisplayableTranscript({ stats: parsedStats })
 
       this._storeCacheEntry({ filePath, mtimeMs: fileStat.mtimeMs, transcript })
@@ -94,12 +100,13 @@ export class SessionTranscriptService {
   protected _storeCacheEntry(params: {
     filePath: string
     mtimeMs: number
-    transcript: ISessionTranscriptStats | undefined
+    transcript: SessionTranscriptStats | undefined
   }): void {
-    if (this._cacheByPath.size >= CACHE_ENTRY_LIMIT) {
+    const { filePath, mtimeMs, transcript } = params
+    if (this._cacheByPath.size >= constant.sessionTranscriptCacheEntryLimit) {
       this._cacheByPath.clear()
     }
 
-    this._cacheByPath.set(params.filePath, { mtimeMs: params.mtimeMs, transcript: params.transcript })
+    this._cacheByPath.set(filePath, { mtimeMs, transcript })
   }
 }

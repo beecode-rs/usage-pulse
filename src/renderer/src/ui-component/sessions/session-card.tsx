@@ -9,14 +9,16 @@ import { SessionTranscriptChips } from '#src/renderer/src/ui-component/sessions/
 import { SessionWaitingPulse } from '#src/renderer/src/ui-component/sessions/session-waiting-pulse'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { sessionPresentationUtil } from '#src/renderer/src/util/session-presentation-util'
-import { type ISessionInfo, type ISessionTranscriptStats, type SessionStatus } from '#src/shared/session-model'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { type SessionInfo, type SessionTranscriptStats } from '#src/shared/business/model/session-model'
 
 const LAST_PROMPT_PREVIEW_MAX_LENGTH = 200
 
-const resolveCardClassName = (params: { isRemote: boolean; status: SessionStatus }): string => {
-  const classNames = ['session-card', `is-${params.status}`]
+const resolveCardClassName = (params: { isRemote: boolean; status: SessionStatusMapper }): string => {
+  const { isRemote, status } = params
+  const classNames = ['session-card', `is-${status}`]
 
-  if (params.isRemote) {
+  if (isRemote) {
     classNames.push('is-remote')
   }
 
@@ -40,7 +42,9 @@ const resolveKindLabel = (kind: string): string => {
 }
 
 const resolveUptimeLabel = (params: { nowMs: number; startedAt: number }): string => {
-  return `up ${dateUtil.formatDuration(params.nowMs - params.startedAt)}`
+  const { nowMs, startedAt } = params
+
+  return `up ${dateUtil.formatDuration(nowMs - startedAt)}`
 }
 
 const resolveLastPromptPreview = (lastPrompt: string): string => {
@@ -54,27 +58,30 @@ const resolveLastPromptPreview = (lastPrompt: string): string => {
 }
 
 const resolveExpandButtonLabel = (params: { isExpanded: boolean; title: string }): string => {
-  if (params.isExpanded) {
-    return `Collapse details for ${params.title}`
+  const { isExpanded, title } = params
+  if (isExpanded) {
+    return `Collapse details for ${title}`
   }
 
-  return `Expand details for ${params.title}`
+  return `Expand details for ${title}`
 }
 
 const renderTranscriptStat = (params: { label: string; value: string; valueTitle: string }): ReactElement => {
+  const { label, value, valueTitle } = params
+
   return (
     <div className="session-transcript-stat">
-      <span className="session-transcript-stat-label">{params.label}</span>
-      <span className="session-transcript-stat-value" title={params.valueTitle}>
-        {params.value}
+      <span className="session-transcript-stat-label">{label}</span>
+      <span className="session-transcript-stat-value" title={valueTitle}>
+        {value}
       </span>
     </div>
   )
 }
 
 const renderTranscriptDetails = (params: {
-  session: ISessionInfo
-  transcript: ISessionTranscriptStats
+  session: SessionInfo
+  transcript: SessionTranscriptStats
 }): ReactElement => {
   const { session, transcript } = params
 
@@ -139,10 +146,10 @@ export const SessionCard = (props: {
   nowMs: number
   onFocus: () => void
   onToggle: () => void
-  pulseSeconds: number
-  session: ISessionInfo
+  pulseMs: number
+  session: SessionInfo
 }): ReactElement => {
-  const { finishedAtMs, isExpanded, nowMs, onFocus, onToggle, pulseSeconds, session } = props
+  const { finishedAtMs, isExpanded, nowMs, onFocus, onToggle, pulseMs, session } = props
   const transcript = session.transcript
   const sessionTitle = sessionPresentationUtil.resolveSessionTitle({ session })
   const sessionTitleParts = sessionPresentationUtil.resolveSessionTitleParts({ title: sessionTitle })
@@ -153,8 +160,8 @@ export const SessionCard = (props: {
       className={resolveCardClassName({ isRemote: session.hostId !== undefined, status: session.status })}
       title={session.cwd}
     >
-      <SessionFinishedPulse finishedAtMs={finishedAtMs} nowMs={nowMs} pulseSeconds={pulseSeconds} />
-      <SessionWaitingPulse isWaiting={session.status === 'waiting'} />
+      <SessionFinishedPulse finishedAtMs={finishedAtMs} nowMs={nowMs} pulseMs={pulseMs} />
+      <SessionWaitingPulse isWaiting={session.status === SessionStatusMapper.WAITING} />
       <header className="session-card-header">
         <div className="session-card-heading">
           <span className="session-card-origin">

@@ -1,47 +1,10 @@
-const NUMERIC_SEGMENT_PATTERN = /^\d+$/
+import { constant } from '#src/main/util/constant'
 
-export const versionCompareUtil = {
-  _resolveCoreSegments: (params: { version: string }): number[] | undefined => {
-    const coreVersion = versionCompareUtil._resolveCoreVersion({ version: params.version })
-
-    if (coreVersion === '') {
-      return undefined
-    }
-
-    const segments = coreVersion.split('.')
-
-    const hasMalformedSegment = segments.some((segment) => {
-      return !NUMERIC_SEGMENT_PATTERN.test(segment)
-    })
-
-    if (hasMalformedSegment) {
-      return undefined
-    }
-
-    return segments.map((segment) => {
-      return Number(segment)
-    })
-  },
-
-  _resolveCoreVersion: (params: { version: string }): string => {
-    const strippedVersion = versionCompareUtil._stripVersionPrefix({ version: params.version })
-
-    return strippedVersion.split('-')[0] ?? ''
-  },
-
-  _stripVersionPrefix: (params: { version: string }): string => {
-    const trimmedVersion = params.version.trim()
-
-    if (trimmedVersion.startsWith('v') || trimmedVersion.startsWith('V')) {
-      return trimmedVersion.slice(1)
-    }
-
-    return trimmedVersion
-  },
-
-  resolveIsNewerVersion: (params: { candidateVersion: string; currentVersion: string }): boolean => {
-    const candidateSegments = versionCompareUtil._resolveCoreSegments({ version: params.candidateVersion })
-    const currentSegments = versionCompareUtil._resolveCoreSegments({ version: params.currentVersion })
+export class VersionCompareUtil {
+  isNewerVersion = (params: { candidateVersion: string; currentVersion: string }): boolean => {
+    const { candidateVersion, currentVersion } = params
+    const candidateSegments = this._resolveCoreSegments({ version: candidateVersion })
+    const currentSegments = this._resolveCoreSegments({ version: currentVersion })
 
     if (candidateSegments === undefined || currentSegments === undefined) {
       return false
@@ -59,5 +22,46 @@ export const versionCompareUtil = {
     }
 
     return firstNonZeroDifference > 0
-  },
+  }
+
+  protected _resolveCoreSegments = (params: { version: string }): number[] | undefined => {
+    const { version } = params
+    const coreVersion = this._resolveCoreVersion({ version })
+
+    if (coreVersion === '') {
+      return undefined
+    }
+
+    const segments = coreVersion.split('.')
+
+    const hasMalformedSegment = segments.some((segment) => {
+      return !constant.digitsOnlyRegex.test(segment)
+    })
+
+    if (hasMalformedSegment) {
+      return undefined
+    }
+
+    return segments.map((segment) => {
+      return Number(segment)
+    })
+  }
+
+  protected _resolveCoreVersion = (params: { version: string }): string => {
+    const { version } = params
+    const strippedVersion = this._stripVersionPrefix({ version })
+
+    return strippedVersion.split('-')[0] ?? ''
+  }
+
+  protected _stripVersionPrefix = (params: { version: string }): string => {
+    const { version } = params
+    const trimmedVersion = version.trim()
+
+    if (trimmedVersion.startsWith('v') || trimmedVersion.startsWith('V')) {
+      return trimmedVersion.slice(1)
+    }
+
+    return trimmedVersion
+  }
 }

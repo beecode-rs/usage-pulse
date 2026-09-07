@@ -1,16 +1,18 @@
-import { type ITriggerConfig, TRIGGER_TIME_PATTERN } from '#src/shared/trigger-model'
+import { type ScheduleTriggerConfig } from '#src/shared/business/model/schedule-trigger-model'
+import { constant } from '#src/shared/util/constant'
 
 export const triggerValidationUtil = {
-  resolveValidationError(params: { trigger: ITriggerConfig }): string | undefined {
-    if (params.trigger.command.trim() === '') {
+  resolveValidationError(params: { trigger: ScheduleTriggerConfig }): string | undefined {
+    const { trigger } = params
+    if (trigger.command.trim() === '') {
       return 'Enter a command for this trigger to run.'
     }
 
-    if (params.trigger.days.length === 0) {
+    if (trigger.days.length === 0) {
       return 'Pick at least one day for this trigger.'
     }
 
-    const filledTimes = params.trigger.times.filter((time) => {
+    const filledTimes = trigger.times.filter((time) => {
       return time !== ''
     })
 
@@ -19,7 +21,7 @@ export const triggerValidationUtil = {
     }
 
     const hasInvalidTime = filledTimes.some((time) => {
-      return !TRIGGER_TIME_PATTERN.test(time)
+      return !constant.twentyFourHourTimeRegex.test(time)
     })
 
     if (hasInvalidTime) {

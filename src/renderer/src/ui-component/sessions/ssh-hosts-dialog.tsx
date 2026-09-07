@@ -3,7 +3,7 @@ import { type ReactElement, useEffect, useState } from 'react'
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { type IAppSettings, type ISshHostConfig } from '#src/shared/settings-model'
+import { SettingsModel, type SshHostConfig } from '#src/shared/business/model/settings-model'
 
 const resolveTestMessageClassName = (hasError: boolean): string => {
   if (hasError) {
@@ -89,7 +89,7 @@ const renderRemoveIcon = (): ReactElement => {
 
 export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void }): ReactElement => {
   const { onClose, onSaved } = props
-  const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [urlDraft, setUrlDraft] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
@@ -108,7 +108,9 @@ export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void
     void loadSettings()
   }, [])
 
-  const persistSshHosts = async (params: { sshHosts: ISshHostConfig[] }): Promise<boolean> => {
+  const persistSshHosts = async (params: { sshHosts: SshHostConfig[] }): Promise<boolean> => {
+    const { sshHosts } = params
+
     if (settings === undefined) {
       return false
     }
@@ -118,7 +120,7 @@ export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void
 
     try {
       const nextSettings = await usageClientService.saveSettings({
-        settings: { ...settings, sshHosts: params.sshHosts },
+        settings: new SettingsModel({ settings: { ...settings, sshHosts } }),
       })
 
       setSettings(nextSettings)
@@ -148,7 +150,7 @@ export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void
       return
     }
 
-    const sshHost: ISshHostConfig = { id: crypto.randomUUID(), isEnabled: true, url }
+    const sshHost: SshHostConfig = { id: crypto.randomUUID(), isEnabled: true, url }
     const hasSaved = await persistSshHosts({ sshHosts: [...settings.sshHosts, sshHost] })
 
     if (hasSaved) {
@@ -182,13 +184,15 @@ export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void
     }
   }
 
-  const handleToggleEnabled = async (params: { host: ISshHostConfig }): Promise<void> => {
+  const handleToggleEnabled = async (params: { host: SshHostConfig }): Promise<void> => {
+    const { host } = params
+
     if (settings === undefined) {
       return
     }
 
     const nextSshHosts = settings.sshHosts.map((sshHost) => {
-      if (sshHost.id !== params.host.id) {
+      if (sshHost.id !== host.id) {
         return sshHost
       }
 
@@ -198,19 +202,21 @@ export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void
     await persistSshHosts({ sshHosts: nextSshHosts })
   }
 
-  const handleRemove = async (params: { host: ISshHostConfig }): Promise<void> => {
+  const handleRemove = async (params: { host: SshHostConfig }): Promise<void> => {
+    const { host } = params
+
     if (settings === undefined) {
       return
     }
 
-    if (confirmingRemoveId !== params.host.id) {
-      setConfirmingRemoveId(params.host.id)
+    if (confirmingRemoveId !== host.id) {
+      setConfirmingRemoveId(host.id)
 
       return
     }
 
     const nextSshHosts = settings.sshHosts.filter((sshHost) => {
-      return sshHost.id !== params.host.id
+      return sshHost.id !== host.id
     })
 
     await persistSshHosts({ sshHosts: nextSshHosts })

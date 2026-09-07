@@ -6,10 +6,11 @@ import { ProviderIcon } from '#src/renderer/src/ui-component/provider/provider-i
 import { UsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
 import { UsageWindowBox } from '#src/renderer/src/ui-component/usage-dashboard/usage-window-box'
 import { dateUtil } from '#src/renderer/src/util/date-util'
+import { usageActivityStatusUtil } from '#src/renderer/src/util/usage-activity-status-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
-import { usageStatusUtil } from '#src/renderer/src/util/usage-status-util'
-import { zaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
-import { type IProviderSnapshot, UsageStatus } from '#src/shared/usage-model'
+import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
+import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
+import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
 
 export const ProviderUsageCard = (props: {
   isAutoRefreshPaused: boolean
@@ -18,8 +19,8 @@ export const ProviderUsageCard = (props: {
   onOpenSettings: () => void
   onRefresh: () => void
   onToggleAutoRefresh: () => void
-  providerSnapshot: IProviderSnapshot
-  refreshIntervalSeconds?: number
+  providerSnapshot: ProviderSnapshot
+  refreshIntervalMs?: number
 }): ReactElement => {
   const {
     isAutoRefreshPaused,
@@ -29,11 +30,12 @@ export const ProviderUsageCard = (props: {
     onRefresh,
     onToggleAutoRefresh,
     providerSnapshot,
-    refreshIntervalSeconds,
+    refreshIntervalMs,
   } = props
   const usageWindows = providerSnapshot.usage ?? []
   const primaryWindow = usageWindows[0]
   const secondaryWindows = usageWindows.slice(1)
+  const zaiPeakUtil = new ZaiPeakUtil()
   const peakInfo = zaiPeakUtil.resolvePeakInfo({ nowMs, providerId: providerSnapshot.providerId })
   const peakRemainingPercent = zaiPeakUtil.resolvePeakRemainingPercent({
     nowMs,
@@ -74,15 +76,15 @@ export const ProviderUsageCard = (props: {
   }
 
   const resolveStatusText = (): string => {
-    if (isAutoRefreshPaused && providerSnapshot.status === UsageStatus.OK) {
+    if (isAutoRefreshPaused && providerSnapshot.status === UsageActivityStatus.OK) {
       return 'Paused'
     }
 
-    return usageStatusUtil.resolveStatusText(providerSnapshot.status)
+    return usageActivityStatusUtil.resolveStatusText(providerSnapshot.status)
   }
 
   const resolveStatusClassName = (): string => {
-    if (isAutoRefreshPaused && providerSnapshot.status === UsageStatus.OK) {
+    if (isAutoRefreshPaused && providerSnapshot.status === UsageActivityStatus.OK) {
       return 'provider-card-status provider-card-status-paused'
     }
 
@@ -115,16 +117,18 @@ export const ProviderUsageCard = (props: {
   }
 
   const renderPeakProgressBar = (params: { percent: number }): ReactElement => {
+    const { percent } = params
+
     return (
       <div
         aria-label="Time remaining in z.ai peak hours"
         aria-valuemax={100}
         aria-valuemin={0}
-        aria-valuenow={Math.round(params.percent)}
+        aria-valuenow={Math.round(percent)}
         className="provider-card-peak-progress-track"
         role="meter"
       >
-        <div className="provider-card-peak-progress-fill" style={{ width: `${String(params.percent)}%` }} />
+        <div className="provider-card-peak-progress-fill" style={{ width: `${String(percent)}%` }} />
       </div>
     )
   }
@@ -159,11 +163,11 @@ export const ProviderUsageCard = (props: {
   }
 
   const resolveIsSnapshotStale = (): boolean => {
-    if (refreshIntervalSeconds === undefined || providerSnapshot.fetchedAt === undefined) {
+    if (refreshIntervalMs === undefined || providerSnapshot.fetchedAt === undefined) {
       return false
     }
 
-    return nowMs - providerSnapshot.fetchedAt > refreshIntervalSeconds * 1000
+    return nowMs - providerSnapshot.fetchedAt > refreshIntervalMs
   }
 
   const renderLastFetchedItem = (): ReactElement | undefined => {
@@ -216,11 +220,11 @@ export const ProviderUsageCard = (props: {
   }
 
   const renderIntervalItem = (): ReactElement | undefined => {
-    if (refreshIntervalSeconds === undefined) {
+    if (refreshIntervalMs === undefined) {
       return undefined
     }
 
-    const intervalText = dateUtil.formatDuration(refreshIntervalSeconds * 1000)
+    const intervalText = dateUtil.formatDuration(refreshIntervalMs)
 
     const resolveIntervalTooltipText = (): string => {
       if (isAutoRefreshPaused) {
@@ -255,15 +259,14 @@ export const ProviderUsageCard = (props: {
   }
 
   const resolveRefreshProgressPercent = (): number | undefined => {
-    if (isAutoRefreshPaused || providerSnapshot.nextRefreshAt === undefined || refreshIntervalSeconds === undefined) {
+    if (isAutoRefreshPaused || providerSnapshot.nextRefreshAt === undefined || refreshIntervalMs === undefined) {
       return undefined
     }
 
-    const intervalMs = refreshIntervalSeconds * 1000
     const remainingMs = Math.max(0, providerSnapshot.nextRefreshAt - nowMs)
-    const elapsedMs = intervalMs - remainingMs
+    const elapsedMs = refreshIntervalMs - remainingMs
 
-    return Math.min(100, Math.max(0, (elapsedMs / intervalMs) * 100))
+    return Math.min(100, Math.max(0, (elapsedMs / refreshIntervalMs) * 100))
   }
 
   const pauseButtonLabel = resolvePauseButtonLabel()
@@ -325,7 +328,7 @@ export const ProviderUsageCard = (props: {
         </div>
       </header>
       {renderPeakBanner()}
-      {providerSnapshot.status === UsageStatus.OK && primaryWindow !== undefined && (
+      {providerSnapshot.status === UsageActivityStatus.OK && primaryWindow !== undefined && (
         <div className="provider-card-body">
           <UsageWindowBox
             resetAt={primaryWindow.resetAt}
@@ -356,16 +359,16 @@ export const ProviderUsageCard = (props: {
           </div>
         </div>
       )}
-      {providerSnapshot.status === UsageStatus.PENDING && (
+      {providerSnapshot.status === UsageActivityStatus.PENDING && (
         <p className="provider-card-message">{resolvePendingMessage()}</p>
       )}
-      {providerSnapshot.status === UsageStatus.UNCONFIGURED && (
+      {providerSnapshot.status === UsageActivityStatus.UNCONFIGURED && (
         <p className="provider-card-message">Add an access token in this tracker&apos;s settings to track usage.</p>
       )}
-      {providerSnapshot.status === UsageStatus.ERROR && (
+      {providerSnapshot.status === UsageActivityStatus.ERROR && (
         <p className="provider-card-message provider-card-message-error">{providerSnapshot.errorMessage}</p>
       )}
-      {providerSnapshot.status === UsageStatus.OK && primaryWindow === undefined && (
+      {providerSnapshot.status === UsageActivityStatus.OK && primaryWindow === undefined && (
         <p className="provider-card-message">No usage windows returned.</p>
       )}
       {hasFooterContent && (

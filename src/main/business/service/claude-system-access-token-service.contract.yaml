@@ -1,0 +1,158 @@
+# Contract for ClaudeSystemAccessTokenService.
+# Declarative terms cover the synchronous, filesystem-free members of the token resolution
+# path. The contract runner's error strategy asserts synchronous throws only, and its terms
+# cannot stage fixture files, so every async rejection of resolveAccessToken (the Linux
+# missing-file, missing-token and invalid-JSON failures, the windows unsupported-platform
+# dispatch and the macOS Keychain exec) plus the real-file happy path live in
+# claude-system-access-token-service.test.ts.
+subject: ClaudeSystemAccessTokenService
+module: ./claude-system-access-token-service.js
+subjectType: class
+constructor:
+  # Explicit homeDir and platform params land on the instance fields verbatim; the
+  # serialized comparison sorts keys, so field order does not matter.
+  terms:
+    - params:
+        - homeDir: /tmp/claude-contract-home
+          platform: LINUX
+      result:
+        _homeDir: /tmp/claude-contract-home
+        _keychainSourceName: "'Claude Code-credentials' keychain entry"
+        _platform: LINUX
+methods:
+  _extractAccessToken:
+    terms:
+      # Real-world shape: a claudeAiOauth accessToken next to an unrelated mcpOAuth
+      # section, which must be ignored entirely.
+      - constructorParams: []
+        params:
+          - credentialsJson: '{"claudeAiOauth":{"accessToken":"satp-aiOauth-token-123"},"mcpOAuth":{"my-server":{"access_token":"mcp-token-to-ignore","refresh_token":"mcp-refresh-to-ignore"}}}'
+            sourceName: /home/user/.claude/.credentials.json
+        result: satp-aiOauth-token-123
+      # Whitespace around the token value is trimmed away before the token is returned.
+      - constructorParams: []
+        params:
+          - credentialsJson: "{\"claudeAiOauth\":{\"accessToken\":\"  satp-padded-token \\n\"}}"
+            sourceName: /home/user/.claude/.credentials.json
+        result: satp-padded-token
+      # A claudeAiOauth object without any accessToken key is not usable.
+      - constructorParams: []
+        params:
+          - credentialsJson: '{"claudeAiOauth":{}}'
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is missing a usable claudeAiOauth.accessToken
+      # An empty accessToken string is as unusable as a missing one.
+      - constructorParams: []
+        params:
+          - credentialsJson: '{"claudeAiOauth":{"accessToken":""}}'
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is missing a usable claudeAiOauth.accessToken
+      # A whitespace-only accessToken string is not usable either.
+      - constructorParams: []
+        params:
+          - credentialsJson: '{"claudeAiOauth":{"accessToken":"   "}}'
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is missing a usable claudeAiOauth.accessToken
+      # A credentials record without a claudeAiOauth section at all is not usable.
+      - constructorParams: []
+        params:
+          - credentialsJson: '{"mcpOAuth":{"my-server":{"access_token":"mcp-token"}}}'
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is missing a usable claudeAiOauth.accessToken
+      # A claudeAiOauth value that is not a JSON object has no usable accessToken.
+      - constructorParams: []
+        params:
+          - credentialsJson: '{"claudeAiOauth":"not-a-record"}'
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is missing a usable claudeAiOauth.accessToken
+      # A non-string accessToken is not usable.
+      - constructorParams: []
+        params:
+          - credentialsJson: '{"claudeAiOauth":{"accessToken":12345}}'
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is missing a usable claudeAiOauth.accessToken
+      # Content that does not parse as JSON reports the source name.
+      - constructorParams: []
+        params:
+          - credentialsJson: 'definitely not json'
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is not valid JSON
+      # Empty content does not parse as JSON either.
+      - constructorParams: []
+        params:
+          - credentialsJson: ''
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is not valid JSON
+      # The macOS path shares this helper with the keychain entry as the source name.
+      - constructorParams: []
+        params:
+          - credentialsJson: '{"claudeAiOauth":{}}'
+            sourceName: "'Claude Code-credentials' keychain entry"
+        error: "'Claude Code-credentials' keychain entry is missing a usable claudeAiOauth.accessToken"
+  _parseCredentialsRecord:
+    terms:
+      # A well-formed credentials record parses into its plain object form.
+      - constructorParams: []
+        params:
+          - credentialsJson: '{"claudeAiOauth":{"accessToken":"satp-token"}}'
+            sourceName: /home/user/.claude/.credentials.json
+        result:
+          claudeAiOauth:
+            accessToken: satp-token
+      # Non-object JSON is rejected with the source-named message: a JSON array has no
+      # claudeAiOauth member to read.
+      - constructorParams: []
+        params:
+          - credentialsJson: '[7, 42]'
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is not a JSON object
+      # JSON null parses successfully but is not a record; before the asRecord guard it
+      # crashed on member access with a raw TypeError.
+      - constructorParams: []
+        params:
+          - credentialsJson: 'null'
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is not a JSON object
+      # JSON scalars are rejected the same way.
+      - constructorParams: []
+        params:
+          - credentialsJson: '42'
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is not a JSON object
+      # Broken JSON is reported against the source name.
+      - constructorParams: []
+        params:
+          - credentialsJson: '{"broken'
+            sourceName: /home/user/.claude/.credentials.json
+        error: /home/user/.claude/.credentials.json is not valid JSON
+  _resolveLinuxCredentialsPath:
+    terms:
+      # The credentials path nests under .claude inside the injected home dir.
+      - constructorParams:
+          - homeDir: /tmp/claude-contract-home
+        params: []
+        result: /tmp/claude-contract-home/.claude/.credentials.json
+      # A trailing separator on the home dir is normalized away by the join.
+      - constructorParams:
+          - homeDir: /tmp/claude-contract-home/
+        params: []
+        result: /tmp/claude-contract-home/.claude/.credentials.json
+  _resolveKeychainErrorMessage:
+    terms:
+      # A non-empty stderr string wins over any other message and is trimmed.
+      - constructorParams: []
+        params:
+          - stderr: "  security: could not be found  "
+        result: 'security: could not be found'
+      # A whitespace-only stderr falls back to the generic message resolution, which
+      # stringifies non-Error values.
+      - constructorParams: []
+        params:
+          - message: command failed
+            stderr: "   "
+        result: '[object Object]'
+      # An Error without any stderr reports its own message (the spawn-failure shape).
+      - constructorParams: []
+        params:
+          - new Error("spawn security ENOENT")
+        result: spawn security ENOENT

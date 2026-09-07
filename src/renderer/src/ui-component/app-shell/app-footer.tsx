@@ -2,10 +2,10 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import { updateClientService } from '#src/renderer/src/business/service/update-client-service'
 import '#src/renderer/src/ui-component/app-shell/app-footer.css'
-import type { IUpdateStatus } from '#src/shared/update-model'
+import type { UpdateStatus } from '#src/shared/business/model/update-model'
 
 export const AppFooter = (): ReactElement => {
-  const [status, setStatus] = useState<IUpdateStatus | undefined>(undefined)
+  const [status, setStatus] = useState<UpdateStatus | undefined>(undefined)
 
   useEffect(() => {
     const loadStatus = async (): Promise<void> => {

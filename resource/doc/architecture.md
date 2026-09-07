@@ -5,9 +5,9 @@ src/
 ├── shared/                         # cross-process models (main + preload + renderer)
 │   ├── ipc-channel.ts              # IPC channel names
 │   ├── os-model.ts                 # OS detection + capability flags
-│   ├── provider-catalog.ts         # PROVIDER_CATALOG (kind → name/description)
+│   ├── business/model/provider-catalog-model.ts   # ProviderCatalogEntry type (catalog data lives in util/constant.ts)
 │   ├── session-model.ts            # session snapshots, status, focus support
-│   ├── settings-model.ts           # IAppSettings, ITrackerConfig, poll interval bounds
+│   ├── settings-model.ts           # AppSettings, TrackerConfig, poll interval bounds
 │   ├── trigger-model.ts            # scheduled trigger config + presets
 │   ├── trigger-planner-model.ts    # 5-hour window planner math
 │   └── usage-model.ts              # usage snapshots, provider types, renderer API contract
@@ -19,7 +19,7 @@ src/
 │   ├── util/                             # error/http/os/sessions/transcript helpers
 │   └── business/
 │       ├── component/scheduling-strategy/  # OS scheduler strategies (strategy pattern)
-│       │   ├── scheduling-strategy.ts      # ISchedulingStrategy interface
+│       │   ├── scheduling-strategy.ts      # SchedulingStrategy interface
 │       │   ├── factory.ts                  # resolves the strategy for this platform
 │       │   ├── mac-launchd.ts              # macOS launchd
 │       │   ├── linux.ts                    # Linux systemd
@@ -38,7 +38,7 @@ src/
 │           ├── trigger-runner-service.ts       # runs triggered commands, logs runs
 │           ├── usage-poll-service.ts           # interval polling per tracker, snapshot fan-out
 │           └── usage-provider/                 # strategy implementations (stateless registry)
-│               ├── usage-provider.ts           # IUsageProvider interface
+│               ├── usage-provider.ts           # UsageProvider interface
 │               ├── claude.ts                   # UsageProviderClaude
 │               ├── zai.ts                      # UsageProviderZai
 │               └── dummy.ts                    # development/test provider

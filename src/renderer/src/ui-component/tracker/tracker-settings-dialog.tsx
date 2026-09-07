@@ -4,9 +4,9 @@ import { osClientService } from '#src/renderer/src/business/service/os-client-se
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/tracker-config-fields'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { trackerTokenSourceUtil } from '#src/renderer/src/util/tracker-token-source-util'
-import type { OsPlatform } from '#src/shared/os-model'
-import { type IAppSettings, type ITrackerConfig } from '#src/shared/settings-model'
+import { trackerAccessTokenSourceUtil } from '#src/renderer/src/util/tracker-access-token-source-util'
+import type { OS } from '#src/shared/business/enum/os-enum'
+import { SettingsModel, type TrackerConfig } from '#src/shared/business/model/settings-model'
 
 export const TrackerSettingsDialog = (props: {
   onClose: () => void
@@ -14,9 +14,9 @@ export const TrackerSettingsDialog = (props: {
   trackerId: string
 }): ReactElement => {
   const { onClose, onSaved, trackerId } = props
-  const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
-  const [tracker, setTracker] = useState<ITrackerConfig | undefined>(undefined)
-  const [osPlatform, setOsPlatform] = useState<OsPlatform | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
+  const [tracker, setTracker] = useState<TrackerConfig | undefined>(undefined)
+  const [osPlatform, setOsPlatform] = useState<OS | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
   const [isConfirmingRemove, setIsConfirmingRemove] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -40,38 +40,14 @@ export const TrackerSettingsDialog = (props: {
         return
       }
 
-      setTracker(trackerTokenSourceUtil.normalizeConfig({ config: loadedTracker, osPlatform: loadedOsPlatform }))
+      setTracker(trackerAccessTokenSourceUtil.normalizeConfig({ config: loadedTracker, osPlatform: loadedOsPlatform }))
     }
 
     void loadSettings()
   }, [trackerId])
 
-  const resolveTrackerValidationError = (candidate: ITrackerConfig): string | undefined => {
-    if (candidate.providerId !== 'dummy') {
-      return undefined
-    }
-
-    if (candidate.days.length === 0) {
-      return 'Pick at least one day for this tracker.'
-    }
-
-    if (candidate.times.length === 0) {
-      return 'Add at least one time for this tracker.'
-    }
-
-    return undefined
-  }
-
   const handleSave = async (): Promise<void> => {
     if (settings === undefined || tracker === undefined) {
-      return
-    }
-
-    const validationError = resolveTrackerValidationError(tracker)
-
-    if (validationError !== undefined) {
-      setErrorMessage(validationError)
-
       return
     }
 
@@ -87,7 +63,9 @@ export const TrackerSettingsDialog = (props: {
     setErrorMessage('')
 
     try {
-      await usageClientService.saveSettings({ settings: { ...settings, trackers: nextTrackers } })
+      await usageClientService.saveSettings({
+        settings: new SettingsModel({ settings: { ...settings, trackers: nextTrackers } }),
+      })
     } catch (error) {
       setErrorMessage(errorUtil.resolveMessage(error))
       setIsSaving(false)
@@ -119,7 +97,9 @@ export const TrackerSettingsDialog = (props: {
     setErrorMessage('')
 
     try {
-      await usageClientService.saveSettings({ settings: { ...settings, trackers: nextTrackers } })
+      await usageClientService.saveSettings({
+        settings: new SettingsModel({ settings: { ...settings, trackers: nextTrackers } }),
+      })
     } catch (error) {
       setErrorMessage(errorUtil.resolveMessage(error))
       setIsSaving(false)

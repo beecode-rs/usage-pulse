@@ -1,0 +1,29 @@
+# Contract for the bundle detection of SessionsFocusMacOsService, the macos focus
+# routing gate deciding between the Ghostty tab flow and the VS Code window flow.
+subject: SessionsFocusMacOsService
+module: ./macos-service.js
+subjectType: class
+constructor:
+  terms:
+    # A fresh instance holds no state.
+    - params: []
+      result:
+        {}
+methods:
+  isVsCodeBundle:
+    terms:
+      # The stock VS Code bundle basename routes into the window-focus flow.
+      - constructorParams: []
+        params:
+          - bundlePath: /Applications/Visual Studio Code.app
+        result: true
+      # A user-local install matches on basename alone.
+      - constructorParams: []
+        params:
+          - bundlePath: /Users/user/Applications/Visual Studio Code.app
+        result: true
+      # Ghostty keeps its own tab-focus flow.
+      - constructorParams: []
+        params:
+          - bundlePath: /Applications/Ghostty.app
+        result: false

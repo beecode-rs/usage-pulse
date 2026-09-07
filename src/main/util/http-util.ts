@@ -1,3 +1,4 @@
+import { config } from '#src/main/util/config'
 import { errorUtil } from '#src/main/util/error-util'
 
 export const httpUtil = {
@@ -6,8 +7,9 @@ export const httpUtil = {
     timeoutMs?: number
     url: string
   }): Promise<unknown> => {
-    const { headers = {}, timeoutMs = 15000, url } = params
+    const { headers = {}, timeoutMs = config.httpTimeoutMs, url } = params
     const abortController = new AbortController()
+
     const timeoutId = setTimeout(() => {
       abortController.abort()
     }, timeoutMs)

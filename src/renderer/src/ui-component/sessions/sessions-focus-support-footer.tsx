@@ -2,10 +2,10 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { type ISessionFocusSupport } from '#src/shared/session-model'
 
 const resolveInstallButtonLabel = (params: { isInstalling: boolean }): string => {
-  if (params.isInstalling) {
+  const { isInstalling } = params
+  if (isInstalling) {
     return 'Installing…'
   }
 
@@ -13,17 +13,17 @@ const resolveInstallButtonLabel = (params: { isInstalling: boolean }): string =>
 }
 
 export const SessionsFocusSupportFooter = (): ReactElement | null => {
-  const [focusSupport, setFocusSupport] = useState<ISessionFocusSupport | undefined>(undefined)
+  const [isFocusToolMissing, setIsFocusToolMissing] = useState(false)
   const [installErrorMessage, setInstallErrorMessage] = useState('')
   const [isInstalling, setIsInstalling] = useState(false)
 
   const loadFocusSupport = async (): Promise<void> => {
     try {
-      const nextFocusSupport = await sessionsClientService.getSessionFocusSupport()
+      const isFocusSupported = await sessionsClientService.isSessionFocusSupported()
 
-      setFocusSupport(nextFocusSupport)
+      setIsFocusToolMissing(!isFocusSupported)
     } catch {
-      setFocusSupport(undefined)
+      setIsFocusToolMissing(false)
     }
   }
 
@@ -32,9 +32,8 @@ export const SessionsFocusSupportFooter = (): ReactElement | null => {
     setInstallErrorMessage('')
 
     try {
-      const nextFocusSupport = await sessionsClientService.installSessionFocusTool()
-
-      setFocusSupport(nextFocusSupport)
+      await sessionsClientService.installSessionFocusTool()
+      await loadFocusSupport()
     } catch (error) {
       setInstallErrorMessage(errorUtil.resolveMessage(error))
     }
@@ -46,7 +45,7 @@ export const SessionsFocusSupportFooter = (): ReactElement | null => {
     void loadFocusSupport()
   }, [])
 
-  if (focusSupport?.status !== 'missing-tool') {
+  if (!isFocusToolMissing) {
     return null
   }
 

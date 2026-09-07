@@ -2,11 +2,13 @@ import { spawn } from 'node:child_process'
 import { homedir } from 'node:os'
 
 import { errorUtil } from '#src/main/util/error-util'
-import { TRIGGER_RUN_EXIT_CODE_TIMED_OUT, TRIGGER_RUN_LOG_SNIPPET_MAX_LENGTH } from '#src/shared/trigger-model'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { constant } from '#src/shared/util/constant'
 
 const DEFAULT_GRACE_PERIOD_MS = 5000
 
-export interface ITriggerCommandResult {
+export type TriggerCommandResult = {
   durationMs: number
   exitCode: number
   isTimedOut: boolean
@@ -18,19 +20,28 @@ export class TriggerCommandService {
   protected readonly _maxOutputLength: number
   protected readonly _spawnImpl: typeof spawn
 
-  constructor(params: { gracePeriodMs?: number; maxOutputLength?: number; spawnImpl?: typeof spawn } = {}) {
-    this._gracePeriodMs = params.gracePeriodMs ?? DEFAULT_GRACE_PERIOD_MS
-    this._maxOutputLength = params.maxOutputLength ?? TRIGGER_RUN_LOG_SNIPPET_MAX_LENGTH
-    this._spawnImpl = params.spawnImpl ?? spawn
+  constructor(
+    params: { gracePeriodMs: number; maxOutputLength: number; spawnImpl: typeof spawn } = {
+      gracePeriodMs: DEFAULT_GRACE_PERIOD_MS,
+      maxOutputLength: constant.scheduleTrigger.run.log.snippetMaxLength,
+      spawnImpl: spawn,
+    },
+  ) {
+    const { gracePeriodMs, maxOutputLength, spawnImpl } = params
+    this._gracePeriodMs = gracePeriodMs
+    this._maxOutputLength = maxOutputLength
+    this._spawnImpl = spawnImpl
   }
 
-  run(params: { command: string; timeoutMs: number }): Promise<ITriggerCommandResult> {
-    return new Promise<ITriggerCommandResult>((resolve) => {
+  run(params: { command: string; timeoutMs: number }): Promise<TriggerCommandResult> {
+    const { command, timeoutMs } = params
+
+    return new Promise<TriggerCommandResult>((resolve) => {
       const startedAt = Date.now()
       const stdoutChunks: string[] = []
       const stderrChunks: string[] = []
       const workerState = { isTimedOut: false }
-      const child = this._spawnImpl(this._resolveShellPath(), ['-l', '-c', params.command], {
+      const child = this._spawnImpl(this._resolveShellPath(), ['-l', '-c', command], {
         cwd: homedir(),
         detached: true,
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -42,7 +53,7 @@ export class TriggerCommandService {
         graceTimerRef.current = setTimeout(() => {
           this._killProcessGroup({ pid: child.pid, signal: 'SIGKILL' })
         }, this._gracePeriodMs)
-      }, params.timeoutMs)
+      }, timeoutMs)
       const clearTimers = (): void => {
         clearTimeout(timeoutTimer)
 
@@ -82,7 +93,8 @@ export class TriggerCommandService {
   }
 
   protected _captureChunk(params: { chunk: Buffer; chunks: string[] }): void {
-    const capturedLength = params.chunks.reduce((total, chunk) => {
+    const { chunk, chunks } = params
+    const capturedLength = chunks.reduce((total, chunk) => {
       return total + chunk.length
     }, 0)
 
@@ -91,42 +103,45 @@ export class TriggerCommandService {
     }
 
     const remainingLength = this._maxOutputLength - capturedLength
-    params.chunks.push(params.chunk.toString('utf8').slice(0, remainingLength))
+    chunks.push(chunk.toString('utf8').slice(0, remainingLength))
   }
 
   protected _killProcessGroup(params: { pid: number | undefined; signal: NodeJS.Signals }): void {
-    if (params.pid === undefined) {
+    const { pid, signal } = params
+    if (pid === undefined) {
       return
     }
 
     try {
-      process.kill(-params.pid, params.signal)
+      process.kill(-pid, signal)
     } catch {
       return
     }
   }
 
   protected _resolveExitCode(params: { code: number | null; isTimedOut: boolean }): number {
-    if (params.isTimedOut) {
-      return TRIGGER_RUN_EXIT_CODE_TIMED_OUT
+    const { code, isTimedOut } = params
+    if (isTimedOut) {
+      return constant.scheduleTrigger.run.exitCodeTimedOut
     }
 
-    if (params.code !== null) {
-      return params.code
+    if (code !== null) {
+      return code
     }
 
     return 1
   }
 
   protected _resolveOutput(params: { stderrChunks: string[]; stdoutChunks: string[] }): string {
-    const stdout = params.stdoutChunks.join('')
-    const stderr = params.stderrChunks.join('')
+    const { stderrChunks, stdoutChunks } = params
+    const stdout = stdoutChunks.join('')
+    const stderr = stderrChunks.join('')
 
     return this._truncate({ value: `${stdout}\n${stderr}`.trim() })
   }
 
   protected _resolveShellPath(): string {
-    if (process.platform === 'darwin') {
+    if (osUtil.resolvePlatform() === OS.MACOS) {
       return '/bin/zsh'
     }
 
@@ -134,10 +149,11 @@ export class TriggerCommandService {
   }
 
   protected _truncate(params: { value: string }): string {
-    if (params.value.length <= this._maxOutputLength) {
-      return params.value
+    const { value } = params
+    if (value.length <= this._maxOutputLength) {
+      return value
     }
 
-    return params.value.slice(0, this._maxOutputLength)
+    return value.slice(0, this._maxOutputLength)
   }
 }
