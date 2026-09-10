@@ -13,9 +13,9 @@ import { type ISideMenuItem, SideMenu } from '#src/renderer/src/ui-component/sid
 import { UsageDashboard } from '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard'
 import { developmentPrefsUtil } from '#src/renderer/src/util/development-prefs-util'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { type MenuStatusDot, menuStatusUtil } from '#src/renderer/src/util/menu-status-util'
+import { type MenuStatusDot, MenuStatusUtil } from '#src/renderer/src/util/menu-status-util'
 import { sessionFinishedPulseUtil } from '#src/renderer/src/util/session-finished-pulse-util'
-import { sessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
+import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
 import { sideMenuPrefsUtil } from '#src/renderer/src/util/side-menu-prefs-util'
 import type { ISessionInfo, ISessionSnapshot } from '#src/shared/session-model'
 import {
@@ -252,6 +252,7 @@ export const AppShell = (): ReactElement => {
 
   useEffect(() => {
     const playSessionSounds = (params: { nextSnapshot: ISessionSnapshot; previousSessions?: ISessionInfo[] }): void => {
+      const sessionSoundUtil = new SessionSoundUtil()
       const newlyFinishedSessionIds = sessionSoundUtil.resolveStatusTransitionSessionIds({
         currentSessions: params.nextSnapshot.sessions,
         fromStatus: 'busy',
@@ -335,6 +336,7 @@ export const AppShell = (): ReactElement => {
   }, [])
 
   const finishedPulseSeconds = settings?.sessionFinishedPulseSeconds ?? DEFAULT_SESSION_FINISHED_PULSE_SECONDS
+  const menuStatusUtil = new MenuStatusUtil()
   const peakStatusDot = menuStatusUtil.resolvePeakStatusDot({ now: nowMs, snapshot: usageSnapshot })
   const sessionsStatusDot = menuStatusUtil.resolveSessionsStatusDot({
     hasLoadError: sessionsErrorMessage !== '',

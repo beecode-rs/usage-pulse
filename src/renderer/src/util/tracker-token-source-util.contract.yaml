@@ -20,7 +20,7 @@ methods:
               providerId: claude
               refreshIntervalSeconds: 300
               tokenSource: SYSTEM
-            osPlatform: windows
+            osPlatform: WINDOWS
         result:
           accessToken: ''
           id: tracker-claude
@@ -39,7 +39,7 @@ methods:
               providerId: claude
               refreshIntervalSeconds: 300
               tokenSource: SYSTEM
-            osPlatform: linux
+            osPlatform: LINUX
         result:
           accessToken: ''
           id: tracker-claude
@@ -58,7 +58,7 @@ methods:
               providerId: claude
               refreshIntervalSeconds: 300
               tokenSource: MANUAL
-            osPlatform: windows
+            osPlatform: WINDOWS
         result:
           accessToken: ''
           id: tracker-claude
@@ -78,7 +78,7 @@ methods:
               providerId: dummy
               refreshIntervalSeconds: 300
               times: ['09:00']
-            osPlatform: windows
+            osPlatform: WINDOWS
         result:
           accessToken: ''
           days: [friday]
@@ -100,7 +100,7 @@ methods:
               providerId: claude
               refreshIntervalSeconds: 300
               tokenSource: SYSTEM
-            osPlatform: linux
+            osPlatform: LINUX
         result:
           selectedTokenSource: SYSTEM
           systemTokenOption:
@@ -116,7 +116,7 @@ methods:
               providerId: claude
               refreshIntervalSeconds: 300
               tokenSource: MANUAL
-            osPlatform: macos
+            osPlatform: MACOS
         result:
           selectedTokenSource: MANUAL
           systemTokenOption:
@@ -134,7 +134,7 @@ methods:
               providerId: claude
               refreshIntervalSeconds: 300
               tokenSource: SYSTEM
-            osPlatform: windows
+            osPlatform: WINDOWS
         result:
           selectedTokenSource: MANUAL
       # Non-claude providers have no token source section at all: manual, no option.
@@ -148,6 +148,6 @@ methods:
               providerId: dummy
               refreshIntervalSeconds: 300
               times: ['09:00']
-            osPlatform: linux
+            osPlatform: LINUX
         result:
           selectedTokenSource: MANUAL

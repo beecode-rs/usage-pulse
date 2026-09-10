@@ -1,4 +1,4 @@
-import { sessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
+import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
 import { type ISessionInfo } from '#src/shared/session-model'
 
 const MILLISECONDS_PER_SECOND = 1000
@@ -22,7 +22,7 @@ export const sessionFinishedPulseUtil = {
     const keptEntries = Object.entries(params.finishedAtBySessionId).filter(([sessionId]) => {
       return idleSessionIds.has(sessionId)
     })
-    const finishedEntries = sessionSoundUtil
+    const finishedEntries = new SessionSoundUtil()
       .resolveStatusTransitionSessionIds({
         currentSessions: params.currentSessions,
         fromStatus: 'busy',

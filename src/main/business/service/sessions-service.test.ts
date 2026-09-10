@@ -23,6 +23,7 @@ import { delimiter, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { SessionsServiceContractHarness } from '#src/main/business/service/_sessions-service-contract-harness'
+import { OS, osUtil } from '#src/main/util/os-util'
 
 const fakeXdotoolScript = `#!/bin/sh
 if [ -n "$USAGE_PULSE_XDOTOOL_ARGS_LOG" ]; then
@@ -149,26 +150,6 @@ const restoreEnvValue = (params: { key: string; value: string | undefined }) => 
   process.env[params.key] = params.value
 }
 
-const forceSessionType = (params: { sessionType: 'wayland' | 'x11' }) => {
-  const originalSessionType = process.env.XDG_SESSION_TYPE
-  const originalWaylandDisplay = process.env.WAYLAND_DISPLAY
-
-  process.env.XDG_SESSION_TYPE = params.sessionType
-
-  if (params.sessionType === 'wayland') {
-    process.env.WAYLAND_DISPLAY = 'wayland-0'
-  } else {
-    delete process.env.WAYLAND_DISPLAY
-  }
-
-  return {
-    restoreSessionEnv: () => {
-      restoreEnvValue({ key: 'XDG_SESSION_TYPE', value: originalSessionType })
-      restoreEnvValue({ key: 'WAYLAND_DISPLAY', value: originalWaylandDisplay })
-    },
-  }
-}
-
 const installLinuxFocusShims = async () => {
   const binDir = await mkdtemp(join(tmpdir(), 'usage-pulse-focus-bin-'))
   const argsLogPath = join(binDir, 'xdotool-args.log')
@@ -283,14 +264,14 @@ const readOsascriptInvocations = async (params: { argsLogPath: string }): Promis
   return logContent.trim() === '' ? [] : logContent.trim().split('\n')
 }
 
-describe.skipIf(process.platform === 'win32')('SessionsService [contract supplement]', () => {
+describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService [contract supplement]', () => {
   it('activates the first ancestor window found by the Linux walk', async () => {
     const shim = await installLinuxFocusShims()
 
     try {
       shim.setPsPpidByPid({ ppidByPid: { '4242': '777' } })
       shim.setWindowForPid({ pid: '777', windowId: '123456' })
-      const service = new SessionsServiceContractHarness({ focusPlatform: 'linux' })
+      const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
       await service.focusSession({ cwd: '/home/user/project', pid: 4242 })
       const invocations = await readXdotoolInvocations({ argsLogPath: shim.argsLogPath })
 
@@ -312,7 +293,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
       shim.setPsPpidByPid({ ppidByPid: { '4242': '777' } })
       shim.setWindowForPid({ pid: '777', windowId: '123456' })
       shim.setWindowHidden()
-      const service = new SessionsServiceContractHarness({ focusPlatform: 'linux' })
+      const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
       await service.focusSession({ cwd: '/home/user/project', pid: 4242 })
       const invocations = await readXdotoolInvocations({ argsLogPath: shim.argsLogPath })
 
@@ -332,7 +313,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
     const pathOverride = await installBinarylessPath()
 
     try {
-      const service = new SessionsServiceContractHarness({ focusPlatform: 'linux' })
+      const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
 
       await expect(service.focusSession({ cwd: '/home/user/project', pid: 4242 })).rejects.toThrow(
         'focusing a session terminal on Linux requires the xdotool tool; install it via the system package manager',
@@ -344,10 +325,8 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
 
   it('rejects with the window-not-found error when the session pid is already dead', async () => {
     const shim = await installLinuxFocusShims()
-    const sessionEnv = forceSessionType({ sessionType: 'x11' })
-
     try {
-      const service = new SessionsServiceContractHarness({ focusPlatform: 'linux' })
+      const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX, isWaylandSession: false })
 
       await expect(service.focusSession({ cwd: '/home/user/project', pid: 4242 })).rejects.toThrow(
         linuxWindowNotFoundMessage,
@@ -356,34 +335,28 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
 
       expect(invocations).toEqual(['search|--onlyvisible|--pid|4242', 'search|--pid|4242'])
     } finally {
-      sessionEnv.restoreSessionEnv()
       await shim.restoreEnvironment()
     }
   })
 
   it('rejects with the Wayland-not-supported error on a Wayland session without an X11 window', async () => {
     const shim = await installLinuxFocusShims()
-    const sessionEnv = forceSessionType({ sessionType: 'wayland' })
-
     try {
-      const service = new SessionsServiceContractHarness({ focusPlatform: 'linux' })
+      const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX, isWaylandSession: true })
 
       await expect(service.focusSession({ cwd: '/home/user/project', pid: 4242 })).rejects.toThrow(
         linuxWaylandNotSupportedMessage,
       )
     } finally {
-      sessionEnv.restoreSessionEnv()
       await shim.restoreEnvironment()
     }
   })
 
   it('rejects with the window-not-found error when the walk reaches init without finding a window', async () => {
     const shim = await installLinuxFocusShims()
-    const sessionEnv = forceSessionType({ sessionType: 'x11' })
-
     try {
       shim.setPsPpidByPid({ ppidByPid: { '4242': '1' } })
-      const service = new SessionsServiceContractHarness({ focusPlatform: 'linux' })
+      const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX, isWaylandSession: false })
 
       await expect(service.focusSession({ cwd: '/home/user/project', pid: 4242 })).rejects.toThrow(
         linuxWindowNotFoundMessage,
@@ -397,18 +370,15 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
         'search|--pid|1',
       ])
     } finally {
-      sessionEnv.restoreSessionEnv()
       await shim.restoreEnvironment()
     }
   })
 
   it('stops the Linux ancestor walk after twelve hops without a window', async () => {
     const shim = await installLinuxFocusShims()
-    const sessionEnv = forceSessionType({ sessionType: 'x11' })
-
     try {
       shim.setPsDecrementMode()
-      const service = new SessionsServiceContractHarness({ focusPlatform: 'linux' })
+      const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX, isWaylandSession: false })
 
       await expect(service.focusSession({ cwd: '/home/user/project', pid: 100 })).rejects.toThrow(
         linuxWindowNotFoundMessage,
@@ -421,13 +391,12 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
       expect(firstInvocation).toBe('search|--onlyvisible|--pid|100')
       expect(lastInvocation).toBe('search|--pid|89')
     } finally {
-      sessionEnv.restoreSessionEnv()
       await shim.restoreEnvironment()
     }
   })
 
   it('rejects the windows platform with the macOS-and-Linux support error', async () => {
-    const service = new SessionsServiceContractHarness({ focusPlatform: 'windows' })
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.WINDOWS })
 
     await expect(service.focusSession({ cwd: 'C:\\Users\\user\\project', pid: 4242 })).rejects.toThrow(
       'focusing a session terminal is only supported on macOS and Linux',
@@ -436,7 +405,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
 
   it('routes a macos platform into the bundle flow and focuses the matching Ghostty tab', async () => {
     const service = new SessionsServiceContractHarness({
-      focusPlatform: 'macos',
+      focusPlatform: OS.MACOS,
       macOsBundlePath: '/Applications/Ghostty.app',
     })
     await service.focusSession({ cwd: '/Users/user/project', pid: 4242 })
@@ -448,7 +417,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
 
   it('activates the Ghostty bundle only when no terminal matched the session', async () => {
     const service = new SessionsServiceContractHarness({
-      focusPlatform: 'macos',
+      focusPlatform: OS.MACOS,
       macOsBundlePath: '/Applications/Ghostty.app',
     })
     service.macOsGhosttyTabFocusOutcome = 'missing'
@@ -466,7 +435,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
       shim.setPsCommByPid({ commByPid: { '9999': '/Applications/Ghostty.app/Contents/MacOS/ghostty' } })
       shim.setPsTtyByPid({ ttyByPid: { '5100': 'ttys011' } })
       const service = new SessionsServiceContractHarness({
-        focusPlatform: 'macos',
+        focusPlatform: OS.MACOS,
         macOsBundlePath: '/Applications/Ghostty.app',
       })
       service.macOsGhosttyTtySupport = true
@@ -483,7 +452,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
 
   it('falls back to the ranked cwd match when the tty match reports the terminal missing', async () => {
     const service = new SessionsServiceContractHarness({
-      focusPlatform: 'macos',
+      focusPlatform: OS.MACOS,
       macOsBundlePath: '/Applications/Ghostty.app',
     })
     service.macOsGhosttyTtySupport = true
@@ -500,7 +469,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
 
   it('rejects with the other-desktop hint when the tty-focused terminal never reaches the front', async () => {
     const service = new SessionsServiceContractHarness({
-      focusPlatform: 'macos',
+      focusPlatform: OS.MACOS,
       macOsBundlePath: '/Applications/Ghostty.app',
     })
     service.macOsGhosttyTtySupport = true
@@ -516,7 +485,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
 
   it('rejects with the other-desktop hint when the cwd-matched tab never reaches the front', async () => {
     const service = new SessionsServiceContractHarness({
-      focusPlatform: 'macos',
+      focusPlatform: OS.MACOS,
       macOsBundlePath: '/Applications/Ghostty.app',
     })
     service.macOsGhosttyTabFocusOutcome = 'hidden'
@@ -555,7 +524,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
       })
       shim.setPsLstartByPid({ lstartByPid: { '5100': 'Wed Sep  2 08:18:07 2026', '6100': 'Wed Sep  2 10:40:10 2026' } })
       const service = new SessionsServiceContractHarness({
-        focusPlatform: 'macos',
+        focusPlatform: OS.MACOS,
         macOsBundlePath: '/Applications/Ghostty.app',
       })
       service.isMacOsGhosttyPeersStubbed = false
@@ -608,7 +577,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
       shim.setPsPpidByPid({ ppidByPid: { '4242': '5001', '5001': '5100', '5100': '9999', '9999': '1' } })
       shim.setPsCommByPid({ commByPid: { '9999': '/Applications/Ghostty.app/Contents/MacOS/ghostty' } })
       const service = new SessionsServiceContractHarness({
-        focusPlatform: 'macos',
+        focusPlatform: OS.MACOS,
         macOsBundlePath: '/Applications/Ghostty.app',
       })
       service.isMacOsGhosttyPeersStubbed = false
@@ -623,7 +592,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
 
   it('routes a macos platform into the bundle flow but skips the tab focus for other terminals', async () => {
     const service = new SessionsServiceContractHarness({
-      focusPlatform: 'macos',
+      focusPlatform: OS.MACOS,
       macOsBundlePath: '/Applications/iTerm.app',
     })
     await service.focusSession({ cwd: '/Users/user/project', pid: 4242 })
@@ -635,7 +604,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
 
   it('routes a macos platform into the bundle flow but skips the tab focus without a cwd', async () => {
     const service = new SessionsServiceContractHarness({
-      focusPlatform: 'macos',
+      focusPlatform: OS.MACOS,
       macOsBundlePath: '/Applications/Ghostty.app',
     })
     await service.focusSession({ cwd: '', pid: 4242 })
@@ -646,7 +615,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
 
   it('routes a macos platform into the bundle flow and focuses the matching VS Code window', async () => {
     const service = new SessionsServiceContractHarness({
-      focusPlatform: 'macos',
+      focusPlatform: OS.MACOS,
       macOsBundlePath: '/Applications/Visual Studio Code.app',
     })
     await service.focusSession({ cwd: '/Users/user/claude-code-helper', pid: 4242 })
@@ -666,7 +635,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
         windowTitles: '◐ session-focus-button.tsx — claude-code-helper\nemotify\nGit Graph — bm (Workspace)',
       })
       const service = new SessionsServiceContractHarness({
-        focusPlatform: 'macos',
+        focusPlatform: OS.MACOS,
         macOsBundlePath: '/Applications/Visual Studio Code.app',
       })
       service.isMacOsWindowFocusStubbed = false
@@ -687,7 +656,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
     try {
       shim.setWindowTitles({ windowTitles: 'emotify\nGit Graph — bm (Workspace)' })
       const service = new SessionsServiceContractHarness({
-        focusPlatform: 'macos',
+        focusPlatform: OS.MACOS,
         macOsBundlePath: '/Applications/Visual Studio Code.app',
       })
       service.isMacOsWindowFocusStubbed = false
@@ -701,9 +670,9 @@ describe.skipIf(process.platform === 'win32')('SessionsService [contract supplem
   })
 })
 
-describe.skipIf(process.platform === 'win32')('SessionsService focus support [contract supplement]', () => {
+describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService focus support [contract supplement]', () => {
   it('reports ready focus support off linux without touching the install path', async () => {
-    const service = new SessionsServiceContractHarness({ focusPlatform: 'macos' })
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
 
     await expect(service.getFocusSupport()).resolves.toEqual({ status: 'ready' })
     expect(service.linuxFocusToolInstallAttemptCount).toBe(0)
@@ -713,7 +682,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService focus support [co
     const shim = await installLinuxFocusShims()
 
     try {
-      const service = new SessionsServiceContractHarness({ focusPlatform: 'linux' })
+      const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
       await expect(service.getFocusSupport()).resolves.toEqual({ status: 'ready' })
       await expect(service.getFocusSupport()).resolves.toEqual({ status: 'ready' })
       const invocations = await readXdotoolInvocations({ argsLogPath: shim.argsLogPath })
@@ -728,7 +697,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService focus support [co
     const pathOverride = await installBinarylessPath()
 
     try {
-      const service = new SessionsServiceContractHarness({ focusPlatform: 'linux' })
+      const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
 
       await expect(service.getFocusSupport()).resolves.toEqual({ status: 'missing-tool' })
     } finally {
@@ -737,7 +706,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService focus support [co
   })
 
   it('refreshes the cached focus support after installing the tool', async () => {
-    const service = new SessionsServiceContractHarness({ focusPlatform: 'linux' })
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
     service.isLinuxFocusToolInstalled = false
 
     await expect(service.getFocusSupport()).resolves.toEqual({ status: 'missing-tool' })
@@ -749,7 +718,7 @@ describe.skipIf(process.platform === 'win32')('SessionsService focus support [co
   })
 
   it('rejects with a wrapped message when the focus tool install fails', async () => {
-    const service = new SessionsServiceContractHarness({ focusPlatform: 'linux' })
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
     service.linuxFocusToolInstallError = new Error('polkit dismissed the prompt')
 
     await expect(service.installFocusTool()).rejects.toThrow('installing xdotool failed: polkit dismissed the prompt')

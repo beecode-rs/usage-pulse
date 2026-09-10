@@ -4,6 +4,7 @@ import { type SettingsRepo } from '#src/main/business/repo/settings-repo'
 import { type TriggerRunLogRepo } from '#src/main/business/repo/trigger-run-log-repo'
 import { TriggerCommandService } from '#src/main/business/service/trigger-command-service'
 import { dummyTriggerPopup } from '#src/main/lib/dummy-trigger-popup'
+import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/main/util/error-util'
 import { type IAppSettings, type IDummyTrackerConfig } from '#src/shared/settings-model'
 import {
@@ -313,7 +314,7 @@ export class TriggerRunnerService {
   }
 
   protected _parseSlotMinutes(params: { time: string }): number {
-    const match = /^([0-9]{2}):([0-9]{2})$/.exec(params.time)
+    const match = constant.twoDigitTimeRegex.exec(params.time)
     const hoursText = match?.[1]
     const minutesText = match?.[2]
 

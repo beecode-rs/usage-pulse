@@ -14,6 +14,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { ClaudeSystemTokenService } from '#src/main/business/service/claude-system-token-service'
+import { OS, osUtil } from '#src/main/util/os-util'
 
 const createLinuxHomeFixture = async (params: { credentialsJson?: string }) => {
   const homeDir = await mkdtemp(join(tmpdir(), 'usage-pulse-token-home-'))
@@ -42,7 +43,7 @@ describe('ClaudeSystemTokenService [contract supplement]', () => {
     })
 
     try {
-      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: 'linux' })
+      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: OS.LINUX })
 
       await expect(service.resolveAccessToken()).resolves.toBe('satp-aiOauth-token-123')
     } finally {
@@ -54,7 +55,7 @@ describe('ClaudeSystemTokenService [contract supplement]', () => {
     const fixture = await createLinuxHomeFixture({})
 
     try {
-      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: 'linux' })
+      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: OS.LINUX })
 
       await expect(service.resolveAccessToken()).rejects.toThrow(
         `reading the Claude Code credentials file '${fixture.credentialsPath}' failed:`,
@@ -68,7 +69,7 @@ describe('ClaudeSystemTokenService [contract supplement]', () => {
     const fixture = await createLinuxHomeFixture({ credentialsJson: '{"claudeAiOauth":{}}' })
 
     try {
-      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: 'linux' })
+      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: OS.LINUX })
 
       await expect(service.resolveAccessToken()).rejects.toThrow(
         `${fixture.credentialsPath} is missing a usable claudeAiOauth.accessToken`,
@@ -82,7 +83,7 @@ describe('ClaudeSystemTokenService [contract supplement]', () => {
     const fixture = await createLinuxHomeFixture({ credentialsJson: '{"claudeAiOauth":{"accessToken":""}}' })
 
     try {
-      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: 'linux' })
+      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: OS.LINUX })
 
       await expect(service.resolveAccessToken()).rejects.toThrow(
         `${fixture.credentialsPath} is missing a usable claudeAiOauth.accessToken`,
@@ -96,7 +97,7 @@ describe('ClaudeSystemTokenService [contract supplement]', () => {
     const fixture = await createLinuxHomeFixture({ credentialsJson: 'definitely not json' })
 
     try {
-      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: 'linux' })
+      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: OS.LINUX })
 
       await expect(service.resolveAccessToken()).rejects.toThrow(`${fixture.credentialsPath} is not valid JSON`)
     } finally {
@@ -108,7 +109,7 @@ describe('ClaudeSystemTokenService [contract supplement]', () => {
     const fixture = await createLinuxHomeFixture({ credentialsJson: 'null' })
 
     try {
-      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: 'linux' })
+      const service = new ClaudeSystemTokenService({ homeDir: fixture.homeDir, platform: OS.LINUX })
 
       await expect(service.resolveAccessToken()).rejects.toThrow(`${fixture.credentialsPath} is not a JSON object`)
     } finally {
@@ -117,17 +118,17 @@ describe('ClaudeSystemTokenService [contract supplement]', () => {
   })
 
   it('rejects the windows platform with the unsupported-platform message', async () => {
-    const service = new ClaudeSystemTokenService({ homeDir: '/tmp/unused-claude-home', platform: 'windows' })
+    const service = new ClaudeSystemTokenService({ homeDir: '/tmp/unused-claude-home', platform: OS.WINDOWS })
 
     await expect(service.resolveAccessToken()).rejects.toThrow(
-      "Reading the Claude token from the system is not supported on 'windows'",
+      "Reading the Claude token from the system is not supported on 'WINDOWS'",
     )
   })
 
-  it.skipIf(process.platform === 'darwin')(
+  it.skipIf(osUtil.resolvePlatform() === OS.MACOS)(
     'rejects the macos platform with the keychain read-failure message when the security binary is unavailable',
     async () => {
-      const service = new ClaudeSystemTokenService({ homeDir: '/tmp/unused-claude-home', platform: 'macos' })
+      const service = new ClaudeSystemTokenService({ homeDir: '/tmp/unused-claude-home', platform: OS.MACOS })
 
       await expect(service.resolveAccessToken()).rejects.toThrow(
         "reading 'Claude Code-credentials' from the macOS Keychain failed:",

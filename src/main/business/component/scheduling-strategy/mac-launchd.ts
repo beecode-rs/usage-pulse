@@ -9,8 +9,9 @@ import type {
   ISchedulingRegistrationParams,
   ISchedulingStrategy,
 } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
+import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/main/util/error-util'
-import { type OsPlatform, osUtil } from '#src/main/util/os-util'
+import { OS, osUtil } from '#src/main/util/os-util'
 import type { TriggerDay } from '#src/shared/trigger-model'
 
 const execFileAsync = promisify(execFile)
@@ -45,8 +46,8 @@ export class SchedulingStrategyMacLaunchd implements ISchedulingStrategy {
     this._uid = params.uid ?? userInfo().uid
   }
 
-  getSchedulingPlatform(): OsPlatform {
-    return 'macos'
+  getSchedulingPlatform(): OS {
+    return OS.MACOS
   }
 
   async inspectRegistration(params: { triggerId: string }): Promise<ISchedulingInspection> {
@@ -83,7 +84,7 @@ export class SchedulingStrategyMacLaunchd implements ISchedulingStrategy {
   protected _assertMacOsPlatform(): void {
     const platform = osUtil.resolvePlatform()
 
-    if (platform !== 'macos') {
+    if (platform !== OS.MACOS) {
       throw new Error('Scheduling triggers with a launchd agent is only supported on macOS for now')
     }
   }
@@ -226,7 +227,7 @@ export class SchedulingStrategyMacLaunchd implements ISchedulingStrategy {
   }
 
   protected _parseTimeOfDay(params: { time: string }): { hour: number; minute: number } {
-    const match = /^([0-9]{2}):([0-9]{2})$/.exec(params.time)
+    const match = constant.twoDigitTimeRegex.exec(params.time)
     const hourText = match?.[1]
     const minuteText = match?.[2]
 

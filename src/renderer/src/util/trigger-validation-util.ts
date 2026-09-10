@@ -1,4 +1,5 @@
-import { type ITriggerConfig, TRIGGER_TIME_PATTERN } from '#src/shared/trigger-model'
+import { type ITriggerConfig } from '#src/shared/trigger-model'
+import { constant } from '#src/shared/util/constant'
 
 export const triggerValidationUtil = {
   resolveValidationError(params: { trigger: ITriggerConfig }): string | undefined {
@@ -19,7 +20,7 @@ export const triggerValidationUtil = {
     }
 
     const hasInvalidTime = filledTimes.some((time) => {
-      return !TRIGGER_TIME_PATTERN.test(time)
+      return !constant.triggerTimeRegex.test(time)
     })
 
     if (hasInvalidTime) {

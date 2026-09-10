@@ -48,61 +48,30 @@ const SESSION_SOUND_TONES: Record<SessionSoundId, ISessionSoundTone[]> = {
 
 const audioContextCache: { context?: AudioContext } = {}
 
-export const sessionSoundUtil = {
-  _playTone: (params: { audioContext: AudioContext; gain: number; tone: ISessionSoundTone }): void => {
-    const gainNode = params.audioContext.createGain()
-    const oscillator = params.audioContext.createOscillator()
-    const startAtSeconds = params.audioContext.currentTime + params.tone.offsetSeconds
-    const stopAtSeconds = startAtSeconds + params.tone.durationSeconds
-
-    const toneGain = params.gain * params.tone.gainMultiplier
-
-    gainNode.gain.setValueAtTime(0, startAtSeconds)
-    gainNode.gain.linearRampToValueAtTime(toneGain, startAtSeconds + TONE_ATTACK_SECONDS)
-    gainNode.gain.exponentialRampToValueAtTime(TONE_SILENCE_GAIN, stopAtSeconds)
-    oscillator.frequency.value = params.tone.frequencyHz
-    oscillator.type = params.tone.waveType
-    oscillator.connect(gainNode)
-    gainNode.connect(params.audioContext.destination)
-    oscillator.start(startAtSeconds)
-    oscillator.stop(stopAtSeconds)
-  },
-
-  _resolveAudioContext: (): AudioContext => {
-    audioContextCache.context = audioContextCache.context ?? new AudioContext()
-
-    const audioContext = audioContextCache.context
-
-    if (audioContext.state === 'suspended') {
-      void audioContext.resume()
-    }
-
-    return audioContext
-  },
-
-  playSessionSound: (params: { soundId: SessionSoundId; volumePercent: number }): void => {
+export class SessionSoundUtil {
+  playSessionSound(params: { soundId: SessionSoundId; volumePercent: number }): void {
     if (params.soundId === SessionSoundId.NONE) {
       return
     }
 
-    const gain = sessionSoundUtil.resolveSoundGain({ volumePercent: params.volumePercent })
+    const gain = this.resolveSoundGain({ volumePercent: params.volumePercent })
 
     if (gain <= 0) {
       return
     }
 
-    const audioContext = sessionSoundUtil._resolveAudioContext()
+    const audioContext = this._resolveAudioContext()
 
     SESSION_SOUND_TONES[params.soundId].map((tone) => {
-      sessionSoundUtil._playTone({ audioContext, gain, tone })
+      this._playTone({ audioContext, gain, tone })
     })
-  },
+  }
 
-  resolveNewlyStatusSessionIds: (params: {
+  resolveNewlyStatusSessionIds(params: {
     currentSessions: ISessionInfo[]
     previousSessions?: ISessionInfo[]
     status: SessionStatus
-  }): string[] => {
+  }): string[] {
     if (params.previousSessions === undefined) {
       return []
     }
@@ -124,23 +93,23 @@ export const sessionSoundUtil = {
       .map((session) => {
         return session.sessionId
       })
-  },
+  }
 
-  resolveSoundGain: (params: { volumePercent: number }): number => {
+  resolveSoundGain(params: { volumePercent: number }): number {
     const clampedVolumePercent = Math.min(
       Math.max(params.volumePercent, MIN_SOUND_VOLUME_PERCENT),
       MAX_SOUND_VOLUME_PERCENT,
     )
 
     return (clampedVolumePercent / MAX_SOUND_VOLUME_PERCENT) * TONE_MAX_GAIN
-  },
+  }
 
-  resolveStatusTransitionSessionIds: (params: {
+  resolveStatusTransitionSessionIds(params: {
     currentSessions: ISessionInfo[]
     fromStatus: SessionStatus
     previousSessions?: ISessionInfo[]
     toStatus: SessionStatus
-  }): string[] => {
+  }): string[] {
     if (params.previousSessions === undefined) {
       return []
     }
@@ -162,5 +131,36 @@ export const sessionSoundUtil = {
       .map((session) => {
         return session.sessionId
       })
-  },
+  }
+
+  protected _playTone(params: { audioContext: AudioContext; gain: number; tone: ISessionSoundTone }): void {
+    const gainNode = params.audioContext.createGain()
+    const oscillator = params.audioContext.createOscillator()
+    const startAtSeconds = params.audioContext.currentTime + params.tone.offsetSeconds
+    const stopAtSeconds = startAtSeconds + params.tone.durationSeconds
+
+    const toneGain = params.gain * params.tone.gainMultiplier
+
+    gainNode.gain.setValueAtTime(0, startAtSeconds)
+    gainNode.gain.linearRampToValueAtTime(toneGain, startAtSeconds + TONE_ATTACK_SECONDS)
+    gainNode.gain.exponentialRampToValueAtTime(TONE_SILENCE_GAIN, stopAtSeconds)
+    oscillator.frequency.value = params.tone.frequencyHz
+    oscillator.type = params.tone.waveType
+    oscillator.connect(gainNode)
+    gainNode.connect(params.audioContext.destination)
+    oscillator.start(startAtSeconds)
+    oscillator.stop(stopAtSeconds)
+  }
+
+  protected _resolveAudioContext(): AudioContext {
+    audioContextCache.context = audioContextCache.context ?? new AudioContext()
+
+    const audioContext = audioContextCache.context
+
+    if (audioContext.state === 'suspended') {
+      void audioContext.resume()
+    }
+
+    return audioContext
+  }
 }

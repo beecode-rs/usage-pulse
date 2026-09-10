@@ -1,20 +1,20 @@
-import type { OsPlatform } from '#src/shared/os-model'
+import { OS } from '#src/shared/os-model'
 
-export type { OsPlatform }
+export { OS }
 
 export const osUtil = {
-  resolvePlatform: (): OsPlatform => {
+  resolvePlatform: (): OS => {
     switch (process.platform) {
       case 'darwin': {
-        return 'macos'
+        return OS.MACOS
       }
 
       case 'linux': {
-        return 'linux'
+        return OS.LINUX
       }
 
       case 'win32': {
-        return 'windows'
+        return OS.WINDOWS
       }
 
       default: {

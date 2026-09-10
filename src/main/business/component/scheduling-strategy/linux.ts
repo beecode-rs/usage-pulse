@@ -9,8 +9,10 @@ import type {
   ISchedulingRegistrationParams,
   ISchedulingStrategy,
 } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
+import { config } from '#src/main/util/config'
+import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/main/util/error-util'
-import { type OsPlatform, osUtil } from '#src/main/util/os-util'
+import { OS, osUtil } from '#src/main/util/os-util'
 import { TRIGGER_DAYS, type TriggerDay } from '#src/shared/trigger-model'
 
 const execFileAsync = promisify(execFile)
@@ -68,8 +70,8 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
     this.isSupported = params.isSystemdUserAvailable ?? this._resolveIsSystemdUserAvailable()
   }
 
-  getSchedulingPlatform(): OsPlatform {
-    return 'linux'
+  getSchedulingPlatform(): OS {
+    return OS.LINUX
   }
 
   async inspectRegistration(params: { triggerId: string }): Promise<ISchedulingInspection> {
@@ -115,7 +117,7 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   protected _assertLinuxOsPlatform(): void {
     const platform = osUtil.resolvePlatform()
 
-    if (platform !== 'linux') {
+    if (platform !== OS.LINUX) {
       throw new Error('Scheduling triggers with systemd user timers are only supported on Linux for now')
     }
   }
@@ -257,7 +259,7 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   protected _parseTimeOfDay(params: { time: string }): { hour: number; minute: number } {
-    const match = /^([0-9]{2}):([0-9]{2})$/.exec(params.time)
+    const match = constant.twoDigitTimeRegex.exec(params.time)
     const hourText = match?.[1]
     const minuteText = match?.[2]
 
@@ -299,7 +301,7 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
   }
 
   protected _resolveDefaultUnitDir(): string {
-    return join(process.env.XDG_CONFIG_HOME ?? join(this._homeDir, '.config'), 'systemd', 'user')
+    return join(config.xdgConfigHome ?? join(this._homeDir, '.config'), 'systemd', 'user')
   }
 
   protected _resolveIsSystemdUserAvailable(): boolean {

@@ -26,17 +26,6 @@ export class SettingsUseCase {
     this._settingsService = params.settingsService
   }
 
-  async initializeSettings(): Promise<IAppSettings> {
-    const settings = await this._settingsRepo.load()
-
-    await this._settingsRepo.save({ settings })
-    await this._schedulingService.syncRegistrations({ settings }).catch(() => {
-      return undefined
-    })
-
-    return settings
-  }
-
   async loadSettings(): Promise<IAppSettings> {
     return await this._settingsRepo.load()
   }

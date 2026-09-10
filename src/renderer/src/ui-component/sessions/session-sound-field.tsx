@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react'
 
-import { sessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
+import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
 import { SessionSoundId } from '#src/shared/settings-model'
 
 const SESSION_SOUND_OPTIONS: { label: string; soundId: SessionSoundId }[] = [
@@ -30,7 +30,7 @@ export const SessionSoundField = (props: {
   volumePercent: number
 }): ReactElement => {
   const handlePlaySound = (): void => {
-    sessionSoundUtil.playSessionSound({ soundId: props.soundId, volumePercent: props.volumePercent })
+    new SessionSoundUtil().playSessionSound({ soundId: props.soundId, volumePercent: props.volumePercent })
   }
 
   return (

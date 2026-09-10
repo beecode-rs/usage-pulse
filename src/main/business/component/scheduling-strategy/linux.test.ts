@@ -11,6 +11,7 @@ import { delimiter, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { SchedulingStrategyLinuxContractHarness } from '#src/main/business/component/scheduling-strategy/_linux-contract-harness'
+import { OS, osUtil } from '#src/main/util/os-util'
 
 const fakeSystemctlScript = `#!/bin/sh
 if [ -n "$USAGE_PULSE_SYSTEMCTL_ARGS_LOG" ]; then
@@ -110,7 +111,7 @@ const readSystemctlInvocations = async (params: { argsLogPath: string }) => {
   return (await readFile(params.argsLogPath, 'utf8')).trim().split('\n')
 }
 
-describe.skipIf(process.platform === 'win32')('SchedulingStrategyLinux [contract supplement]', () => {
+describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SchedulingStrategyLinux [contract supplement]', () => {
   it('reports a trigger as registered when its timer unit file exists and systemctl reports it active', async () => {
     const shim = await installFakeSystemctl()
     const unitDir = await mkdtemp(join(tmpdir(), 'usage-pulse-unit-dir-'))

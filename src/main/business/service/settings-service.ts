@@ -33,10 +33,10 @@ import {
   MAX_TRIGGER_TIMEOUT_MS,
   MIN_TRIGGER_TIMEOUT_MS,
   TRIGGER_DAYS,
-  TRIGGER_TIME_PATTERN,
   type TriggerDay,
 } from '#src/shared/trigger-model'
 import type { ProviderId } from '#src/shared/usage-model'
+import { constant } from '#src/shared/util/constant'
 
 export class SettingsService {
   createDefaultSettings(): IAppSettings {
@@ -554,7 +554,7 @@ export class SettingsService {
     }
 
     const times = params.value.filter((time): time is string => {
-      return typeof time === 'string' && TRIGGER_TIME_PATTERN.test(time)
+      return typeof time === 'string' && constant.triggerTimeRegex.test(time)
     })
 
     return [...new Set(times)].sort()

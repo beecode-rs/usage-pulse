@@ -1,5 +1,5 @@
-import { usagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
-import { zaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
+import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
+import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
 import type { ISessionSnapshot } from '#src/shared/session-model'
 import { FIVE_HOUR_WINDOW_MS, type IUsageSnapshot, UsageStatus } from '#src/shared/usage-model'
 
@@ -9,14 +9,8 @@ export const MONTH_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
 
 export type MenuStatusDot = 'error' | 'peak' | 'waiting' | 'warning'
 
-export const menuStatusUtil = {
-  _resolveWindowResetAt: (params: { elapsedMinutes: number; now: number; windowMs: number }): number => {
-    const elapsedMs = (params.elapsedMinutes * params.windowMs) / MAX_ELAPSED_MINUTES
-
-    return params.now + params.windowMs - elapsedMs
-  },
-
-  resolveCombinedStatusDot: (params: { dots: (MenuStatusDot | undefined)[] }): MenuStatusDot | undefined => {
+export class MenuStatusUtil {
+  resolveCombinedStatusDot(params: { dots: (MenuStatusDot | undefined)[] }): MenuStatusDot | undefined {
     if (params.dots.includes('error')) {
       return 'error'
     }
@@ -34,13 +28,13 @@ export const menuStatusUtil = {
     }
 
     return undefined
-  },
+  }
 
-  resolveDevelopmentStatusDot: (params: {
+  resolveDevelopmentStatusDot(params: {
     elapsedMinutes: number
     now: number
     usedPercent: number
-  }): MenuStatusDot | undefined => {
+  }): MenuStatusDot | undefined {
     const snapshot: IUsageSnapshot = {
       providers: [
         {
@@ -51,7 +45,7 @@ export const menuStatusUtil = {
           usage: [
             {
               label: '5-hour window',
-              resetAt: menuStatusUtil._resolveWindowResetAt({
+              resetAt: this._resolveWindowResetAt({
                 elapsedMinutes: params.elapsedMinutes,
                 now: params.now,
                 windowMs: FIVE_HOUR_WINDOW_MS,
@@ -61,7 +55,7 @@ export const menuStatusUtil = {
             },
             {
               label: 'MCP quota',
-              resetAt: menuStatusUtil._resolveWindowResetAt({
+              resetAt: this._resolveWindowResetAt({
                 elapsedMinutes: params.elapsedMinutes,
                 now: params.now,
                 windowMs: MONTH_WINDOW_MS,
@@ -74,34 +68,29 @@ export const menuStatusUtil = {
       ],
     }
 
-    return menuStatusUtil.resolveUsageStatusDot({ now: params.now, snapshot })
-  },
+    return this.resolveUsageStatusDot({ now: params.now, snapshot })
+  }
 
-  resolveIsWindowWarning: (params: {
-    now: number
-    resetAt?: number
-    usedPercent: number
-    windowMs?: number
-  }): boolean => {
+  resolveIsWindowWarning(params: { now: number; resetAt?: number; usedPercent: number; windowMs?: number }): boolean {
     const { resetAt, windowMs } = params
 
     if (resetAt === undefined || windowMs === undefined) {
       return false
     }
 
-    return usagePaceUtil.resolveIsUsageOutpacingWindow({
+    return new UsagePaceUtil().resolveIsUsageOutpacingWindow({
       now: params.now,
       resetAt,
       usedPercent: params.usedPercent,
       windowMs,
     })
-  },
+  }
 
-  resolvePeakStatusDot: (params: { now: number; snapshot?: IUsageSnapshot }): MenuStatusDot | undefined => {
+  resolvePeakStatusDot(params: { now: number; snapshot?: IUsageSnapshot }): MenuStatusDot | undefined {
     const providers = params.snapshot?.providers ?? []
 
     const isAnyProviderInPeakHours = providers.some((provider) => {
-      const peakInfo = zaiPeakUtil.resolvePeakInfo({ nowMs: params.now, providerId: provider.providerId })
+      const peakInfo = new ZaiPeakUtil().resolvePeakInfo({ nowMs: params.now, providerId: provider.providerId })
 
       return peakInfo?.isPeakHour === true
     })
@@ -111,12 +100,9 @@ export const menuStatusUtil = {
     }
 
     return undefined
-  },
+  }
 
-  resolveSessionsStatusDot: (params: {
-    hasLoadError?: boolean
-    snapshot?: ISessionSnapshot
-  }): MenuStatusDot | undefined => {
+  resolveSessionsStatusDot(params: { hasLoadError?: boolean; snapshot?: ISessionSnapshot }): MenuStatusDot | undefined {
     const hasSnapshotError = params.snapshot?.errorMessage !== undefined && params.snapshot.errorMessage !== ''
 
     if (params.hasLoadError === true || hasSnapshotError) {
@@ -132,9 +118,9 @@ export const menuStatusUtil = {
     }
 
     return undefined
-  },
+  }
 
-  resolveUsageStatusDot: (params: { now: number; snapshot?: IUsageSnapshot }): MenuStatusDot | undefined => {
+  resolveUsageStatusDot(params: { now: number; snapshot?: IUsageSnapshot }): MenuStatusDot | undefined {
     const providers = params.snapshot?.providers ?? []
 
     const isAnyProviderError = providers.some((provider) => {
@@ -147,7 +133,7 @@ export const menuStatusUtil = {
 
     const isAnyWindowWarning = providers.some((provider) => {
       return (provider.usage ?? []).some((window) => {
-        return menuStatusUtil.resolveIsWindowWarning({
+        return this.resolveIsWindowWarning({
           now: params.now,
           resetAt: window.resetAt,
           usedPercent: window.usedPercent,
@@ -161,5 +147,11 @@ export const menuStatusUtil = {
     }
 
     return undefined
-  },
+  }
+
+  protected _resolveWindowResetAt(params: { elapsedMinutes: number; now: number; windowMs: number }): number {
+    const elapsedMs = (params.elapsedMinutes * params.windowMs) / MAX_ELAPSED_MINUTES
+
+    return params.now + params.windowMs - elapsedMs
+  }
 }

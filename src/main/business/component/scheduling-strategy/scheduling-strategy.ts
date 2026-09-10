@@ -1,4 +1,4 @@
-import type { OsPlatform } from '#src/main/util/os-util'
+import type { OS } from '#src/main/util/os-util'
 import type { TriggerDay } from '#src/shared/trigger-model'
 
 export interface ISchedulingRegistrationParams {
@@ -14,7 +14,7 @@ export interface ISchedulingInspection {
 }
 
 export interface ISchedulingStrategy {
-  getSchedulingPlatform: () => OsPlatform
+  getSchedulingPlatform: () => OS
   inspectRegistration: (params: { triggerId: string }) => Promise<ISchedulingInspection>
   readonly isSupported: boolean
   listRegistrationIds: () => Promise<string[]>

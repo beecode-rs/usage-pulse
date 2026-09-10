@@ -1,7 +1,7 @@
-import type { OsPlatform } from '#src/shared/os-model'
+import type { OS } from '#src/shared/os-model'
 
 export const osClientService = {
-  getPlatform: (): Promise<OsPlatform> => {
+  getPlatform: (): Promise<OS> => {
     return window.usageApi.getPlatform()
   },
 }

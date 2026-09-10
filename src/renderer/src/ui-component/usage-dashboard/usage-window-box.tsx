@@ -2,8 +2,8 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import { UsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
 import { dateUtil } from '#src/renderer/src/util/date-util'
-import { menuStatusUtil } from '#src/renderer/src/util/menu-status-util'
-import { usagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
+import { MenuStatusUtil } from '#src/renderer/src/util/menu-status-util'
+import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { usageWindowUtil } from '#src/renderer/src/util/usage-window-util'
 
@@ -34,8 +34,8 @@ export const UsageWindowBox = (props: {
 
   const remainingMs = usageResetUtil.resolveRemainingMs({ now, resetAt })
   const remainingPercent = usageResetUtil.resolveRemainingPercent({ remainingMs, windowMs })
-  const paceFillColor = usagePaceUtil.resolvePaceColor({ now, resetAt, usedPercent, windowMs })
-  const isWindowWarning = menuStatusUtil.resolveIsWindowWarning({ now, resetAt, usedPercent, windowMs })
+  const paceFillColor = new UsagePaceUtil().resolvePaceColor({ now, resetAt, usedPercent, windowMs })
+  const isWindowWarning = new MenuStatusUtil().resolveIsWindowWarning({ now, resetAt, usedPercent, windowMs })
 
   const resolveBoxClassName = (): string => {
     if (isWindowWarning) {

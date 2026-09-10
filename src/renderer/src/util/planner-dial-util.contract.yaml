@@ -1,80 +1,99 @@
-subject: plannerDialUtil
+subject: PlannerDialUtil
 module: ./planner-dial-util.js
-subjectType: function
+subjectType: class
+constructor:
+  # A fresh instance carries no own fields, so it serializes as an empty object.
+  terms:
+    - params: []
+      result: {}
 methods:
   resolveDialDeltaDegrees:
     terms:
       # Arc start (135° in SVG y-down coords, bottom-left of the dial) maps to delta 0.
-      - params:
+      - constructorParams: []
+        params:
           - angleDegrees: 135
         result: 0
       # Arc midpoint (top of the dial) is half the 270° sweep.
-      - params:
+      - constructorParams: []
+        params:
           - angleDegrees: 270
         result: 135
       # End convention: the sweep ends at 405°, which is the same point as 45° (bottom-right).
-      - params:
+      - constructorParams: []
+        params:
           - angleDegrees: 405
         result: 270
-      - params:
+      - constructorParams: []
+        params:
           - angleDegrees: 45
         result: 270
       # Dead zone (the 90° bottom gap, deltas 270–360) snaps to the nearer arc end;
       # 80° sits 35° from the end and 55° from the start, so it snaps to the end.
-      - params:
+      - constructorParams: []
+        params:
           - angleDegrees: 80
         result: 270
       # 100° sits 35° from the start and 55° from the end, so it snaps to the start.
-      - params:
+      - constructorParams: []
+        params:
           - angleDegrees: 100
         result: 0
       # Dead-zone midpoint (90°, delta 315) is an exact tie and snaps to the start.
-      - params:
+      - constructorParams: []
+        params:
           - angleDegrees: 90
         result: 0
   resolveSteppedValue:
     terms:
       # Off-step raw values round to the nearest step.
-      - params:
+      - constructorParams: []
+        params:
           - max: 23
             min: 0
             rawValue: 10.4
             step: 1
         result: 10
-      - params:
+      - constructorParams: []
+        params:
           - max: 23
             min: 0
             rawValue: 10.6
             step: 1
         result: 11
       # 15-minute steps round to the nearest quarter hour.
-      - params:
+      - constructorParams: []
+        params:
           - max: 1425
             min: 0
             rawValue: 100
             step: 15
         result: 105
-      - params:
+      - constructorParams: []
+        params:
           - max: 1425
             min: 0
             rawValue: 92
             step: 15
         result: 90
       # Rounding is relative to min, not to zero.
-      - params:
+      - constructorParams: []
+        params:
           - max: 16
             min: 1
             rawValue: 4.4
             step: 1
         result: 4
       # Raw values beyond the range clamp to the bounds.
-      - params:
+      - constructorParams: []
+        params:
           - max: 23
             min: 0
             rawValue: -5
             step: 1
         result: 0
-      - params:
+      - constructorParams: []
+        params:
           - max: 23
             min: 0
             rawValue: 99
@@ -83,7 +102,8 @@ methods:
   resolvePointerValue:
     terms:
       # Pointer at the arc start (bottom-left, atan2(1, -1) = 135°) resolves to min.
-      - params:
+      - constructorParams: []
+        params:
           - dx: -1
             dy: 1
             max: 23
@@ -91,7 +111,8 @@ methods:
             step: 1
         result: 0
       # Pointer at the arc end (bottom-right, atan2(1, 1) = 45°) resolves to max.
-      - params:
+      - constructorParams: []
+        params:
           - dx: 1
             dy: 1
             max: 23
@@ -99,7 +120,8 @@ methods:
             step: 1
         result: 23
       # Pointer straight up (atan2(-1, 0) = -90°) is half the sweep; 11.5 rounds up to 12.
-      - params:
+      - constructorParams: []
+        params:
           - dx: 0
             dy: -1
             max: 23
@@ -107,7 +129,8 @@ methods:
             step: 1
         result: 12
       # Pointer straight down is the dead-zone tie and resolves to min.
-      - params:
+      - constructorParams: []
+        params:
           - dx: 0
             dy: 1
             max: 23
@@ -117,14 +140,16 @@ methods:
   resolveKeyboardValue:
     terms:
       # ArrowUp/ArrowRight increase by one step.
-      - params:
+      - constructorParams: []
+        params:
           - key: ArrowUp
             max: 23
             min: 0
             step: 1
             value: 10
         result: 11
-      - params:
+      - constructorParams: []
+        params:
           - key: ArrowRight
             max: 23
             min: 0
@@ -132,14 +157,16 @@ methods:
             value: 10
         result: 11
       # ArrowDown/ArrowLeft decrease by one step.
-      - params:
+      - constructorParams: []
+        params:
           - key: ArrowDown
             max: 23
             min: 0
             step: 1
             value: 10
         result: 9
-      - params:
+      - constructorParams: []
+        params:
           - key: ArrowLeft
             max: 23
             min: 0
@@ -147,14 +174,16 @@ methods:
             value: 10
         result: 9
       # Stepping past the bounds clamps instead of wrapping.
-      - params:
+      - constructorParams: []
+        params:
           - key: ArrowDown
             max: 23
             min: 0
             step: 1
             value: 0
         result: 0
-      - params:
+      - constructorParams: []
+        params:
           - key: ArrowUp
             max: 23
             min: 0
@@ -162,21 +191,24 @@ methods:
             value: 23
         result: 23
       # Home/End jump to the bounds; other keys leave the value unchanged.
-      - params:
+      - constructorParams: []
+        params:
           - key: Home
             max: 23
             min: 0
             step: 1
             value: 10
         result: 0
-      - params:
+      - constructorParams: []
+        params:
           - key: End
             max: 23
             min: 0
             step: 1
             value: 10
         result: 23
-      - params:
+      - constructorParams: []
+        params:
           - key: x
             max: 23
             min: 0
@@ -186,17 +218,20 @@ methods:
   resolveValueAngleDegrees:
     terms:
       # Value-to-angle inverse: min sits at 135°, max at 405° (= 45°), mid at the top (270°).
-      - params:
+      - constructorParams: []
+        params:
           - max: 23
             min: 0
             value: 0
         result: 135
-      - params:
+      - constructorParams: []
+        params:
           - max: 23
             min: 0
             value: 23
         result: 405
-      - params:
+      - constructorParams: []
+        params:
           - max: 16
             min: 1
             value: 8.5

@@ -14,11 +14,11 @@ constructor:
   terms:
     - params:
         - homeDir: /tmp/claude-contract-home
-          platform: linux
+          platform: LINUX
       result:
         _homeDir: /tmp/claude-contract-home
         _keychainSourceName: "'Claude Code-credentials' keychain entry"
-        _platform: linux
+        _platform: LINUX
 methods:
   _extractAccessToken:
     terms:

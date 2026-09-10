@@ -1,4 +1,4 @@
-import type { OsPlatform } from '#src/shared/os-model'
+import { OS } from '#src/shared/os-model'
 import { ClaudeTokenSource, type ITrackerConfig } from '#src/shared/settings-model'
 
 export interface ITrackerSystemTokenOption {
@@ -12,8 +12,8 @@ export interface ITrackerTokenSelection {
 }
 
 export const trackerTokenSourceUtil = {
-  normalizeConfig: (params: { config: ITrackerConfig; osPlatform: OsPlatform }): ITrackerConfig => {
-    if (params.config.providerId !== 'claude' || params.osPlatform !== 'windows') {
+  normalizeConfig: (params: { config: ITrackerConfig; osPlatform: OS }): ITrackerConfig => {
+    if (params.config.providerId !== 'claude' || params.osPlatform !== OS.WINDOWS) {
       return params.config
     }
 
@@ -24,13 +24,13 @@ export const trackerTokenSourceUtil = {
     return { ...params.config, tokenSource: ClaudeTokenSource.MANUAL }
   },
 
-  resolveSelection: (params: { config: ITrackerConfig; osPlatform: OsPlatform }): ITrackerTokenSelection => {
+  resolveSelection: (params: { config: ITrackerConfig; osPlatform: OS }): ITrackerTokenSelection => {
     if (params.config.providerId !== 'claude') {
       return { selectedTokenSource: ClaudeTokenSource.MANUAL }
     }
 
     switch (params.osPlatform) {
-      case 'linux': {
+      case OS.LINUX: {
         return {
           selectedTokenSource: params.config.tokenSource,
           systemTokenOption: {
@@ -40,7 +40,7 @@ export const trackerTokenSourceUtil = {
         }
       }
 
-      case 'macos': {
+      case OS.MACOS: {
         return {
           selectedTokenSource: params.config.tokenSource,
           systemTokenOption: {

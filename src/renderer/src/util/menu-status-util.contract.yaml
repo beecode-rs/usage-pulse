@@ -1,4 +1,4 @@
-# Contract for menuStatusUtil.
+# Contract for MenuStatusUtil.
 # Terms pin the side-menu status dots. The usage dot is 'error' when any provider
 # snapshot reports UsageStatus.ERROR, else 'warning' when any usage window is
 # outpacing the window (usage percent at least 10 points ahead of the
@@ -9,57 +9,70 @@
 # error > warning > waiting > peak.
 # All terms use now: 0 and windowMs: 3600000 unless stated, so resetAt encodes the
 # remaining share directly (resetAt 1800000 leaves exactly half the window).
-subject: menuStatusUtil
+subject: MenuStatusUtil
 module: ./menu-status-util.js
-subjectType: function
+subjectType: class
+constructor:
+  # A fresh instance carries no own fields, so it serializes as an empty object.
+  terms:
+    - params: []
+      result: {}
 methods:
   resolveCombinedStatusDot:
     terms:
       # Error outranks waiting.
-      - params:
+      - constructorParams: []
+        params:
           - dots:
               - waiting
               - error
         result: error
       # Warning outranks waiting.
-      - params:
+      - constructorParams: []
+        params:
           - dots:
               - waiting
               - warning
         result: warning
       # Warning survives undefined entries from areas without a dot.
-      - params:
+      - constructorParams: []
+        params:
           - dots:
               - !undefined
               - warning
               - !undefined
         result: warning
       # A lone waiting dot passes through.
-      - params:
+      - constructorParams: []
+        params:
           - dots:
               - !undefined
               - waiting
         result: waiting
       # Waiting outranks the informational peak dot.
-      - params:
+      - constructorParams: []
+        params:
           - dots:
               - peak
               - waiting
         result: waiting
       # A lone peak dot passes through as the weakest rank.
-      - params:
+      - constructorParams: []
+        params:
           - dots:
               - !undefined
               - peak
         result: peak
       # Neither area produced a dot.
-      - params:
+      - constructorParams: []
+        params:
           - dots:
               - !undefined
               - !undefined
         result: !undefined
       # No dots at all.
-      - params:
+      - constructorParams: []
+        params:
           - dots: []
         result: !undefined
   resolveDevelopmentStatusDot:
@@ -72,43 +85,50 @@ methods:
       #
       # Pace warning: 85% used at 60 elapsed minutes (20% elapsed) is drift +65, far
       # past the +10 outpacing threshold.
-      - params:
+      - constructorParams: []
+        params:
           - elapsedMinutes: 60
             now: 0
             usedPercent: 85
         result: warning
       # 65% used at 60 elapsed minutes is drift +45: still past the +10 threshold.
-      - params:
+      - constructorParams: []
+        params:
           - elapsedMinutes: 60
             now: 0
             usedPercent: 65
         result: warning
       # Boundary: 30% used at 20% elapsed is exactly drift +10 and warns.
-      - params:
+      - constructorParams: []
+        params:
           - elapsedMinutes: 60
             now: 0
             usedPercent: 30
         result: warning
       # One point shy: 29% used at 20% elapsed is drift +9 and stays clean.
-      - params:
+      - constructorParams: []
+        params:
           - elapsedMinutes: 60
             now: 0
             usedPercent: 29
         result: !undefined
       # Late window (284 of 300 minutes elapsed) with usage far under pace stays clean.
-      - params:
+      - constructorParams: []
+        params:
           - elapsedMinutes: 284
             now: 0
             usedPercent: 10
         result: !undefined
       # Drift +2 (62% used at 180 elapsed = 60% elapsed) stays inside the band.
-      - params:
+      - constructorParams: []
+        params:
           - elapsedMinutes: 180
             now: 0
             usedPercent: 62
         result: !undefined
       # Drift +6 (the first red pace step) is no longer enough to warn.
-      - params:
+      - constructorParams: []
+        params:
           - elapsedMinutes: 180
             now: 0
             usedPercent: 66
@@ -117,24 +137,28 @@ methods:
       # 18000000 and 129600000 of 2592000000), pinning the integer-exact
       # multiply-before-divide resetAt derivation — with usage far under pace it stays
       # clean: nearing reset alone does not warn.
-      - params:
+      - constructorParams: []
+        params:
           - elapsedMinutes: 285
             now: 0
             usedPercent: 10
         result: !undefined
       # Max dials: full quota on a fresh window warns via pace; empty fresh window is clean.
-      - params:
+      - constructorParams: []
+        params:
           - elapsedMinutes: 0
             now: 0
             usedPercent: 100
         result: warning
-      - params:
+      - constructorParams: []
+        params:
           - elapsedMinutes: 0
             now: 0
             usedPercent: 0
         result: !undefined
       # Fully elapsed window (300 minutes) with zero usage: elapsed alone never warns.
-      - params:
+      - constructorParams: []
+        params:
           - elapsedMinutes: 300
             now: 0
             usedPercent: 0
@@ -142,20 +166,23 @@ methods:
   resolveIsWindowWarning:
     terms:
       # A window without a reset time never warns, however much of the quota is used.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             usedPercent: 90
             windowMs: 3600000
         result: false
       # A window without a window length never warns either.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3600000
             usedPercent: 90
         result: false
       # Nearing reset (5% remaining, resetAt 180000 of 3600000) with usage far under
       # pace does not warn.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 180000
             usedPercent: 10
@@ -163,21 +190,24 @@ methods:
         result: false
       # Warning via pace: 80% used at 20% elapsed is drift +60, far past the +10
       # outpacing threshold.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 2880000
             usedPercent: 80
             windowMs: 3600000
         result: true
       # Boundary: 20% used at 10% elapsed is exactly drift +10 and warns.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3240000
             usedPercent: 20
             windowMs: 3600000
         result: true
       # Mid-window and on pace (drift 0) stays clean.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 1800000
             usedPercent: 50
@@ -190,17 +220,20 @@ methods:
       # 2026-08-29 (1787990400000 is that day's 16:00 UTC+8).
       #
       # No snapshot at all (usage not loaded yet).
-      - params:
+      - constructorParams: []
+        params:
           - now: 1787731200000
         result: !undefined
       # Snapshot with no providers.
-      - params:
+      - constructorParams: []
+        params:
           - now: 1787731200000
             snapshot:
               providers: []
         result: !undefined
       # A z.ai tracker mid-peak flags peak, even while it is still loading.
-      - params:
+      - constructorParams: []
+        params:
           - now: 1787731200000
             snapshot:
               providers:
@@ -210,7 +243,8 @@ methods:
                   trackerName: z.ai
         result: peak
       # A z.ai tracker among other providers flags peak.
-      - params:
+      - constructorParams: []
+        params:
           - now: 1787731200000
             snapshot:
               providers:
@@ -224,7 +258,8 @@ methods:
                   trackerName: z.ai
         result: peak
       # Peak hours belong to z.ai only: other providers never flag peak.
-      - params:
+      - constructorParams: []
+        params:
           - now: 1787731200000
             snapshot:
               providers:
@@ -238,7 +273,8 @@ methods:
                   trackerName: Dummy
         result: !undefined
       # An hour past the weekday peak window.
-      - params:
+      - constructorParams: []
+        params:
           - now: 1787742000000
             snapshot:
               providers:
@@ -248,7 +284,8 @@ methods:
                   trackerName: z.ai
         result: !undefined
       # Saturday 16:00 UTC+8 is inside the daily hours but outside the weekday window.
-      - params:
+      - constructorParams: []
+        params:
           - now: 1787990400000
             snapshot:
               providers:
@@ -260,11 +297,13 @@ methods:
   resolveSessionsStatusDot:
     terms:
       # No snapshot at all (sessions view not loaded yet).
-      - params:
+      - constructorParams: []
+        params:
           - {}
         result: !undefined
       # Healthy snapshot: no error message and only active sessions.
-      - params:
+      - constructorParams: []
+        params:
           - snapshot:
               fetchedAt: 0
               sessions:
@@ -278,14 +317,16 @@ methods:
               unreachableHosts: []
         result: !undefined
       # Empty sessions list with no error message.
-      - params:
+      - constructorParams: []
+        params:
           - snapshot:
               fetchedAt: 0
               sessions: []
               unreachableHosts: []
         result: !undefined
       # A waiting session anywhere in the list (here: middle of three) waits.
-      - params:
+      - constructorParams: []
+        params:
           - snapshot:
               fetchedAt: 0
               sessions:
@@ -313,7 +354,8 @@ methods:
               unreachableHosts: []
         result: waiting
       # An empty-string error message is not an error: the waiting session still wins.
-      - params:
+      - constructorParams: []
+        params:
           - snapshot:
               errorMessage: ''
               fetchedAt: 0
@@ -328,7 +370,8 @@ methods:
               unreachableHosts: []
         result: waiting
       # A snapshot error message outranks a waiting session.
-      - params:
+      - constructorParams: []
+        params:
           - snapshot:
               errorMessage: ssh unreachable
               fetchedAt: 0
@@ -343,7 +386,8 @@ methods:
               unreachableHosts: []
         result: error
       # A load failure flags error even when the snapshot itself looks healthy.
-      - params:
+      - constructorParams: []
+        params:
           - hasLoadError: true
             snapshot:
               fetchedAt: 0
@@ -353,17 +397,20 @@ methods:
   resolveUsageStatusDot:
     terms:
       # No snapshot at all (usage not loaded yet).
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
         result: !undefined
       # Snapshot with no providers.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers: []
         result: !undefined
       # Single healthy provider: mid-window and on pace.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers:
@@ -378,7 +425,8 @@ methods:
                       windowMs: 3600000
         result: !undefined
       # One errored tracker among healthy ones flags error.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers:
@@ -406,7 +454,8 @@ methods:
                       windowMs: 3600000
         result: error
       # An errored provider outranks a warning window on another provider.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers:
@@ -426,7 +475,8 @@ methods:
         result: error
       # Nearing reset (5% remaining) on the second provider with usage under pace does
       # not warn.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers:
@@ -450,7 +500,8 @@ methods:
                       windowMs: 3600000
         result: !undefined
       # One millisecond more remaining, still under pace: clean.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers:
@@ -466,7 +517,8 @@ methods:
         result: !undefined
       # Warning via pace: 80% used at 20% elapsed is drift +60, far past the +10
       # outpacing threshold.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers:
@@ -481,7 +533,8 @@ methods:
                       windowMs: 3600000
         result: warning
       # Drift +20 (40% used at 20% elapsed) is past the +10 threshold and warns.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers:
@@ -496,7 +549,8 @@ methods:
                       windowMs: 3600000
         result: warning
       # Drift +3 (23% used at 20% elapsed) stays inside the on-pace band.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers:
@@ -511,7 +565,8 @@ methods:
                       windowMs: 3600000
         result: !undefined
       # Under pace (drift -30: 10% used at 40% elapsed) never warns.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers:
@@ -526,7 +581,8 @@ methods:
                       windowMs: 3600000
         result: !undefined
       # A window without resetAt never warns, however much of the quota is used.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers:
@@ -540,7 +596,8 @@ methods:
                       windowMs: 3600000
         result: !undefined
       # A window without windowMs never warns either.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             snapshot:
               providers:
@@ -555,7 +612,8 @@ methods:
         result: !undefined
       # A window already past its reset time (now after resetAt) with zero usage stays
       # clean: elapsed alone never warns.
-      - params:
+      - constructorParams: []
+        params:
           - now: 4000000
             snapshot:
               providers:

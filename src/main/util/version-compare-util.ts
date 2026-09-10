@@ -1,4 +1,4 @@
-const NUMERIC_SEGMENT_PATTERN = /^\d+$/
+import { constant } from '#src/main/util/constant'
 
 export class VersionCompareUtil {
   isNewerVersion = (params: { candidateVersion: string; currentVersion: string }): boolean => {
@@ -33,7 +33,7 @@ export class VersionCompareUtil {
     const segments = coreVersion.split('.')
 
     const hasMalformedSegment = segments.some((segment) => {
-      return !NUMERIC_SEGMENT_PATTERN.test(segment)
+      return !constant.digitsOnlyRegex.test(segment)
     })
 
     if (hasMalformedSegment) {

@@ -1,11 +1,17 @@
-subject: claudeTranscriptParserService
+subject: ClaudeTranscriptParserService
 module: ./service.js
-subjectType: function
+subjectType: class
+constructor:
+  # A fresh instance carries no own fields, so it serializes as an empty object.
+  terms:
+    - params: []
+      result: {}
 methods:
   hasSignal:
     terms:
       # Zeroed stats carry nothing worth displaying.
-      - params:
+      - constructorParams: []
+        params:
           - aiTitle: ''
             cacheCreationTokens: 0
             cacheReadTokens: 0
@@ -19,7 +25,8 @@ methods:
             version: ''
         result: false
       # Any single token field is enough signal.
-      - params:
+      - constructorParams: []
+        params:
           - aiTitle: ''
             cacheCreationTokens: 0
             cacheReadTokens: 0
@@ -33,7 +40,8 @@ methods:
             version: ''
         result: true
       # A lone AI title is worth showing.
-      - params:
+      - constructorParams: []
+        params:
           - aiTitle: 'Fix login bug'
             cacheCreationTokens: 0
             cacheReadTokens: 0
@@ -47,7 +55,8 @@ methods:
             version: ''
         result: true
       # A lone user turn is worth showing.
-      - params:
+      - constructorParams: []
+        params:
           - aiTitle: ''
             cacheCreationTokens: 0
             cacheReadTokens: 0
@@ -61,7 +70,8 @@ methods:
             version: ''
         result: true
       # Version alone is deliberately not enough signal — every transcript would qualify.
-      - params:
+      - constructorParams: []
+        params:
           - aiTitle: ''
             cacheCreationTokens: 0
             cacheReadTokens: 0
@@ -77,7 +87,8 @@ methods:
   parseStats:
     terms:
       # Happy path: turns, two API calls, AI title, last prompt (last wins), branch/version (first wins), last activity.
-      - params:
+      - constructorParams: []
+        params:
           - content: |
               {"type":"user","isMeta":false,"gitBranch":"main","version":"2.1.241","timestamp":"2026-08-23T21:48:12.177Z"}
               {"type":"assistant","message":{"id":"msg_a","model":"glm-5.3","usage":{"input_tokens":100,"cache_read_input_tokens":200,"cache_creation_input_tokens":50,"output_tokens":10,"output_tokens_details":{"thinking_tokens":0}}},"timestamp":"2026-08-23T21:53:31.053Z"}
@@ -100,7 +111,8 @@ methods:
           userTurnsCount: 1
           version: 2.1.241
       # Duplicate message.id entries are the same API call — usage counted once, context size from the first.
-      - params:
+      - constructorParams: []
+        params:
           - content: |
               {"type":"assistant","message":{"id":"msg_dup","model":"glm-5.3","usage":{"input_tokens":100,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens":5,"output_tokens_details":{"thinking_tokens":0}}},"timestamp":"2026-08-23T21:53:31.053Z"}
               {"type":"assistant","message":{"id":"msg_dup","model":"glm-5.3","usage":{"input_tokens":100,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens":5,"output_tokens_details":{"thinking_tokens":0}}},"timestamp":"2026-08-23T21:53:31.592Z"}
@@ -119,7 +131,8 @@ methods:
           userTurnsCount: 0
           version: ''
       # Meta user entries are not turns.
-      - params:
+      - constructorParams: []
+        params:
           - content: |
               {"type":"user","isMeta":true,"timestamp":"2026-08-23T21:48:12.177Z"}
               {"type":"user","isMeta":false,"timestamp":"2026-08-23T21:49:12.177Z"}
@@ -137,7 +150,8 @@ methods:
           userTurnsCount: 1
           version: ''
       # No assistant entries means no context size — the key stays absent.
-      - params:
+      - constructorParams: []
+        params:
           - content: |
               {"type":"user","gitBranch":"main","version":"2.1.241","timestamp":"2026-08-23T21:48:12.177Z"}
               {"type":"system","content":"hook","timestamp":"2026-08-23T21:48:30.000Z"}
@@ -155,7 +169,8 @@ methods:
           userTurnsCount: 1
           version: 2.1.241
       # Empty content yields the zero stats object.
-      - params:
+      - constructorParams: []
+        params:
           - content: ''
         result:
           aiTitle: ''
@@ -170,7 +185,8 @@ methods:
           userTurnsCount: 0
           version: ''
       # Invalid JSON lines, non-object JSON, and blank lines are skipped.
-      - params:
+      - constructorParams: []
+        params:
           - content: |
               not json
               {"broken
@@ -190,7 +206,8 @@ methods:
           userTurnsCount: 1
           version: ''
       # An assistant entry without usage contributes no numbers but still reports its model.
-      - params:
+      - constructorParams: []
+        params:
           - content: |
               {"type":"assistant","message":{"id":"msg_no_usage","model":"glm-5.3"},"timestamp":"2026-08-23T21:53:31.053Z"}
         result:

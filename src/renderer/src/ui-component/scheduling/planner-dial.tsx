@@ -8,7 +8,7 @@ import {
 import {
   DIAL_ANGLE_RANGE_DEGREES,
   DIAL_START_ANGLE_DEGREES,
-  plannerDialUtil,
+  PlannerDialUtil,
 } from '#src/renderer/src/util/planner-dial-util'
 
 const DIAL_SIZE = 76
@@ -88,6 +88,7 @@ export const PlannerDial = (props: {
 }): ReactElement => {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const isDraggingRef = useRef(false)
+  const plannerDialUtil = new PlannerDialUtil()
 
   const valueAngleDegrees = plannerDialUtil.resolveValueAngleDegrees({
     max: props.max,

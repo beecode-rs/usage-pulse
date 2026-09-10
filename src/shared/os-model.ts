@@ -1,1 +1,5 @@
-export type OsPlatform = 'linux' | 'macos' | 'windows'
+export enum OS {
+  LINUX = 'LINUX',
+  MACOS = 'MACOS',
+  WINDOWS = 'WINDOWS',
+}

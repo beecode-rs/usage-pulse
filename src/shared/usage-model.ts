@@ -1,4 +1,4 @@
-import type { OsPlatform } from '#src/shared/os-model'
+import type { OS } from '#src/shared/os-model'
 import type { ISessionFocusSupport, ISessionSnapshot, SessionsUpdateListener } from '#src/shared/session-model'
 import type { IAppSettings } from '#src/shared/settings-model'
 import type { ISchedulingInfo, ITriggerRegistrationHealth, ITriggerRunLogEntry } from '#src/shared/trigger-model'
@@ -48,7 +48,7 @@ export type SettingsUpdateListener = (settings: IAppSettings) => void
 export interface IUsageApiClient {
   clearTriggerRunLogs: (params: { triggerId: string }) => Promise<void>
   focusSession: (params: { cwd: string; pid: number }) => Promise<void>
-  getPlatform: () => Promise<OsPlatform>
+  getPlatform: () => Promise<OS>
   getSessionFocusSupport: () => Promise<ISessionFocusSupport>
   getSessionsSnapshot: () => Promise<ISessionSnapshot | undefined>
   getSettings: () => Promise<IAppSettings>

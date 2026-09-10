@@ -5,7 +5,7 @@ import { usageClientService } from '#src/renderer/src/business/service/usage-cli
 import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/tracker-config-fields'
 import { errorUtil } from '#src/renderer/src/util/error-util'
 import { trackerTokenSourceUtil } from '#src/renderer/src/util/tracker-token-source-util'
-import type { OsPlatform } from '#src/shared/os-model'
+import type { OS } from '#src/shared/os-model'
 import { type IAppSettings, type ITrackerConfig } from '#src/shared/settings-model'
 
 export const TrackerSettingsDialog = (props: {
@@ -16,7 +16,7 @@ export const TrackerSettingsDialog = (props: {
   const { onClose, onSaved, trackerId } = props
   const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
   const [tracker, setTracker] = useState<ITrackerConfig | undefined>(undefined)
-  const [osPlatform, setOsPlatform] = useState<OsPlatform | undefined>(undefined)
+  const [osPlatform, setOsPlatform] = useState<OS | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
   const [isConfirmingRemove, setIsConfirmingRemove] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')

@@ -1,4 +1,4 @@
-# Contract for usagePaceUtil.
+# Contract for UsagePaceUtil.
 # Terms pin the stepped pace color: the drift between usedPercent and the elapsed window
 # percent decides the fill color. Drift within +/-5 points is on pace (blue). Beyond the
 # band, steps are shifted by five: step 1 covers 6-25, step 2 26-45, step 3 46-65, step 4
@@ -8,71 +8,85 @@
 # the extreme of an untouched quota on a fully elapsed window.
 # All terms use now: 0 and windowMs: 3600000, so resetAt encodes the elapsed share directly
 # (elapsed percent = 100 - resetAt / windowMs * 100).
-subject: usagePaceUtil
+subject: UsagePaceUtil
 module: ./usage-pace-util.js
-subjectType: function
+subjectType: class
+constructor:
+  # A fresh instance carries no own fields, so it serializes as an empty object.
+  terms:
+    - params: []
+      result: {}
 methods:
   resolveIsUsageOutpacingWindow:
     terms:
       # Outpacing fires when usage runs at least 10 points ahead of the elapsed window
       # percent. 20% used at 10% elapsed is exactly drift +10 and counts.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3240000
             usedPercent: 20
             windowMs: 3600000
         result: true
       # Drift +9, one point shy of the threshold, does not count.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3240000
             usedPercent: 19
             windowMs: 3600000
         result: false
       # Far ahead: 90% used at 20% elapsed is drift +70.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 2880000
             usedPercent: 90
             windowMs: 3600000
         result: true
       # Drift +20 (40% used at 20% elapsed) counts.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 2880000
             usedPercent: 40
             windowMs: 3600000
         result: true
       # Drift +6, the first point beyond the on-pace band, is not enough.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3600000
             usedPercent: 6
             windowMs: 3600000
         result: false
       # Drift +5 is the outer edge of the on-pace band: not outpacing.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3600000
             usedPercent: 5
             windowMs: 3600000
         result: false
       # Drift +3 stays inside the band.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 2880000
             usedPercent: 23
             windowMs: 3600000
         result: false
       # Green direction (drift -30: 10% used at 40% elapsed) is never outpacing.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 2160000
             usedPercent: 10
             windowMs: 3600000
         result: false
       # Without a reset time there is no elapsed baseline to compare against.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             usedPercent: 90
             windowMs: 3600000
@@ -80,98 +94,112 @@ methods:
   resolvePaceColor:
     terms:
       # Fresh window with no usage: used and elapsed are both 0, squarely in the blue band.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3600000
             usedPercent: 0
             windowMs: 3600000
         result: var(--meter-accent)
       # Half the window elapsed with half the quota used: on pace, blue.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 1800000
             usedPercent: 50
             windowMs: 3600000
         result: var(--meter-accent)
       # Drift +5 is the outer edge of the blue band.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3600000
             usedPercent: 5
             windowMs: 3600000
         result: var(--meter-accent)
       # Drift -5 is the other outer edge of the blue band.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 1800000
             usedPercent: 45
             windowMs: 3600000
         result: var(--meter-accent)
       # Usage 21% on a freshly reset window (elapsed 0%): drift +21 lands in red step 1.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3600000
             usedPercent: 21
             windowMs: 3600000
         result: var(--pace-red-1)
       # Drift +25 is the upper edge of red step 1.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3600000
             usedPercent: 25
             windowMs: 3600000
         result: var(--pace-red-1)
       # Drift +26 starts red step 2.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3600000
             usedPercent: 26
             windowMs: 3600000
         result: var(--pace-red-2)
       # Elapsed 40%, used 100%: drift +60 reaches red step 3.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 2160000
             usedPercent: 100
             windowMs: 3600000
         result: var(--pace-red-3)
       # Full quota burned on a freshly reset window (elapsed 0%): drift +100 is red step 5.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 3600000
             usedPercent: 100
             windowMs: 3600000
         result: var(--pace-red-5)
       # Drift -6 is the first point outside the blue band, green step 1.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 1800000
             usedPercent: 44
             windowMs: 3600000
         result: var(--pace-green-1)
       # Usage 40% against 61% elapsed: drift -21 stays in green step 1.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 1404000
             usedPercent: 40
             windowMs: 3600000
         result: var(--pace-green-1)
       # Drift -26 starts green step 2.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 1800000
             usedPercent: 24
             windowMs: 3600000
         result: var(--pace-green-2)
       # Usage 14% on a fully elapsed window: drift -86 reaches the shortened green step 5.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 0
             usedPercent: 14
             windowMs: 3600000
         result: var(--pace-green-5)
       # Untouched quota on a fully elapsed window: drift -100 is green step 5.
-      - params:
+      - constructorParams: []
+        params:
           - now: 0
             resetAt: 0
             usedPercent: 0

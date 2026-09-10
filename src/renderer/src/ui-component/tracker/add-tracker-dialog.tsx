@@ -6,7 +6,7 @@ import { ProviderIcon } from '#src/renderer/src/ui-component/provider/provider-i
 import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/tracker-config-fields'
 import { errorUtil } from '#src/renderer/src/util/error-util'
 import { providerCatalogUtil } from '#src/renderer/src/util/provider-catalog-util'
-import type { OsPlatform } from '#src/shared/os-model'
+import type { OS } from '#src/shared/os-model'
 import { PROVIDER_CATALOG } from '#src/shared/provider-catalog'
 import {
   ClaudeTokenSource,
@@ -21,7 +21,7 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
   const { onClose, onSaved } = props
   const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
   const [newTracker, setNewTracker] = useState<ITrackerConfig | undefined>(undefined)
-  const [osPlatform, setOsPlatform] = useState<OsPlatform | undefined>(undefined)
+  const [osPlatform, setOsPlatform] = useState<OS | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 

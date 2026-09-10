@@ -18,8 +18,27 @@ export interface ITriggerRunSummary {
   triggerName: string
 }
 
-export const triggerRunUtil = {
-  _applyTerminalEntry(params: { entry: ITriggerRunLogEntry; summary: ITriggerRunSummary }): ITriggerRunSummary {
+export class TriggerRunUtil {
+  groupRunsByEventId(params: { entries: ITriggerRunLogEntry[] }): ITriggerRunSummary[] {
+    const summaryByEventId = params.entries.reduce<Record<string, ITriggerRunSummary>>((summaryRecord, entry) => {
+      return {
+        ...summaryRecord,
+        [entry.eventId]: this._mergeEntry({
+          entry,
+          summary: summaryRecord[entry.eventId],
+        }),
+      }
+    }, {})
+
+    return Object.values(summaryByEventId).sort((summary, nextSummary) => {
+      return nextSummary.startedAtTimestamp.localeCompare(summary.startedAtTimestamp)
+    })
+  }
+
+  protected _applyTerminalEntry(params: {
+    entry: ITriggerRunLogEntry
+    summary: ITriggerRunSummary
+  }): ITriggerRunSummary {
     return {
       ...params.summary,
       durationMs: params.entry.durationMs,
@@ -28,9 +47,9 @@ export const triggerRunUtil = {
       phase: params.entry.phase,
       skipReason: params.entry.skipReason,
     }
-  },
+  }
 
-  _createSummaryFromEntry(params: { entry: ITriggerRunLogEntry }): ITriggerRunSummary {
+  protected _createSummaryFromEntry(params: { entry: ITriggerRunLogEntry }): ITriggerRunSummary {
     return {
       durationMs: params.entry.durationMs,
       eventId: params.entry.eventId,
@@ -43,33 +62,20 @@ export const triggerRunUtil = {
       trigger: params.entry.trigger,
       triggerName: params.entry.triggerName,
     }
-  },
+  }
 
-  _mergeEntry(params: { entry: ITriggerRunLogEntry; summary: ITriggerRunSummary | undefined }): ITriggerRunSummary {
+  protected _mergeEntry(params: {
+    entry: ITriggerRunLogEntry
+    summary: ITriggerRunSummary | undefined
+  }): ITriggerRunSummary {
     if (params.summary === undefined) {
-      return triggerRunUtil._createSummaryFromEntry({ entry: params.entry })
+      return this._createSummaryFromEntry({ entry: params.entry })
     }
 
     if (params.entry.phase === 'started') {
       return { ...params.summary, startedAtTimestamp: params.entry.timestamp }
     }
 
-    return triggerRunUtil._applyTerminalEntry({ entry: params.entry, summary: params.summary })
-  },
-
-  groupRunsByEventId: (params: { entries: ITriggerRunLogEntry[] }): ITriggerRunSummary[] => {
-    const summaryByEventId = params.entries.reduce<Record<string, ITriggerRunSummary>>((summaryRecord, entry) => {
-      return {
-        ...summaryRecord,
-        [entry.eventId]: triggerRunUtil._mergeEntry({
-          entry,
-          summary: summaryRecord[entry.eventId],
-        }),
-      }
-    }, {})
-
-    return Object.values(summaryByEventId).sort((summary, nextSummary) => {
-      return nextSummary.startedAtTimestamp.localeCompare(summary.startedAtTimestamp)
-    })
-  },
+    return this._applyTerminalEntry({ entry: params.entry, summary: params.summary })
+  }
 }

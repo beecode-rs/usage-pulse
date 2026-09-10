@@ -3,13 +3,13 @@ import type {
   ISchedulingRegistrationParams,
   ISchedulingStrategy,
 } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
-import type { OsPlatform } from '#src/main/util/os-util'
+import { OS } from '#src/main/util/os-util'
 
 export class SchedulingStrategyWindows implements ISchedulingStrategy {
   readonly isSupported = false
 
-  getSchedulingPlatform(): OsPlatform {
-    return 'windows'
+  getSchedulingPlatform(): OS {
+    return OS.WINDOWS
   }
 
   inspectRegistration(_params: { triggerId: string }): Promise<ISchedulingInspection> {

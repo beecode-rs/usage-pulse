@@ -3,9 +3,12 @@ import { homedir } from 'node:os'
 import { basename } from 'node:path'
 import { promisify } from 'node:util'
 
-import { sessionsParserService } from '#src/main/business/service/sessions-parser-service'
+import { SessionsParserService } from '#src/main/business/service/sessions-parser-service'
+import { config } from '#src/main/util/config'
+import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/main/util/error-util'
-import { type OsPlatform, osUtil } from '#src/main/util/os-util'
+import { OS, osUtil } from '#src/main/util/os-util'
+import { rawEnvUtil } from '#src/main/util/raw-env-util'
 import { type ISessionFocusSupport, type ISessionInfo, type ISessionSnapshot } from '#src/shared/session-model'
 
 const execFileAsync = promisify(execFile)
@@ -15,8 +18,6 @@ const FOCUS_TOOL_CHECK_TIMEOUT_MS = 5_000
 const FOCUS_TOOL_INSTALL_TIMEOUT_MS = 300_000
 
 const SESSIONS_QUERY_TIMEOUT_MS = 10_000
-
-const APP_BUNDLE_PATTERN = /^(?:-)?(.*?\/[^/]+\.app)\//
 
 const GHOSTTY_AUTOMATION_DENIED_MESSAGE =
   'to focus the exact Ghostty tab, allow this app to control Ghostty in System Settings > Privacy & Security > Automation'
@@ -151,8 +152,6 @@ const OPEN_APP_TIMEOUT_MS = 5_000
 
 const OSASCRIPT_TIMEOUT_MS = 5_000
 
-const PROCESS_LINE_PATTERN = /^\s*(\d+)\s+(.+)$/
-
 const PS_QUERY_TIMEOUT_MS = 5_000
 
 const XDOTOOL_TIMEOUT_MS = 5_000
@@ -179,6 +178,11 @@ export class SessionsService {
   protected _focusSupport: Promise<ISessionFocusSupport> | undefined
   protected _ghosttyTtySupport: Promise<boolean> | undefined
   protected _inFlightSnapshot: Promise<ISessionSnapshot> | undefined
+  protected readonly _isWaylandSessionOverride: boolean | undefined
+
+  constructor(params: { isWaylandSession?: boolean } = {}) {
+    this._isWaylandSessionOverride = params.isWaylandSession
+  }
 
   async listSessions(): Promise<ISessionSnapshot> {
     if (this._inFlightSnapshot !== undefined) {
@@ -205,7 +209,7 @@ export class SessionsService {
   async installFocusTool(): Promise<ISessionFocusSupport> {
     const platform = this._resolveFocusPlatform()
 
-    if (platform !== 'linux') {
+    if (platform !== OS.LINUX) {
       return { status: 'ready' }
     }
 
@@ -220,21 +224,21 @@ export class SessionsService {
     return this.getFocusSupport()
   }
 
-  protected _resolveFocusPlatform(): OsPlatform {
+  protected _resolveFocusPlatform(): OS {
     return osUtil.resolvePlatform()
   }
 
-  protected async _focusSessionForPlatform(params: { cwd: string; pid: number; platform: OsPlatform }): Promise<void> {
+  protected async _focusSessionForPlatform(params: { cwd: string; pid: number; platform: OS }): Promise<void> {
     switch (params.platform) {
-      case 'linux': {
+      case OS.LINUX: {
         return this._focusLinuxSession({ pid: params.pid })
       }
 
-      case 'macos': {
+      case OS.MACOS: {
         return this._focusMacOsSession({ cwd: params.cwd, pid: params.pid })
       }
 
-      case 'windows': {
+      case OS.WINDOWS: {
         throw new Error('focusing a session terminal is only supported on macOS and Linux')
       }
 
@@ -363,7 +367,7 @@ export class SessionsService {
   protected async _listSameCwdSessions(params: { cwd: string }): Promise<ISessionInfo[]> {
     const sessions = await this._runAgentsQuery()
       .then((stdout) => {
-        return sessionsParserService.parseSessionEntries({ stdout })
+        return new SessionsParserService().parseSessionEntries({ stdout })
       })
       .catch(() => {
         return []
@@ -431,10 +435,16 @@ export class SessionsService {
     await this._activateLinuxWindow({ windowId })
   }
 
-  protected _resolveLinuxWindowNotFoundMessage(): string {
-    const isWaylandSession = process.env.XDG_SESSION_TYPE === 'wayland' || process.env.WAYLAND_DISPLAY !== undefined
+  protected _resolveIsWaylandSession(): boolean {
+    if (this._isWaylandSessionOverride !== undefined) {
+      return this._isWaylandSessionOverride
+    }
 
-    if (isWaylandSession) {
+    return config.xdgSessionType === 'wayland' || config.waylandDisplay !== undefined
+  }
+
+  protected _resolveLinuxWindowNotFoundMessage(): string {
+    if (this._resolveIsWaylandSession()) {
       return 'focusing a session terminal on Linux is not supported on Wayland yet; the session has no X11 window'
     }
 
@@ -522,7 +532,7 @@ export class SessionsService {
   protected async _resolveFocusSupport(): Promise<ISessionFocusSupport> {
     const platform = this._resolveFocusPlatform()
 
-    if (platform !== 'linux') {
+    if (platform !== OS.LINUX) {
       return { status: 'ready' }
     }
 
@@ -570,7 +580,7 @@ export class SessionsService {
 
     return {
       fetchedAt: Date.now(),
-      sessions: sessionsParserService.sortSessions(sessionsParserService.parseSessionEntries({ stdout })),
+      sessions: new SessionsParserService().sortSessions(new SessionsParserService().parseSessionEntries({ stdout })),
       unreachableHosts: [],
     }
   }
@@ -589,9 +599,9 @@ export class SessionsService {
   }
 
   protected _resolveQueryEnv(): NodeJS.ProcessEnv {
-    const env: NodeJS.ProcessEnv = { ...process.env }
+    const env: NodeJS.ProcessEnv = { ...rawEnvUtil.processEnv }
 
-    env.PATH = `${homedir()}/.local/bin:${process.env.PATH ?? ''}`
+    env.PATH = `${homedir()}/.local/bin:${env.PATH ?? ''}`
 
     return env
   }
@@ -704,7 +714,7 @@ export class SessionsService {
   }
 
   protected _parseProcessLine(params: { line: string }): IProcessEntry | undefined {
-    const match = PROCESS_LINE_PATTERN.exec(params.line)
+    const match = constant.processLineRegex.exec(params.line)
 
     if (match === null) {
       return undefined
@@ -720,7 +730,7 @@ export class SessionsService {
   }
 
   protected _resolveAppBundleFromComm(params: { comm: string }): string | undefined {
-    const match = APP_BUNDLE_PATTERN.exec(params.comm)
+    const match = constant.appBundleRegex.exec(params.comm)
 
     if (match === null) {
       return undefined

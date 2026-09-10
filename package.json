@@ -36,6 +36,7 @@
 		"typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false"
 	},
 	"dependencies": {
+		"@beecode/msh-app-boot": "^2.0.2",
 		"@beecode/msh-env": "^2.0.3"
 	},
 	"devDependencies": {

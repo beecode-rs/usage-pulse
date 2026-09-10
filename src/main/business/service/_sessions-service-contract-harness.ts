@@ -3,7 +3,7 @@ import {
   type IGhosttyFocusPeer,
   SessionsService,
 } from '#src/main/business/service/sessions-service'
-import { type OsPlatform } from '#src/main/util/os-util'
+import { type OS } from '#src/main/util/os-util'
 
 export class SessionsServiceContractHarness extends SessionsService {
   isLinuxFocusToolInstalled: boolean | undefined
@@ -23,16 +23,16 @@ export class SessionsServiceContractHarness extends SessionsService {
   readonly macOsTabFocusCalls: { cwd: string; matchRank: number }[] = []
   readonly macOsTtyFocusCalls: { sessionTty: string }[] = []
   readonly macOsWindowFocusCalls: { bundlePath: string; cwd: string }[] = []
-  protected readonly _focusPlatformOverride: OsPlatform | undefined
+  protected readonly _focusPlatformOverride: OS | undefined
   protected readonly _macOsBundlePath: string
 
-  constructor(params: { focusPlatform?: OsPlatform; macOsBundlePath?: string } = {}) {
-    super()
+  constructor(params: { focusPlatform?: OS; isWaylandSession?: boolean; macOsBundlePath?: string } = {}) {
+    super({ isWaylandSession: params.isWaylandSession })
     this._focusPlatformOverride = params.focusPlatform
     this._macOsBundlePath = params.macOsBundlePath ?? '/Applications/Ghostty.app'
   }
 
-  protected override _resolveFocusPlatform(): OsPlatform {
+  protected override _resolveFocusPlatform(): OS {
     if (this._focusPlatformOverride === undefined) {
       return super._resolveFocusPlatform()
     }

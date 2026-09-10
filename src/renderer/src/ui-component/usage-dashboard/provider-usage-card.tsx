@@ -8,7 +8,7 @@ import { UsageWindowBox } from '#src/renderer/src/ui-component/usage-dashboard/u
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { usageStatusUtil } from '#src/renderer/src/util/usage-status-util'
-import { zaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
+import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
 import { type IProviderSnapshot, UsageStatus } from '#src/shared/usage-model'
 
 export const ProviderUsageCard = (props: {
@@ -34,6 +34,7 @@ export const ProviderUsageCard = (props: {
   const usageWindows = providerSnapshot.usage ?? []
   const primaryWindow = usageWindows[0]
   const secondaryWindows = usageWindows.slice(1)
+  const zaiPeakUtil = new ZaiPeakUtil()
   const peakInfo = zaiPeakUtil.resolvePeakInfo({ nowMs, providerId: providerSnapshot.providerId })
   const peakRemainingPercent = zaiPeakUtil.resolvePeakRemainingPercent({
     nowMs,

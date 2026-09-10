@@ -6,8 +6,30 @@ const SESSION_ORIGIN_ORDER = {
   ssh: 1,
 }
 
-export const sessionsParserService = {
-  _resolveSessionInfo: (params: { rawEntry: unknown }): ISessionInfo | undefined => {
+export class SessionsParserService {
+  parseSessionEntries(params: { stdout: string }): ISessionInfo[] {
+    const parsed = this._tryParseSessionsJson({ stdout: params.stdout })
+
+    if (!Array.isArray(parsed)) {
+      throw new Error("'claude agents --json' printed unexpected output: expected a JSON array of sessions")
+    }
+
+    return this._sanitizeSessions({ rawEntries: parsed })
+  }
+
+  sortSessions(sessions: ISessionInfo[]): ISessionInfo[] {
+    return [...sessions].sort((left, right) => {
+      const originOrderDiff = this._resolveSessionOriginOrder(left) - this._resolveSessionOriginOrder(right)
+
+      if (originOrderDiff !== 0) {
+        return originOrderDiff
+      }
+
+      return left.name.localeCompare(right.name)
+    })
+  }
+
+  protected _resolveSessionInfo(params: { rawEntry: unknown }): ISessionInfo | undefined {
     const rawRecord = objectUtil.asRecord(params.rawEntry)
 
     if (rawRecord === undefined) {
@@ -33,25 +55,25 @@ export const sessionsParserService = {
     }
 
     return {
-      cwd: sessionsParserService._resolveStringValue(rawRecord['cwd']),
-      kind: sessionsParserService._resolveStringValue(rawRecord['kind']),
-      name: sessionsParserService._resolveStringValue(rawRecord['name']),
+      cwd: this._resolveStringValue(rawRecord['cwd']),
+      kind: this._resolveStringValue(rawRecord['kind']),
+      name: this._resolveStringValue(rawRecord['name']),
       pid,
       sessionId,
       startedAt,
-      status: sessionsParserService._resolveSessionStatus(rawRecord['status']),
+      status: this._resolveSessionStatus(rawRecord['status']),
     }
-  },
+  }
 
-  _resolveSessionOriginOrder: (session: ISessionInfo): number => {
+  protected _resolveSessionOriginOrder(session: ISessionInfo): number {
     if (session.hostId === undefined) {
       return SESSION_ORIGIN_ORDER.local
     }
 
     return SESSION_ORIGIN_ORDER.ssh
-  },
+  }
 
-  _resolveSessionStatus: (value: unknown): SessionStatus => {
+  protected _resolveSessionStatus(value: unknown): SessionStatus {
     switch (value) {
       case 'busy': {
         return 'busy'
@@ -69,35 +91,35 @@ export const sessionsParserService = {
         return 'unknown'
       }
     }
-  },
+  }
 
-  _resolveStringValue: (value: unknown): string => {
+  protected _resolveStringValue(value: unknown): string {
     if (typeof value === 'string') {
       return value
     }
 
     return ''
-  },
+  }
 
-  _sanitizeSessions: (params: { rawEntries: unknown[] }): ISessionInfo[] => {
+  protected _sanitizeSessions(params: { rawEntries: unknown[] }): ISessionInfo[] {
     return params.rawEntries
       .map((rawEntry) => {
-        return sessionsParserService._resolveSessionInfo({ rawEntry })
+        return this._resolveSessionInfo({ rawEntry })
       })
       .filter((session): session is ISessionInfo => {
         return session !== undefined
       })
-  },
+  }
 
-  _tryParseSessionsJson: (params: { stdout: string }): unknown => {
+  protected _tryParseSessionsJson(params: { stdout: string }): unknown {
     try {
       return JSON.parse(params.stdout)
     } catch {
-      return sessionsParserService._tryParseSessionsJsonSlice({ stdout: params.stdout })
+      return this._tryParseSessionsJsonSlice({ stdout: params.stdout })
     }
-  },
+  }
 
-  _tryParseSessionsJsonSlice: (params: { stdout: string }): unknown => {
+  protected _tryParseSessionsJsonSlice(params: { stdout: string }): unknown {
     const startIndex = params.stdout.indexOf('[')
     const endIndex = params.stdout.lastIndexOf(']')
 
@@ -110,28 +132,5 @@ export const sessionsParserService = {
     } catch {
       throw new Error("'claude agents --json' printed output that is not valid JSON")
     }
-  },
-
-  parseSessionEntries: (params: { stdout: string }): ISessionInfo[] => {
-    const parsed = sessionsParserService._tryParseSessionsJson({ stdout: params.stdout })
-
-    if (!Array.isArray(parsed)) {
-      throw new Error("'claude agents --json' printed unexpected output: expected a JSON array of sessions")
-    }
-
-    return sessionsParserService._sanitizeSessions({ rawEntries: parsed })
-  },
-
-  sortSessions: (sessions: ISessionInfo[]): ISessionInfo[] => {
-    return [...sessions].sort((left, right) => {
-      const originOrderDiff =
-        sessionsParserService._resolveSessionOriginOrder(left) - sessionsParserService._resolveSessionOriginOrder(right)
-
-      if (originOrderDiff !== 0) {
-        return originOrderDiff
-      }
-
-      return left.name.localeCompare(right.name)
-    })
-  },
+  }
 }

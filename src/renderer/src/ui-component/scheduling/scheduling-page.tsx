@@ -14,8 +14,8 @@ import { DashboardAddButton } from '#src/renderer/src/ui-component/usage-dashboa
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { type ITriggerRunSummary, triggerRunUtil } from '#src/renderer/src/util/trigger-run-util'
-import { type OsPlatform } from '#src/shared/os-model'
+import { type ITriggerRunSummary, TriggerRunUtil } from '#src/renderer/src/util/trigger-run-util'
+import { OS } from '#src/shared/os-model'
 import { type IAppSettings } from '#src/shared/settings-model'
 import {
   type ISchedulingInfo,
@@ -40,17 +40,17 @@ const TRIGGER_DAY_LABELS: Record<TriggerDay, string> = {
   wednesday: 'Wed',
 }
 
-const resolvePlatformLabel = (platform: OsPlatform): string => {
+const resolvePlatformLabel = (platform: OS): string => {
   switch (platform) {
-    case 'linux': {
+    case OS.LINUX: {
       return 'Linux'
     }
 
-    case 'macos': {
+    case OS.MACOS: {
       return 'macOS'
     }
 
-    case 'windows': {
+    case OS.WINDOWS: {
       return 'Windows'
     }
 
@@ -443,7 +443,7 @@ export const SchedulingPage = (): ReactElement => {
       return <p className="trigger-run-empty">Loading runs…</p>
     }
 
-    const summaries = triggerRunUtil.groupRunsByEventId({ entries })
+    const summaries = new TriggerRunUtil().groupRunsByEventId({ entries })
 
     if (summaries.length === 0) {
       return <p className="trigger-run-empty">No runs recorded yet.</p>

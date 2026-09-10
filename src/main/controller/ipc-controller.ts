@@ -9,7 +9,7 @@ import { type UpdateService } from '#src/main/business/service/update-service'
 import { type UsagePollService } from '#src/main/business/service/usage-poll-service'
 import { type SettingsUseCase } from '#src/main/business/use-case/settings-use-case'
 import { objectUtil } from '#src/main/util/object-util'
-import { type OsPlatform, osUtil } from '#src/main/util/os-util'
+import { type OS, osUtil } from '#src/main/util/os-util'
 import { IpcChannelMapper } from '#src/shared/ipc-channel'
 import { type ISessionFocusSupport, type ISessionSnapshot } from '#src/shared/session-model'
 import { type IAppSettings } from '#src/shared/settings-model'
@@ -33,7 +33,7 @@ export const ipcController = {
     triggerRunLogRepo: TriggerRunLogRepo
     updateService: UpdateService
   }): void => {
-    ipcMain.handle(IpcChannelMapper.OS_GET_PLATFORM, (): OsPlatform => {
+    ipcMain.handle(IpcChannelMapper.OS_GET_PLATFORM, (): OS => {
       return osUtil.resolvePlatform()
     })
 

@@ -1,10 +1,8 @@
-import { type OsPlatform } from '#src/shared/os-model'
+import { type OS } from '#src/shared/os-model'
 
 export type TriggerDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
 
 export const TRIGGER_DAYS: TriggerDay[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-
-export const TRIGGER_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 
 export const DEFAULT_TRIGGER_TIMEOUT_MS = 5 * 60 * 1000
 
@@ -39,7 +37,7 @@ export const MAX_WINDOW_TRIGGER_PRESET: ITriggerPreset = {
 
 export interface ISchedulingInfo {
   isSupported: boolean
-  platform: OsPlatform
+  platform: OS
 }
 
 export interface ITriggerRegistrationHealth {

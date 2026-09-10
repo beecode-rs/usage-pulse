@@ -2,7 +2,7 @@ import type { ReactElement } from 'react'
 
 import { DayTimeScheduleFields } from '#src/renderer/src/ui-component/schedule/day-time-schedule-fields'
 import { trackerTokenSourceUtil } from '#src/renderer/src/util/tracker-token-source-util'
-import type { OsPlatform } from '#src/shared/os-model'
+import type { OS } from '#src/shared/os-model'
 import { PROVIDER_CATALOG } from '#src/shared/provider-catalog'
 import {
   ClaudeTokenSource,
@@ -14,7 +14,7 @@ import {
 export const TrackerConfigFields = (props: {
   config: ITrackerConfig
   onChange: (config: ITrackerConfig) => void
-  osPlatform: OsPlatform
+  osPlatform: OS
 }): ReactElement => {
   const { config, onChange, osPlatform } = props
   const catalogEntry = PROVIDER_CATALOG.find((entry) => {

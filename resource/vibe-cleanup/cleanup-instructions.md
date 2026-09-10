@@ -4,4 +4,28 @@
 - /writing-clean-ts @src/main/util/sessions-util.ts is not an util, rename it and move to business/service folder the service layer
 ---
 - /writing-clean-ts @src/main/util/version-compare-util.ts if we have private functions in our simple object we must convert it into class and have functions starting with _ as protected. rewrite this file
-- if the function returns the boolean functions it must also start as we have the rule for the boolean variables, fix the name resolveIsNewerVersion in @src/main/util/version-compare-util.ts  /writing-clean-ts
+- if the function returns the boolean functions it must also start as we have the rule for the boolean variables, fix the name resolveIsNewerVersion in @src/main/util/version-compare-util.ts  /writing-clean-ts---
+- In the utile version compare (@src/main/util/version-compare-util.ts) there is constant for the regex for the version number. We need to move this to the util constants and give it a better name like regex for digit or something that will better explain the regex use and not where it is used
+- yes (@src/main/util/version-compare-util.contract.yaml)
+- use the /writing-clean-ts on @src/main/util/constant.ts
+- wrap all constants into a simple object export the constants are keys of the simole object (@src/main/util/constant.ts)
+- we need to update the constant name for regex, every regex value must end with Regex and not Pattern
+- i see that we have multiple regex constants across the code. move them all to util/constant.ts file
+- extract it too
+---
+- /writing-clean-ts check all the src .ts files and if we have a simple object export and we have functions with _ prefix in name, convert object into class and all functions with _ prefix must be protected
+---
+- /writing-clean-ts looking at the @src/main/business/use-case/settings-use-case.ts it look like something that is run in the beginning of the app like a serup, we should use app-boot layer for this, use /implementing-msh skill for implementing the msh app boot
+---
+- /writing-clean-ts in some parts of the code we are using process.env. the env variable must only be called from config util. move all env keys to config and use config throught the code
+---
+- /implementing-msh check how we implement msh-env (src/main/util/config.ts), we don't need to use .value anymore, we now use mshEnvResolver
+- we need to move other .env values from getter to envConfig using env() (src/main/util/config.ts)
+- i don't like changing the value of the config, the config value should only come from the .env or from args at the moment of start, any change in the config is changing how the app started, chan we find a better way of solving this issue. can we use memory global variable and set it's value on startup copy the current value from the config, and have this function markNoSandboxReexecDone be called from the util layer and change the inmemory variable, it would solve the same thing, but we would not change the value of the config which must be imutable what we get by using mshEnvResolver. also if separate getter processEnv, from the config this is raw env value and config is a const object imutable
+---
+- add contracts for @src/main/util/constant.ts regex values
+- move the @src/main/util/_constant-contract-harness.ts to __tests__ folder like jest has it, this is only for tests
+---
+- in @src/main/util/os-util.ts do not return string, return enum OS with UPPER_CASE_NAMES
+---
+- i see that we are using throught the code the process.platform, we encapsulated the platofrm into the OS enum and we have a util function to extract the OS enum using @src/main/util/os-util.ts (targets: src/main/index.ts, src/main/lib/app-window.ts, src/main/lib/dev-desktop-entry.ts, src/main/business/service/trigger-command-service.ts)

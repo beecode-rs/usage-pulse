@@ -1,36 +1,10 @@
-import { claudeTranscriptParserRecordApplier } from '#src/main/lib/claude-transcript-parser/_record-applier'
+import { ClaudeTranscriptParserRecordApplier } from '#src/main/lib/claude-transcript-parser/_record-applier'
 import { type ITranscriptParseState, claudeTranscriptParserState } from '#src/main/lib/claude-transcript-parser/_state'
 import { objectUtil } from '#src/main/util/object-util'
 import { type ISessionTranscriptStats } from '#src/shared/session-model'
 
-export const claudeTranscriptParserService = {
-  _reduceLineToState: (state: ITranscriptParseState, line: string): ITranscriptParseState => {
-    const trimmedLine = line.trim()
-
-    if (trimmedLine === '') {
-      return state
-    }
-
-    const record = claudeTranscriptParserService._tryParseEntry({ line: trimmedLine })
-
-    if (record === undefined) {
-      return state
-    }
-
-    claudeTranscriptParserRecordApplier.applyEntry({ record, state })
-
-    return state
-  },
-
-  _tryParseEntry: (params: { line: string }): Record<string, unknown> | undefined => {
-    try {
-      return objectUtil.asRecord(JSON.parse(params.line))
-    } catch {
-      return undefined
-    }
-  },
-
-  hasSignal: (params: ISessionTranscriptStats): boolean => {
+export class ClaudeTranscriptParserService {
+  hasSignal(params: ISessionTranscriptStats): boolean {
     const hasTokenUsage =
       params.cacheCreationTokens > 0 ||
       params.cacheReadTokens > 0 ||
@@ -43,16 +17,39 @@ export const claudeTranscriptParserService = {
     }
 
     return params.aiTitle !== '' || params.gitBranch !== '' || params.lastPrompt !== '' || params.model !== ''
-  },
+  }
 
-  parseStats: (params: { content: string }): ISessionTranscriptStats => {
-    const state = params.content
-      .split('\n')
-      .reduce<ITranscriptParseState>(
-        claudeTranscriptParserService._reduceLineToState,
-        claudeTranscriptParserState.create(),
-      )
+  parseStats(params: { content: string }): ISessionTranscriptStats {
+    const state = params.content.split('\n').reduce<ITranscriptParseState>((state, line) => {
+      return this._reduceLineToState(state, line)
+    }, claudeTranscriptParserState.create())
 
     return claudeTranscriptParserState.resolveStats({ state })
-  },
+  }
+
+  protected _reduceLineToState(state: ITranscriptParseState, line: string): ITranscriptParseState {
+    const trimmedLine = line.trim()
+
+    if (trimmedLine === '') {
+      return state
+    }
+
+    const record = this._tryParseEntry({ line: trimmedLine })
+
+    if (record === undefined) {
+      return state
+    }
+
+    new ClaudeTranscriptParserRecordApplier().applyEntry({ record, state })
+
+    return state
+  }
+
+  protected _tryParseEntry(params: { line: string }): Record<string, unknown> | undefined {
+    try {
+      return objectUtil.asRecord(JSON.parse(params.line))
+    } catch {
+      return undefined
+    }
+  }
 }

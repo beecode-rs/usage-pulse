@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { homedir } from 'node:os'
 
 import { errorUtil } from '#src/main/util/error-util'
+import { OS, osUtil } from '#src/main/util/os-util'
 import { TRIGGER_RUN_EXIT_CODE_TIMED_OUT, TRIGGER_RUN_LOG_SNIPPET_MAX_LENGTH } from '#src/shared/trigger-model'
 
 const DEFAULT_GRACE_PERIOD_MS = 5000
@@ -126,7 +127,7 @@ export class TriggerCommandService {
   }
 
   protected _resolveShellPath(): string {
-    if (process.platform === 'darwin') {
+    if (osUtil.resolvePlatform() === OS.MACOS) {
       return '/bin/zsh'
     }
 

@@ -3,12 +3,12 @@ import { type ReactElement, useEffect, useState } from 'react'
 import { PeakIcon } from '#src/renderer/src/ui-component/icon/peak-icon'
 import { UsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
 import { dateUtil } from '#src/renderer/src/util/date-util'
-import { menuStatusUtil } from '#src/renderer/src/util/menu-status-util'
-import { usagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
+import { MenuStatusUtil } from '#src/renderer/src/util/menu-status-util'
+import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { usageStatusUtil } from '#src/renderer/src/util/usage-status-util'
 import { usageWindowUtil } from '#src/renderer/src/util/usage-window-util'
-import { zaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
+import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
 import { type IProviderSnapshot, UsageStatus } from '#src/shared/usage-model'
 
 const TICK_INTERVAL_MS = 30_000
@@ -50,6 +50,7 @@ export const DashboardUsageBox = (props: { providerSnapshot: IProviderSnapshot }
   }, [])
 
   const fiveHourWindow = (providerSnapshot.usage ?? [])[0]
+  const zaiPeakUtil = new ZaiPeakUtil()
   const peakInfo = zaiPeakUtil.resolvePeakInfo({ nowMs: now, providerId: providerSnapshot.providerId })
   const peakRemainingPercent = zaiPeakUtil.resolvePeakRemainingPercent({
     nowMs: now,
@@ -60,7 +61,7 @@ export const DashboardUsageBox = (props: { providerSnapshot: IProviderSnapshot }
     providerId: providerSnapshot.providerId,
   })
 
-  const isWindowWarning = menuStatusUtil.resolveIsWindowWarning({
+  const isWindowWarning = new MenuStatusUtil().resolveIsWindowWarning({
     now,
     resetAt: fiveHourWindow?.resetAt,
     usedPercent: fiveHourWindow?.usedPercent ?? 0,
@@ -148,7 +149,7 @@ export const DashboardUsageBox = (props: { providerSnapshot: IProviderSnapshot }
     }
 
     const windowMs = fiveHourWindow.windowMs ?? usageResetUtil.fiveHourWindowMs
-    const paceFillColor = usagePaceUtil.resolvePaceColor({
+    const paceFillColor = new UsagePaceUtil().resolvePaceColor({
       now,
       resetAt: fiveHourWindow.resetAt,
       usedPercent: fiveHourWindow.usedPercent,

@@ -1,4 +1,4 @@
-# Contract for sessionSoundUtil.
+# Contract for SessionSoundUtil.
 # Terms pin the session sound triggers (playSessionSound itself drives the Web Audio
 # API and stays untested here). resolveNewlyStatusSessionIds answers "which
 # sessions just entered the given status" (the waiting sound): with no previous
@@ -15,46 +15,60 @@
 # [0, 100] and maps it linearly onto gain [0, 0.4]. Volume 40 (the app default)
 # divides before multiplying, so the exact double is 0.16000000000000003 — the
 # nearest representable neighbor of 0.16.
-subject: sessionSoundUtil
+subject: SessionSoundUtil
 module: ./session-sound-util.js
-subjectType: function
+subjectType: class
+constructor:
+  # A fresh instance carries no own fields (the AudioContext cache is module-level),
+  # so it serializes as an empty object.
+  terms:
+    - params: []
+      result: {}
 methods:
   resolveSoundGain:
     terms:
       # Muted volume maps to silence (playSessionSound skips gain <= 0).
-      - params:
+      - constructorParams: []
+        params:
           - volumePercent: 0
         result: 0
       # A quarter volume: 25 / 100 * 0.4.
-      - params:
+      - constructorParams: []
+        params:
           - volumePercent: 25
         result: 0.1
       # The app default volume: 40 / 100 * 0.4, which lands one ULP above 0.16
       # because 40 / 100 rounds before the multiply by 0.4.
-      - params:
+      - constructorParams: []
+        params:
           - volumePercent: 40
         result: 0.16000000000000003
       # Half volume maps to half the max gain.
-      - params:
+      - constructorParams: []
+        params:
           - volumePercent: 50
         result: 0.2
       # Full volume maps to the max gain.
-      - params:
+      - constructorParams: []
+        params:
           - volumePercent: 100
         result: 0.4
       # Below the minimum clamps to silence.
-      - params:
+      - constructorParams: []
+        params:
           - volumePercent: -5
         result: 0
       # Above the maximum clamps to the max gain.
-      - params:
+      - constructorParams: []
+        params:
           - volumePercent: 120
         result: 0.4
   resolveNewlyStatusSessionIds:
     terms:
       # First snapshot (no previous sessions yet): nobody is newly waiting, even
       # when sessions are already waiting.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -67,14 +81,16 @@ methods:
             status: waiting
         result: []
       # Both snapshots empty.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions: []
             previousSessions: []
             status: waiting
         result: []
       # Empty previous snapshot (as opposed to missing): every currently waiting
       # session counts as new.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -88,7 +104,8 @@ methods:
         result:
           - sid-1
       # Simplest waiting transition: idle becomes waiting.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -109,7 +126,8 @@ methods:
         result:
           - sid-1
       # Simplest idle transition: busy becomes idle.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -130,7 +148,8 @@ methods:
         result:
           - sid-1
       # Waiting becomes idle is a fresh idle transition, but not a waiting one.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -153,7 +172,8 @@ methods:
       # The full matrix for waiting: sid-1 stays waiting (no beep), sid-2 goes
       # busy to waiting (beep), sid-3 leaves waiting (no beep), sid-4 is new but
       # idle (no beep), sid-5 is new and waiting (beep).
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -217,7 +237,8 @@ methods:
           - sid-2
           - sid-5
       # The same matrix for idle: only sid-4 (new and idle) and nobody else.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -280,7 +301,8 @@ methods:
         result:
           - sid-4
       # 'unknown' before is "not waiting", so unknown to waiting still beeps.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -301,7 +323,8 @@ methods:
         result:
           - sid-1
       # Nothing waiting anymore, however many waited before.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -337,7 +360,8 @@ methods:
   resolveStatusTransitionSessionIds:
     terms:
       # The finished-session transition itself: the same session id goes busy to idle.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -359,7 +383,8 @@ methods:
         result:
           - sid-1
       # Only busy counts as the finished-from status: waiting becomes idle does not trigger.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -380,7 +405,8 @@ methods:
             toStatus: idle
         result: []
       # Nor does unknown become idle: the session must have been exactly busy before.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -402,7 +428,8 @@ methods:
         result: []
       # A session idle now but absent from the previous snapshot never matches, no
       # matter what the previous snapshot holds for other sessions.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -425,7 +452,8 @@ methods:
       # An empty previous snapshot is the same story: nobody was busy before, so
       # nobody finished — unlike resolveNewlyStatusSessionIds, where [] means every
       # currently-matching session counts as new.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -440,7 +468,8 @@ methods:
         result: []
       # First snapshot (no previous sessions yet): nobody transitioned, even when a
       # session is already idle.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -454,7 +483,8 @@ methods:
             toStatus: idle
         result: []
       # Wrong toStatus: idle becomes busy is a start, not a finish.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -475,7 +505,8 @@ methods:
             toStatus: idle
         result: []
       # Staying busy is not a transition either.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -496,7 +527,8 @@ methods:
             toStatus: idle
         result: []
       # Nor is staying idle.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -519,7 +551,8 @@ methods:
       # The full matrix: only sid-1 and sid-8 (busy to idle) come back. sid-2 came
       # from waiting, sid-3 from unknown, sid-4 is new (absent before), sid-5 is
       # busy now (was idle), sid-6 stays busy and sid-7 stays idle.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude
@@ -634,7 +667,8 @@ methods:
           - sid-8
       # fromStatus/toStatus are parameters, not a hardcoded busy/idle pair: the
       # resumed-work transition idle to busy triggers with the pair swapped.
-      - params:
+      - constructorParams: []
+        params:
           - currentSessions:
               - cwd: /a
                 kind: claude

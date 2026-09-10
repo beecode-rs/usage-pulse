@@ -2,26 +2,26 @@ import { SchedulingStrategyLinux } from '#src/main/business/component/scheduling
 import { SchedulingStrategyMacLaunchd } from '#src/main/business/component/scheduling-strategy/mac-launchd'
 import { type ISchedulingStrategy } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
 import { SchedulingStrategyWindows } from '#src/main/business/component/scheduling-strategy/windows'
-import { type OsPlatform, osUtil } from '#src/main/util/os-util'
+import { OS, osUtil } from '#src/main/util/os-util'
 
 export class SchedulingStrategyFactory {
-  resolve(params: { platform?: OsPlatform } = {}): ISchedulingStrategy {
+  resolve(params: { platform?: OS } = {}): ISchedulingStrategy {
     const platform = params.platform ?? osUtil.resolvePlatform()
 
     return this._resolveForPlatform({ platform })
   }
 
-  protected _resolveForPlatform(params: { platform: OsPlatform }): ISchedulingStrategy {
+  protected _resolveForPlatform(params: { platform: OS }): ISchedulingStrategy {
     switch (params.platform) {
-      case 'linux': {
+      case OS.LINUX: {
         return new SchedulingStrategyLinux()
       }
 
-      case 'macos': {
+      case OS.MACOS: {
         return new SchedulingStrategyMacLaunchd()
       }
 
-      case 'windows': {
+      case OS.WINDOWS: {
         return new SchedulingStrategyWindows()
       }
 

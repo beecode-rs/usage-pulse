@@ -1,12 +1,12 @@
 import { app, dialog } from 'electron'
 
-import { osUtil } from '#src/main/util/os-util'
+import { OS, osUtil } from '#src/main/util/os-util'
 
 const POPUP_TITLE = 'Usage Pulse — Dummy tracker'
 
 export const dummyTriggerPopup = {
   show: async (params: { trackerName: string }): Promise<void> => {
-    if (osUtil.resolvePlatform() !== 'macos') {
+    if (osUtil.resolvePlatform() !== OS.MACOS) {
       return
     }
 

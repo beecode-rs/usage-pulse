@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 import { IpcChannelMapper } from '#src/shared/ipc-channel'
-import type { OsPlatform } from '#src/shared/os-model'
+import type { OS } from '#src/shared/os-model'
 import {
   type ISessionFocusSupport,
   type ISessionSnapshot,
@@ -28,7 +28,7 @@ const usageApi: IUsageApiClient = {
   focusSession: (params: { cwd: string; pid: number }): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_FOCUS, params)
   },
-  getPlatform: (): Promise<OsPlatform> => {
+  getPlatform: (): Promise<OS> => {
     return ipcRenderer.invoke(IpcChannelMapper.OS_GET_PLATFORM)
   },
   getSchedulingInfo: (): Promise<ISchedulingInfo> => {

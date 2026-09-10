@@ -6,29 +6,29 @@ import { promisify } from 'node:util'
 
 import { errorUtil } from '#src/main/util/error-util'
 import { objectUtil } from '#src/main/util/object-util'
-import { type OsPlatform, osUtil } from '#src/main/util/os-util'
+import { OS, osUtil } from '#src/main/util/os-util'
 
 const execFileAsync = promisify(execFile)
 
 export class ClaudeSystemTokenService {
   protected readonly _homeDir: string
   protected readonly _keychainSourceName = "'Claude Code-credentials' keychain entry"
-  protected readonly _platform: OsPlatform
+  protected readonly _platform: OS
 
-  constructor(params: { homeDir?: string; platform?: OsPlatform } = {}) {
+  constructor(params: { homeDir?: string; platform?: OS } = {}) {
     this._homeDir = params.homeDir ?? homedir()
     this._platform = params.platform ?? osUtil.resolvePlatform()
   }
 
   async resolveAccessToken(): Promise<string> {
     switch (this._platform) {
-      case 'linux': {
+      case OS.LINUX: {
         const credentialsJson = await this._readLinuxCredentialsJson()
 
         return this._extractAccessToken({ credentialsJson, sourceName: this._resolveLinuxCredentialsPath() })
       }
 
-      case 'macos': {
+      case OS.MACOS: {
         const credentialsJson = await this._readKeychainCredentialsJson()
 
         return this._extractAccessToken({ credentialsJson, sourceName: this._keychainSourceName })

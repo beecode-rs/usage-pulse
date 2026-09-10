@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@beecode/msh-app-boot':
+        specifier: ^2.0.2
+        version: 2.0.2(@typescript-eslint/utils@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(jiti@2.7.0)(typescript@6.0.3)
       '@beecode/msh-env':
         specifier: ^2.0.3
         version: 2.0.3(@typescript-eslint/utils@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(jiti@2.7.0)(typescript@6.0.3)
@@ -187,6 +190,10 @@ packages:
   '@babel/types@7.29.8':
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
+
+  '@beecode/msh-app-boot@2.0.2':
+    resolution: {integrity: sha512-lVHZX+IAiLz7XRFto2QRfy/KjnNBuU7ynFXa0kUy+9brDHGfnJoKbZC6o6xY3cdaYPW21Q8Xqe7Mc+lZzV9g9g==}
+    engines: {node: '>=20.8.1', npm: '>=10.1.0'}
 
   '@beecode/msh-config@1.2.2':
     resolution: {integrity: sha512-xw+0uSIibEAm+O1DHwZhkk+eWmna14UGPNGkFPffqgY46GuLYahQYgFdH5X1iZx8qjE0srpKljIONC4gRTgriw==}
@@ -4423,6 +4430,19 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
+
+  '@beecode/msh-app-boot@2.0.2(@typescript-eslint/utils@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(jiti@2.7.0)(typescript@6.0.3)':
+    dependencies:
+      '@beecode/msh-config': 1.2.2(@typescript-eslint/utils@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(jiti@2.7.0)(typescript@6.0.3)
+      '@beecode/msh-logger': 2.0.2(@typescript-eslint/utils@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(jiti@2.7.0)(typescript@6.0.3)
+    transitivePeerDependencies:
+      - '@types/eslint'
+      - '@typescript-eslint/utils'
+      - eslint-import-resolver-node
+      - jiti
+      - kerberos
+      - supports-color
+      - typescript
 
   '@beecode/msh-config@1.2.2(@typescript-eslint/utils@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(jiti@2.7.0)(typescript@6.0.3)':
     dependencies:
