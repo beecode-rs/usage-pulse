@@ -5,8 +5,9 @@ import { usageClientService } from '#src/renderer/src/business/service/usage-cli
 import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/tracker-config-fields'
 import { errorUtil } from '#src/renderer/src/util/error-util'
 import { trackerTokenSourceUtil } from '#src/renderer/src/util/tracker-token-source-util'
-import type { OS } from '#src/shared/os-model'
-import { type IAppSettings, type ITrackerConfig } from '#src/shared/settings-model'
+import type { OS } from '#src/shared/business/enum/os-enum'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import { type AppSettings, type TrackerConfig } from '#src/shared/business/model/settings-model'
 
 export const TrackerSettingsDialog = (props: {
   onClose: () => void
@@ -14,8 +15,8 @@ export const TrackerSettingsDialog = (props: {
   trackerId: string
 }): ReactElement => {
   const { onClose, onSaved, trackerId } = props
-  const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
-  const [tracker, setTracker] = useState<ITrackerConfig | undefined>(undefined)
+  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [tracker, setTracker] = useState<TrackerConfig | undefined>(undefined)
   const [osPlatform, setOsPlatform] = useState<OS | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
   const [isConfirmingRemove, setIsConfirmingRemove] = useState(false)
@@ -46,8 +47,8 @@ export const TrackerSettingsDialog = (props: {
     void loadSettings()
   }, [trackerId])
 
-  const resolveTrackerValidationError = (candidate: ITrackerConfig): string | undefined => {
-    if (candidate.providerId !== 'dummy') {
+  const resolveTrackerValidationError = (candidate: TrackerConfig): string | undefined => {
+    if (candidate.providerId !== ProviderIdMapper.DUMMY) {
       return undefined
     }
 

@@ -9,11 +9,12 @@ import { SessionTranscriptChips } from '#src/renderer/src/ui-component/sessions/
 import { SessionWaitingPulse } from '#src/renderer/src/ui-component/sessions/session-waiting-pulse'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { sessionPresentationUtil } from '#src/renderer/src/util/session-presentation-util'
-import { type ISessionInfo, type ISessionTranscriptStats, type SessionStatus } from '#src/shared/session-model'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { type SessionInfo, type SessionTranscriptStats } from '#src/shared/business/model/session-model'
 
 const LAST_PROMPT_PREVIEW_MAX_LENGTH = 200
 
-const resolveCardClassName = (params: { isRemote: boolean; status: SessionStatus }): string => {
+const resolveCardClassName = (params: { isRemote: boolean; status: SessionStatusMapper }): string => {
   const classNames = ['session-card', `is-${params.status}`]
 
   if (params.isRemote) {
@@ -73,8 +74,8 @@ const renderTranscriptStat = (params: { label: string; value: string; valueTitle
 }
 
 const renderTranscriptDetails = (params: {
-  session: ISessionInfo
-  transcript: ISessionTranscriptStats
+  session: SessionInfo
+  transcript: SessionTranscriptStats
 }): ReactElement => {
   const { session, transcript } = params
 
@@ -139,10 +140,10 @@ export const SessionCard = (props: {
   nowMs: number
   onFocus: () => void
   onToggle: () => void
-  pulseSeconds: number
-  session: ISessionInfo
+  pulseMs: number
+  session: SessionInfo
 }): ReactElement => {
-  const { finishedAtMs, isExpanded, nowMs, onFocus, onToggle, pulseSeconds, session } = props
+  const { finishedAtMs, isExpanded, nowMs, onFocus, onToggle, pulseMs, session } = props
   const transcript = session.transcript
   const sessionTitle = sessionPresentationUtil.resolveSessionTitle({ session })
   const sessionTitleParts = sessionPresentationUtil.resolveSessionTitleParts({ title: sessionTitle })
@@ -153,8 +154,8 @@ export const SessionCard = (props: {
       className={resolveCardClassName({ isRemote: session.hostId !== undefined, status: session.status })}
       title={session.cwd}
     >
-      <SessionFinishedPulse finishedAtMs={finishedAtMs} nowMs={nowMs} pulseSeconds={pulseSeconds} />
-      <SessionWaitingPulse isWaiting={session.status === 'waiting'} />
+      <SessionFinishedPulse finishedAtMs={finishedAtMs} nowMs={nowMs} pulseMs={pulseMs} />
+      <SessionWaitingPulse isWaiting={session.status === SessionStatusMapper.WAITING} />
       <header className="session-card-header">
         <div className="session-card-heading">
           <span className="session-card-origin">

@@ -1,17 +1,19 @@
-import { type IUsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
+import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
 import { httpUtil } from '#src/main/util/http-util'
 import { objectUtil } from '#src/main/util/object-util'
 import { percentUtil } from '#src/main/util/percent-util'
-import { FIVE_HOUR_WINDOW_MS, type IUsageWindow, type ProviderId, SEVEN_DAY_WINDOW_MS } from '#src/shared/usage-model'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import type { UsageWindow } from '#src/shared/business/model/usage-model'
+import { constant } from '#src/shared/util/constant'
 
-export class UsageProviderClaude implements IUsageProvider {
+export class UsageProviderClaude implements UsageProvider {
   protected readonly _usageUrl = 'https://api.anthropic.com/api/oauth/usage'
 
-  getProviderId(): ProviderId {
-    return 'claude'
+  getProviderId(): ProviderIdMapper {
+    return ProviderIdMapper.CLAUDE
   }
 
-  async fetchUsage(params: { accessToken: string }): Promise<IUsageWindow[]> {
+  async fetchUsage(params: { accessToken: string }): Promise<UsageWindow[]> {
     const rawUsage = await httpUtil.fetchJson({
       headers: {
         accept: 'application/json',
@@ -34,18 +36,18 @@ export class UsageProviderClaude implements IUsageProvider {
     return rootRecord
   }
 
-  protected _buildWindows(params: { usageRecord: Record<string, unknown> }): IUsageWindow[] {
+  protected _buildWindows(params: { usageRecord: Record<string, unknown> }): UsageWindow[] {
     const fiveHourWindow = this._buildWindow({
       label: '5-hour window',
       sectionRecord: objectUtil.asRecord(params.usageRecord['five_hour']),
-      windowMs: FIVE_HOUR_WINDOW_MS,
+      windowMs: constant.fiveHourWindowMs,
     })
 
     if (fiveHourWindow === undefined) {
       throw new Error("Claude usage response is missing the 'five_hour' section")
     }
 
-    const windows: IUsageWindow[] = [fiveHourWindow]
+    const windows: UsageWindow[] = [fiveHourWindow]
     const weeklyWindow = this._buildWeeklyWindow({ usageRecord: params.usageRecord })
 
     if (weeklyWindow !== undefined) {
@@ -55,11 +57,11 @@ export class UsageProviderClaude implements IUsageProvider {
     return windows
   }
 
-  protected _buildWeeklyWindow(params: { usageRecord: Record<string, unknown> }): IUsageWindow | undefined {
+  protected _buildWeeklyWindow(params: { usageRecord: Record<string, unknown> }): UsageWindow | undefined {
     return this._buildWindow({
       label: 'Weekly',
       sectionRecord: objectUtil.asRecord(params.usageRecord['seven_day']),
-      windowMs: SEVEN_DAY_WINDOW_MS,
+      windowMs: constant.sevenDayWindowMs,
     })
   }
 
@@ -67,7 +69,7 @@ export class UsageProviderClaude implements IUsageProvider {
     label: string
     sectionRecord?: Record<string, unknown>
     windowMs?: number
-  }): IUsageWindow | undefined {
+  }): UsageWindow | undefined {
     if (params.sectionRecord === undefined) {
       return undefined
     }

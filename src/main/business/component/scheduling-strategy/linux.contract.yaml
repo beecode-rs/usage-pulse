@@ -182,14 +182,14 @@ methods:
         result: "new Error(\"Invalid trigger time '09:60': hour must be within 00-23 and minute within 00-59\")"
   _buildOnCalendarValues:
     terms:
-      # One value per time; days CSV is shared and already in TRIGGER_DAYS order here.
+      # One value per time; days CSV is shared and already in constant.scheduleTrigger.days order here.
       - constructorParams:
           - isSystemdUserAvailable: false
         params:
           - days: [monday, wednesday, saturday]
             times: ['09:00', '13:00']
         result: ['Mon,Wed,Sat 09:00', 'Mon,Wed,Sat 13:00']
-      # Input day order is normalized to TRIGGER_DAYS (monday..sunday) order.
+      # Input day order is normalized to constant.scheduleTrigger.days (monday..sunday) order.
       - constructorParams:
           - isSystemdUserAvailable: false
         params:

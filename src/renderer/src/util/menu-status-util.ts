@@ -1,30 +1,31 @@
+import { MenuStatusDotMapper } from '#src/renderer/src/business/model/menu-status-dot-mapper-enum'
 import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
 import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
-import type { ISessionSnapshot } from '#src/shared/session-model'
-import { FIVE_HOUR_WINDOW_MS, type IUsageSnapshot, UsageStatus } from '#src/shared/usage-model'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { UsageStatus } from '#src/shared/business/enum/usage-status-enum'
+import type { SessionSnapshot } from '#src/shared/business/model/session-model'
+import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
+import { constant } from '#src/shared/util/constant'
 
 const MAX_ELAPSED_MINUTES = 300
 
-export const MONTH_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
-
-export type MenuStatusDot = 'error' | 'peak' | 'waiting' | 'warning'
-
 export class MenuStatusUtil {
-  resolveCombinedStatusDot(params: { dots: (MenuStatusDot | undefined)[] }): MenuStatusDot | undefined {
-    if (params.dots.includes('error')) {
-      return 'error'
+  resolveCombinedStatusDot(params: { dots: (MenuStatusDotMapper | undefined)[] }): MenuStatusDotMapper | undefined {
+    if (params.dots.includes(MenuStatusDotMapper.ERROR)) {
+      return MenuStatusDotMapper.ERROR
     }
 
-    if (params.dots.includes('warning')) {
-      return 'warning'
+    if (params.dots.includes(MenuStatusDotMapper.WARNING)) {
+      return MenuStatusDotMapper.WARNING
     }
 
-    if (params.dots.includes('waiting')) {
-      return 'waiting'
+    if (params.dots.includes(MenuStatusDotMapper.WAITING)) {
+      return MenuStatusDotMapper.WAITING
     }
 
-    if (params.dots.includes('peak')) {
-      return 'peak'
+    if (params.dots.includes(MenuStatusDotMapper.PEAK)) {
+      return MenuStatusDotMapper.PEAK
     }
 
     return undefined
@@ -34,11 +35,11 @@ export class MenuStatusUtil {
     elapsedMinutes: number
     now: number
     usedPercent: number
-  }): MenuStatusDot | undefined {
-    const snapshot: IUsageSnapshot = {
+  }): MenuStatusDotMapper | undefined {
+    const snapshot: UsageSnapshot = {
       providers: [
         {
-          providerId: 'zai',
+          providerId: ProviderIdMapper.ZAI,
           status: UsageStatus.OK,
           trackerId: 'development-zai',
           trackerName: 'z.ai',
@@ -48,20 +49,20 @@ export class MenuStatusUtil {
               resetAt: this._resolveWindowResetAt({
                 elapsedMinutes: params.elapsedMinutes,
                 now: params.now,
-                windowMs: FIVE_HOUR_WINDOW_MS,
+                windowMs: constant.fiveHourWindowMs,
               }),
               usedPercent: params.usedPercent,
-              windowMs: FIVE_HOUR_WINDOW_MS,
+              windowMs: constant.fiveHourWindowMs,
             },
             {
               label: 'MCP quota',
               resetAt: this._resolveWindowResetAt({
                 elapsedMinutes: params.elapsedMinutes,
                 now: params.now,
-                windowMs: MONTH_WINDOW_MS,
+                windowMs: constant.thirtyDayWindowMs,
               }),
               usedPercent: params.usedPercent,
-              windowMs: MONTH_WINDOW_MS,
+              windowMs: constant.thirtyDayWindowMs,
             },
           ],
         },
@@ -86,7 +87,7 @@ export class MenuStatusUtil {
     })
   }
 
-  resolvePeakStatusDot(params: { now: number; snapshot?: IUsageSnapshot }): MenuStatusDot | undefined {
+  resolvePeakStatusDot(params: { now: number; snapshot?: UsageSnapshot }): MenuStatusDotMapper | undefined {
     const providers = params.snapshot?.providers ?? []
 
     const isAnyProviderInPeakHours = providers.some((provider) => {
@@ -96,31 +97,34 @@ export class MenuStatusUtil {
     })
 
     if (isAnyProviderInPeakHours) {
-      return 'peak'
+      return MenuStatusDotMapper.PEAK
     }
 
     return undefined
   }
 
-  resolveSessionsStatusDot(params: { hasLoadError?: boolean; snapshot?: ISessionSnapshot }): MenuStatusDot | undefined {
+  resolveSessionsStatusDot(params: {
+    hasLoadError?: boolean
+    snapshot?: SessionSnapshot
+  }): MenuStatusDotMapper | undefined {
     const hasSnapshotError = params.snapshot?.errorMessage !== undefined && params.snapshot.errorMessage !== ''
 
     if (params.hasLoadError === true || hasSnapshotError) {
-      return 'error'
+      return MenuStatusDotMapper.ERROR
     }
 
     const isAnySessionWaiting = (params.snapshot?.sessions ?? []).some((session) => {
-      return session.status === 'waiting'
+      return session.status === SessionStatusMapper.WAITING
     })
 
     if (isAnySessionWaiting) {
-      return 'waiting'
+      return MenuStatusDotMapper.WAITING
     }
 
     return undefined
   }
 
-  resolveUsageStatusDot(params: { now: number; snapshot?: IUsageSnapshot }): MenuStatusDot | undefined {
+  resolveUsageStatusDot(params: { now: number; snapshot?: UsageSnapshot }): MenuStatusDotMapper | undefined {
     const providers = params.snapshot?.providers ?? []
 
     const isAnyProviderError = providers.some((provider) => {
@@ -128,7 +132,7 @@ export class MenuStatusUtil {
     })
 
     if (isAnyProviderError) {
-      return 'error'
+      return MenuStatusDotMapper.ERROR
     }
 
     const isAnyWindowWarning = providers.some((provider) => {
@@ -143,7 +147,7 @@ export class MenuStatusUtil {
     })
 
     if (isAnyWindowWarning) {
-      return 'warning'
+      return MenuStatusDotMapper.WARNING
     }
 
     return undefined

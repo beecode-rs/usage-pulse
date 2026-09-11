@@ -5,11 +5,9 @@ import {
   useRef,
 } from 'react'
 
-import {
-  DIAL_ANGLE_RANGE_DEGREES,
-  DIAL_START_ANGLE_DEGREES,
-  PlannerDialUtil,
-} from '#src/renderer/src/util/planner-dial-util'
+import { PlannerDialToneMapper } from '#src/renderer/src/business/model/planner-dial-tone-mapper-enum'
+import { constant } from '#src/renderer/src/util/constant'
+import { PlannerDialUtil } from '#src/renderer/src/util/planner-dial-util'
 
 const DIAL_SIZE = 76
 
@@ -19,9 +17,7 @@ const DIAL_KNOB_RADIUS = 3.5
 
 const DIAL_RADIUS = DIAL_SIZE / 2 - 7
 
-type PlannerDialTone = 'lunch' | 'work'
-
-const resolveDialClassName = (tone: PlannerDialTone | undefined): string => {
+const resolveDialClassName = (tone: PlannerDialToneMapper | undefined): string => {
   if (tone === undefined) {
     return 'planner-dial'
   }
@@ -83,7 +79,7 @@ export const PlannerDial = (props: {
   min: number
   onChange: (value: number) => void
   step: number
-  tone?: PlannerDialTone
+  tone?: PlannerDialToneMapper
   value: number
 }): ReactElement => {
   const svgRef = useRef<SVGSVGElement | null>(null)
@@ -194,9 +190,9 @@ export const PlannerDial = (props: {
           className="planner-dial-track"
           d={resolveArcPath({
             center: DIAL_CENTER,
-            endAngleDegrees: DIAL_START_ANGLE_DEGREES + DIAL_ANGLE_RANGE_DEGREES,
+            endAngleDegrees: constant.plannerDialStartAngleDegrees + constant.plannerDialAngleRangeDegrees,
             radius: DIAL_RADIUS,
-            startAngleDegrees: DIAL_START_ANGLE_DEGREES,
+            startAngleDegrees: constant.plannerDialStartAngleDegrees,
           })}
         />
         {props.value > props.min && (
@@ -206,7 +202,7 @@ export const PlannerDial = (props: {
               center: DIAL_CENTER,
               endAngleDegrees: valueAngleDegrees,
               radius: DIAL_RADIUS,
-              startAngleDegrees: DIAL_START_ANGLE_DEGREES,
+              startAngleDegrees: constant.plannerDialStartAngleDegrees,
             })}
           />
         )}

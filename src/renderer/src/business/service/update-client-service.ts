@@ -1,7 +1,7 @@
-import type { IUpdateStatus, UpdateStatusListener } from '#src/shared/update-model'
+import type { UpdateStatus, UpdateStatusListener } from '#src/shared/business/model/update-model'
 
 export const updateClientService = {
-  getStatus: (): Promise<IUpdateStatus> => {
+  getStatus: (): Promise<UpdateStatus> => {
     return window.usageApi.getUpdateStatus()
   },
   openRelease: (): void => {

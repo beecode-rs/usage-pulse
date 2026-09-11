@@ -1,6 +1,7 @@
 import { app, dialog } from 'electron'
 
-import { OS, osUtil } from '#src/main/util/os-util'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
 
 const POPUP_TITLE = 'Usage Pulse — Dummy tracker'
 

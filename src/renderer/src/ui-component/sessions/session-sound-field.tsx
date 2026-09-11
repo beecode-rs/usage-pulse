@@ -1,16 +1,16 @@
 import { type ReactElement } from 'react'
 
 import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
-import { SessionSoundId } from '#src/shared/settings-model'
+import { SoundNameMapper } from '#src/shared/business/enum/sound-name-mapper-enum'
 
-const SESSION_SOUND_OPTIONS: { label: string; soundId: SessionSoundId }[] = [
-  { label: 'None', soundId: SessionSoundId.NONE },
-  { label: 'Beep', soundId: SessionSoundId.BEEP },
-  { label: 'Chime', soundId: SessionSoundId.CHIME },
-  { label: 'Ding', soundId: SessionSoundId.DING },
-  { label: 'Fanfare', soundId: SessionSoundId.FANFARE },
-  { label: 'Ping', soundId: SessionSoundId.PING },
-  { label: 'Success', soundId: SessionSoundId.SUCCESS },
+const SESSION_SOUND_OPTIONS: { label: string; soundId: SoundNameMapper }[] = [
+  { label: 'None', soundId: SoundNameMapper.NONE },
+  { label: 'Beep', soundId: SoundNameMapper.BEEP },
+  { label: 'Chime', soundId: SoundNameMapper.CHIME },
+  { label: 'Ding', soundId: SoundNameMapper.DING },
+  { label: 'Fanfare', soundId: SoundNameMapper.FANFARE },
+  { label: 'Ping', soundId: SoundNameMapper.PING },
+  { label: 'Success', soundId: SoundNameMapper.SUCCESS },
 ]
 
 const renderPlayIcon = (): ReactElement => {
@@ -24,9 +24,9 @@ const renderPlayIcon = (): ReactElement => {
 export const SessionSoundField = (props: {
   hint: string
   label: string
-  onSoundIdChange: (soundId: SessionSoundId) => void
+  onSoundIdChange: (soundId: SoundNameMapper) => void
   playButtonTitle: string
-  soundId: SessionSoundId
+  soundId: SoundNameMapper
   volumePercent: number
 }): ReactElement => {
   const handlePlaySound = (): void => {
@@ -40,7 +40,7 @@ export const SessionSoundField = (props: {
         <select
           className="settings-field-input"
           onChange={(event) => {
-            props.onSoundIdChange(event.target.value as SessionSoundId)
+            props.onSoundIdChange(event.target.value as SoundNameMapper)
           }}
           value={props.soundId}
         >
@@ -55,7 +55,7 @@ export const SessionSoundField = (props: {
         <button
           aria-label={props.playButtonTitle}
           className="sessions-settings-play-button"
-          disabled={props.soundId === SessionSoundId.NONE}
+          disabled={props.soundId === SoundNameMapper.NONE}
           onClick={handlePlaySound}
           title={props.playButtonTitle}
           type="button"

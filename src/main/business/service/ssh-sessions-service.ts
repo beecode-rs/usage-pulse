@@ -3,8 +3,8 @@ import { promisify } from 'node:util'
 
 import { SessionsParserService } from '#src/main/business/service/sessions-parser-service'
 import { errorUtil } from '#src/main/util/error-util'
-import { type ISessionInfo, type ISessionSnapshot, type IUnreachableHost } from '#src/shared/session-model'
-import { type ISshHostConfig } from '#src/shared/settings-model'
+import { type SessionInfo, type SessionSnapshot, type UnreachableHost } from '#src/shared/business/model/session-model'
+import { type SshHostConfig } from '#src/shared/business/model/settings-model'
 
 const execFileAsync = promisify(execFile)
 
@@ -20,30 +20,30 @@ const REMOTE_AGENTS_COMMAND = String.raw`bash -lc 'PATH="$HOME/.local/bin:$PATH"
 
 const REMOTE_PROBE_COMMAND = 'true'
 
-interface ISshTarget {
+type SshTarget = {
   destination: string
   port?: number
   user?: string
 }
 
-export interface ISshHostFetchResult {
+export type SshHostFetchResult = {
   errorMessage?: string
-  host: ISshHostConfig
-  sessions: ISessionInfo[]
+  host: SshHostConfig
+  sessions: SessionInfo[]
 }
 
-interface ISshHostCacheEntry {
+type SshHostCacheEntry = {
   fetchedAt: number
   fingerprint: string
-  result: ISshHostFetchResult
+  result: SshHostFetchResult
 }
 
 export class SshSessionsService {
-  protected readonly _cacheById = new Map<string, ISshHostCacheEntry>()
+  protected readonly _cacheById = new Map<string, SshHostCacheEntry>()
 
-  protected readonly _inFlightById = new Map<string, Promise<ISshHostFetchResult>>()
+  protected readonly _inFlightById = new Map<string, Promise<SshHostFetchResult>>()
 
-  async listRemoteSessions(params: { hosts: ISshHostConfig[] }): Promise<ISshHostFetchResult[]> {
+  async listRemoteSessions(params: { hosts: SshHostConfig[] }): Promise<SshHostFetchResult[]> {
     const enabledHosts = params.hosts.filter((host) => {
       return host.isEnabled
     })
@@ -58,15 +58,15 @@ export class SshSessionsService {
   }
 
   mergeSessionSnapshots(params: {
-    localSnapshot: ISessionSnapshot
-    remoteResults: ISshHostFetchResult[]
-  }): ISessionSnapshot {
+    localSnapshot: SessionSnapshot
+    remoteResults: SshHostFetchResult[]
+  }): SessionSnapshot {
     const remoteSessions = params.remoteResults.flatMap((remoteResult) => {
       return remoteResult.sessions.map((session) => {
         return { ...session, hostId: remoteResult.host.id, hostLabel: remoteResult.host.url }
       })
     })
-    const unreachableHosts: IUnreachableHost[] = params.remoteResults
+    const unreachableHosts: UnreachableHost[] = params.remoteResults
       .filter((remoteResult) => {
         return remoteResult.errorMessage !== undefined
       })
@@ -101,7 +101,7 @@ export class SshSessionsService {
     }
   }
 
-  protected async _resolveHostResult(params: { host: ISshHostConfig }): Promise<ISshHostFetchResult> {
+  protected async _resolveHostResult(params: { host: SshHostConfig }): Promise<SshHostFetchResult> {
     const fingerprint = this._resolveHostFingerprint({ host: params.host })
     const cachedResult = this._resolveFreshCacheResult({
       cacheEntry: this._cacheById.get(params.host.id),
@@ -122,9 +122,9 @@ export class SshSessionsService {
   }
 
   protected _resolveFreshCacheResult(params: {
-    cacheEntry: ISshHostCacheEntry | undefined
+    cacheEntry: SshHostCacheEntry | undefined
     fingerprint: string
-  }): ISshHostFetchResult | undefined {
+  }): SshHostFetchResult | undefined {
     if (params.cacheEntry === undefined) {
       return undefined
     }
@@ -140,7 +140,7 @@ export class SshSessionsService {
     return params.cacheEntry.result
   }
 
-  protected async _startHostFetch(params: { fingerprint: string; host: ISshHostConfig }): Promise<ISshHostFetchResult> {
+  protected async _startHostFetch(params: { fingerprint: string; host: SshHostConfig }): Promise<SshHostFetchResult> {
     const trackedPromise = this._fetchHostResult({ host: params.host })
       .then((result) => {
         this._cacheById.set(params.host.id, {
@@ -160,7 +160,7 @@ export class SshSessionsService {
     return await trackedPromise
   }
 
-  protected async _fetchHostResult(params: { host: ISshHostConfig }): Promise<ISshHostFetchResult> {
+  protected async _fetchHostResult(params: { host: SshHostConfig }): Promise<SshHostFetchResult> {
     const target = this._parseHostUrl({ url: params.host.url })
 
     if (target === undefined) {
@@ -189,7 +189,7 @@ export class SshSessionsService {
     }
   }
 
-  protected _buildSshArgs(params: { command: string; target: ISshTarget }): string[] {
+  protected _buildSshArgs(params: { command: string; target: SshTarget }): string[] {
     const args = [
       '-o',
       'BatchMode=yes',
@@ -214,7 +214,7 @@ export class SshSessionsService {
     return args
   }
 
-  protected _parseHostUrl(params: { url: string }): ISshTarget | undefined {
+  protected _parseHostUrl(params: { url: string }): SshTarget | undefined {
     const trimmedUrl = params.url.trim()
 
     if (trimmedUrl === '') {
@@ -234,7 +234,7 @@ export class SshSessionsService {
     return this._parseHostAndPort({ hostAndPort, user })
   }
 
-  protected _parseHostAndPort(params: { hostAndPort: string; user: string | undefined }): ISshTarget | undefined {
+  protected _parseHostAndPort(params: { hostAndPort: string; user: string | undefined }): SshTarget | undefined {
     if (params.hostAndPort === '' || params.hostAndPort.includes('/') || params.hostAndPort.startsWith('-')) {
       return undefined
     }
@@ -293,7 +293,7 @@ export class SshSessionsService {
     return port
   }
 
-  protected _pruneCache(params: { hosts: ISshHostConfig[] }): void {
+  protected _pruneCache(params: { hosts: SshHostConfig[] }): void {
     const hostsById = new Map(
       params.hosts.map((host) => {
         return [host.id, host]
@@ -314,7 +314,7 @@ export class SshSessionsService {
     }, this._cacheById)
   }
 
-  protected _resolveHostFingerprint(params: { host: ISshHostConfig }): string {
+  protected _resolveHostFingerprint(params: { host: SshHostConfig }): string {
     return `${params.host.id}:${params.host.url}`
   }
 

@@ -1,14 +1,14 @@
 import { type ReactElement } from 'react'
 
 import '#src/renderer/src/ui-component/side-menu/side-menu.css'
-import { type MenuStatusDot } from '#src/renderer/src/util/menu-status-util'
+import { type MenuStatusDotMapper } from '#src/renderer/src/business/model/menu-status-dot-mapper-enum'
 
-export type ISideMenuItem<ItemId extends string> = {
+export type SideMenuItem<ItemId extends string> = {
   icon: ReactElement
   id: ItemId
   isLive?: boolean
   label: string
-  statusDot?: MenuStatusDot
+  statusDot?: MenuStatusDotMapper
   statusDotTitle?: string
 }
 
@@ -22,12 +22,12 @@ const resolveCollapseToggleTitle = (params: { isCollapsed: boolean }): string | 
 
 export const SideMenu = <ItemId extends string>(props: {
   activeItemId: ItemId
-  footerItems?: ISideMenuItem<ItemId>[]
+  footerItems?: SideMenuItem<ItemId>[]
   isCollapsed: boolean
-  items: ISideMenuItem<ItemId>[]
+  items: SideMenuItem<ItemId>[]
   onSelectItem: (itemId: ItemId) => void
   onToggleCollapse: () => void
-  statusDot?: MenuStatusDot
+  statusDot?: MenuStatusDotMapper
   statusDotTitle?: string
   title: string
 }): ReactElement => {
@@ -52,7 +52,7 @@ export const SideMenu = <ItemId extends string>(props: {
     return 'side-menu'
   }
 
-  const resolveBrandDotClassName = (params: { statusDot: MenuStatusDot | undefined }): string => {
+  const resolveBrandDotClassName = (params: { statusDot: MenuStatusDotMapper | undefined }): string => {
     if (params.statusDot === undefined) {
       return 'side-menu-brand-dot'
     }
@@ -84,7 +84,7 @@ export const SideMenu = <ItemId extends string>(props: {
     return 'side-menu-item-icon'
   }
 
-  const renderStatusDot = (params: { item: ISideMenuItem<ItemId> }): ReactElement | undefined => {
+  const renderStatusDot = (params: { item: SideMenuItem<ItemId> }): ReactElement | undefined => {
     const { statusDot: itemStatusDot, statusDotTitle: itemStatusDotTitle } = params.item
 
     if (itemStatusDot === undefined) {
@@ -94,7 +94,7 @@ export const SideMenu = <ItemId extends string>(props: {
     return <span className={`side-menu-item-status-dot is-${itemStatusDot}`} title={itemStatusDotTitle} />
   }
 
-  const renderItem = (params: { item: ISideMenuItem<ItemId> }): ReactElement => {
+  const renderItem = (params: { item: SideMenuItem<ItemId> }): ReactElement => {
     return (
       <button
         className={resolveItemClassName({ itemId: params.item.id })}

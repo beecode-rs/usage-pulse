@@ -6,16 +6,17 @@ import { TriggerCommandService } from '#src/main/business/service/trigger-comman
 import { dummyTriggerPopup } from '#src/main/lib/dummy-trigger-popup'
 import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/main/util/error-util'
-import { type IAppSettings, type IDummyTrackerConfig } from '#src/shared/settings-model'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
+import { ScheduleTriggerRunPhaseMapper } from '#src/shared/business/enum/schedule-trigger-run-phase-mapper-enum'
+import { ScheduleTriggerRunSkipReasonMapper } from '#src/shared/business/enum/schedule-trigger-run-skip-reason-mapper-enum'
+import { type ScheduleTriggerRunSourceMapper } from '#src/shared/business/enum/schedule-trigger-run-source-mapper-enum'
 import {
-  DEFAULT_TRIGGER_STALE_SKIP_MINUTES,
-  type ITriggerConfig,
-  type ITriggerRunLogEntry,
-  type TriggerDay,
-  type TriggerRunPhase,
-  type TriggerRunSkipReason,
-  type TriggerRunSource,
-} from '#src/shared/trigger-model'
+  type ScheduleTriggerConfig,
+  type ScheduleTriggerRunLogEntry,
+} from '#src/shared/business/model/schedule-trigger-model'
+import { type AppSettings, type DummyTrackerConfig } from '#src/shared/business/model/settings-model'
+import { constant as sharedConstant } from '#src/shared/util/constant'
 
 export type DummyTrackerAction = (params: { trackerName: string }) => Promise<void>
 
@@ -25,15 +26,15 @@ export class TriggerRunnerService {
   protected readonly _now: () => Date
   protected readonly _runLogRepo: TriggerRunLogRepo
   protected readonly _settingsRepo: SettingsRepo
-  protected readonly _staleSkipMinutes: number
-  protected readonly _triggerDayByWeekdayIndex: readonly TriggerDay[] = [
-    'sunday',
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
+  protected readonly _staleSkipMs: number
+  protected readonly _triggerDayByWeekdayIndex: readonly ScheduleTriggerDayMapper[] = [
+    ScheduleTriggerDayMapper.SUNDAY,
+    ScheduleTriggerDayMapper.MONDAY,
+    ScheduleTriggerDayMapper.TUESDAY,
+    ScheduleTriggerDayMapper.WEDNESDAY,
+    ScheduleTriggerDayMapper.THURSDAY,
+    ScheduleTriggerDayMapper.FRIDAY,
+    ScheduleTriggerDayMapper.SATURDAY,
   ]
 
   constructor(params: {
@@ -42,7 +43,7 @@ export class TriggerRunnerService {
     now?: () => Date
     runLogRepo: TriggerRunLogRepo
     settingsRepo: SettingsRepo
-    staleSkipMinutes?: number
+    staleSkipMs?: number
   }) {
     this._commandService = params.commandService ?? new TriggerCommandService()
     this._dummyAction = params.dummyAction ?? dummyTriggerPopup.show
@@ -53,10 +54,13 @@ export class TriggerRunnerService {
       })
     this._runLogRepo = params.runLogRepo
     this._settingsRepo = params.settingsRepo
-    this._staleSkipMinutes = params.staleSkipMinutes ?? DEFAULT_TRIGGER_STALE_SKIP_MINUTES
+    this._staleSkipMs = params.staleSkipMs ?? sharedConstant.scheduleTrigger.staleSkip.defaultMs
   }
 
-  async runTrigger(params: { source: TriggerRunSource; triggerId: string }): Promise<{ exitCode: number }> {
+  async runTrigger(params: {
+    source: ScheduleTriggerRunSourceMapper
+    triggerId: string
+  }): Promise<{ exitCode: number }> {
     const eventId = this._createEventId()
 
     try {
@@ -69,8 +73,8 @@ export class TriggerRunnerService {
         return await this._runCommandTrigger({ eventId, settings, source: params.source, trigger })
       }
 
-      const dummyTracker = settings.trackers.find((candidate): candidate is IDummyTrackerConfig => {
-        return candidate.providerId === 'dummy' && candidate.id === params.triggerId
+      const dummyTracker = settings.trackers.find((candidate): candidate is DummyTrackerConfig => {
+        return candidate.providerId === ProviderIdMapper.DUMMY && candidate.id === params.triggerId
       })
 
       if (dummyTracker !== undefined) {
@@ -79,7 +83,7 @@ export class TriggerRunnerService {
 
       return await this._resolveSkipOutcome({
         eventId,
-        skipReason: 'not-found',
+        skipReason: ScheduleTriggerRunSkipReasonMapper.NOT_FOUND,
         slot: '',
         source: params.source,
         triggerId: params.triggerId,
@@ -92,7 +96,7 @@ export class TriggerRunnerService {
           eventId,
           exitCode: 1,
           outputSnippet: `usage-pulse worker failed: ${errorUtil.resolveMessage(error)}`,
-          phase: 'finished',
+          phase: ScheduleTriggerRunPhaseMapper.FINISHED,
           skipReason: '',
           slot: '',
           source: params.source,
@@ -107,9 +111,9 @@ export class TriggerRunnerService {
 
   protected async _runCommandTrigger(params: {
     eventId: string
-    settings: IAppSettings
-    source: TriggerRunSource
-    trigger: ITriggerConfig
+    settings: AppSettings
+    source: ScheduleTriggerRunSourceMapper
+    trigger: ScheduleTriggerConfig
   }): Promise<{ exitCode: number }> {
     const guardOutcome = await this._resolveGuardSkipOutcome({
       days: params.trigger.days,
@@ -134,7 +138,7 @@ export class TriggerRunnerService {
         eventId: params.eventId,
         exitCode: -1,
         outputSnippet: '',
-        phase: 'started',
+        phase: ScheduleTriggerRunPhaseMapper.STARTED,
         skipReason: '',
         slot: nearestSlot.slot,
         source: params.source,
@@ -154,7 +158,7 @@ export class TriggerRunnerService {
         eventId: params.eventId,
         exitCode: result.exitCode,
         outputSnippet: result.output,
-        phase: 'finished',
+        phase: ScheduleTriggerRunPhaseMapper.FINISHED,
         skipReason: '',
         slot: nearestSlot.slot,
         source: params.source,
@@ -168,9 +172,9 @@ export class TriggerRunnerService {
 
   protected async _runDummyTracker(params: {
     eventId: string
-    settings: IAppSettings
-    source: TriggerRunSource
-    tracker: IDummyTrackerConfig
+    settings: AppSettings
+    source: ScheduleTriggerRunSourceMapper
+    tracker: DummyTrackerConfig
   }): Promise<{ exitCode: number }> {
     const guardOutcome = await this._resolveGuardSkipOutcome({
       days: params.tracker.days,
@@ -196,7 +200,7 @@ export class TriggerRunnerService {
         eventId: params.eventId,
         exitCode: -1,
         outputSnippet: '',
-        phase: 'started',
+        phase: ScheduleTriggerRunPhaseMapper.STARTED,
         skipReason: '',
         slot: nearestSlot.slot,
         source: params.source,
@@ -213,7 +217,7 @@ export class TriggerRunnerService {
         eventId: params.eventId,
         exitCode: 0,
         outputSnippet: 'dummy popup shown',
-        phase: 'finished',
+        phase: ScheduleTriggerRunPhaseMapper.FINISHED,
         skipReason: '',
         slot: nearestSlot.slot,
         source: params.source,
@@ -226,11 +230,11 @@ export class TriggerRunnerService {
   }
 
   protected async _resolveGuardSkipOutcome(params: {
-    days: TriggerDay[]
+    days: ScheduleTriggerDayMapper[]
     eventId: string
     isDisabled: boolean
     isSchedulingEnabled: boolean
-    source: TriggerRunSource
+    source: ScheduleTriggerRunSourceMapper
     times: string[]
     triggerId: string
     triggerName: string
@@ -238,7 +242,7 @@ export class TriggerRunnerService {
     if (!params.isSchedulingEnabled || params.isDisabled) {
       return await this._resolveSkipOutcome({
         eventId: params.eventId,
-        skipReason: 'disabled',
+        skipReason: ScheduleTriggerRunSkipReasonMapper.DISABLED,
         slot: this._resolveNearestSlot({ times: params.times }).slot,
         source: params.source,
         triggerId: params.triggerId,
@@ -252,7 +256,7 @@ export class TriggerRunnerService {
     if (todayTriggerDay === undefined || !params.days.includes(todayTriggerDay)) {
       return await this._resolveSkipOutcome({
         eventId: params.eventId,
-        skipReason: 'not-scheduled-day',
+        skipReason: ScheduleTriggerRunSkipReasonMapper.NOT_SCHEDULED_DAY,
         slot: this._resolveNearestSlot({ times: params.times }).slot,
         source: params.source,
         triggerId: params.triggerId,
@@ -262,10 +266,10 @@ export class TriggerRunnerService {
 
     const nearestSlot = this._resolveNearestSlot({ times: params.times })
 
-    if (nearestSlot.diffMinutes > this._staleSkipMinutes) {
+    if (nearestSlot.diffMinutes * 60_000 > this._staleSkipMs) {
       return await this._resolveSkipOutcome({
         eventId: params.eventId,
-        skipReason: 'stale',
+        skipReason: ScheduleTriggerRunSkipReasonMapper.STALE,
         slot: nearestSlot.slot,
         source: params.source,
         triggerId: params.triggerId,
@@ -276,7 +280,7 @@ export class TriggerRunnerService {
     return undefined
   }
 
-  protected async _appendEntry(params: { entry: ITriggerRunLogEntry }): Promise<void> {
+  protected async _appendEntry(params: { entry: ScheduleTriggerRunLogEntry }): Promise<void> {
     await this._runLogRepo.append({ entry: params.entry }).catch(() => {
       return undefined
     })
@@ -287,13 +291,13 @@ export class TriggerRunnerService {
     eventId: string
     exitCode: number
     outputSnippet: string
-    phase: TriggerRunPhase
-    skipReason: TriggerRunSkipReason | ''
+    phase: ScheduleTriggerRunPhaseMapper
+    skipReason: ScheduleTriggerRunSkipReasonMapper | ''
     slot: string
-    source: TriggerRunSource
+    source: ScheduleTriggerRunSourceMapper
     triggerId: string
     triggerName: string
-  }): ITriggerRunLogEntry {
+  }): ScheduleTriggerRunLogEntry {
     return {
       durationMs: params.durationMs,
       eventId: params.eventId,
@@ -344,9 +348,9 @@ export class TriggerRunnerService {
 
   protected async _resolveSkipOutcome(params: {
     eventId: string
-    skipReason: TriggerRunSkipReason
+    skipReason: ScheduleTriggerRunSkipReasonMapper
     slot: string
-    source: TriggerRunSource
+    source: ScheduleTriggerRunSourceMapper
     triggerId: string
     triggerName: string
   }): Promise<{ exitCode: number }> {
@@ -356,7 +360,7 @@ export class TriggerRunnerService {
         eventId: params.eventId,
         exitCode: 0,
         outputSnippet: '',
-        phase: 'skipped',
+        phase: ScheduleTriggerRunPhaseMapper.SKIPPED,
         skipReason: params.skipReason,
         slot: params.slot,
         source: params.source,

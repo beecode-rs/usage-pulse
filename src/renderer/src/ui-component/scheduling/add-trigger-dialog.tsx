@@ -4,25 +4,24 @@ import { usageClientService } from '#src/renderer/src/business/service/usage-cli
 import { TriggerConfigFields } from '#src/renderer/src/ui-component/scheduling/trigger-config-fields'
 import { errorUtil } from '#src/renderer/src/util/error-util'
 import { triggerValidationUtil } from '#src/renderer/src/util/trigger-validation-util'
-import { type IAppSettings } from '#src/shared/settings-model'
 import {
-  DEFAULT_TRIGGER_TIMEOUT_MS,
-  type ITriggerConfig,
-  type ITriggerPreset,
-  MAX_WINDOW_TRIGGER_PRESET,
-} from '#src/shared/trigger-model'
+  type ScheduleTriggerConfig,
+  type ScheduleTriggerPreset,
+} from '#src/shared/business/model/schedule-trigger-model'
+import { type AppSettings } from '#src/shared/business/model/settings-model'
+import { constant } from '#src/shared/util/constant'
 
 const DEFAULT_TRIGGER_COMMAND = 'claude -p "what is your name, only name"'
 
 export const AddTriggerDialog = (props: {
-  initialPreset?: ITriggerPreset
+  initialPreset?: ScheduleTriggerPreset
   onClose: () => void
   onSaved: () => void
 }): ReactElement => {
   const { initialPreset, onClose, onSaved } = props
-  const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
-  const [newTrigger, setNewTrigger] = useState<ITriggerConfig>((): ITriggerConfig => {
-    const preset = initialPreset ?? MAX_WINDOW_TRIGGER_PRESET
+  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [newTrigger, setNewTrigger] = useState<ScheduleTriggerConfig>((): ScheduleTriggerConfig => {
+    const preset = initialPreset ?? constant.maxWindowScheduleTriggerPreset
 
     return {
       command: DEFAULT_TRIGGER_COMMAND,
@@ -31,7 +30,7 @@ export const AddTriggerDialog = (props: {
       id: crypto.randomUUID(),
       isEnabled: true,
       name: '',
-      timeoutMs: DEFAULT_TRIGGER_TIMEOUT_MS,
+      timeoutMs: constant.scheduleTrigger.timeout.defaultMs,
       times: [...preset.times],
     }
   })

@@ -1,0 +1,63 @@
+subject: constantContractHarness
+module: ./__tests__/_constant-contract-harness.js
+subjectType: function
+methods:
+  isTwentyFourHourTime:
+    terms:
+      # --- Valid HH:mm on the [01]\d hour branch (00-19) ---
+      # Lower bound of the whole range.
+      - params:
+          - time: '00:00'
+        result: true
+      # Typical morning time.
+      - params:
+          - time: '09:30'
+        result: true
+      # Upper edge of the [01]\d hour branch.
+      - params:
+          - time: '19:59'
+        result: true
+      # --- Valid HH:mm on the 2[0-3] hour branch (20-23) ---
+      # Lower edge of the 2[0-3] hour branch.
+      - params:
+          - time: '20:15'
+        result: true
+      # Upper bound of the whole range.
+      - params:
+          - time: '23:59'
+        result: true
+      # --- Invalid shape ---
+      # Zero: empty string has no digits at all.
+      - params:
+          - time: ''
+        result: false
+      # One-digit hour fails; both positions require two digits.
+      - params:
+          - time: '9:30'
+        result: false
+      # One-digit minute fails.
+      - params:
+          - time: '09:5'
+        result: false
+      # Missing colon fails.
+      - params:
+          - time: '0930'
+        result: false
+      # --- Invalid ranges ---
+      # Hour 24 is out of range; only 00-23 pass.
+      - params:
+          - time: '24:00'
+        result: false
+      # Minute 60 is out of range; only 00-59 pass.
+      - params:
+          - time: '23:60'
+        result: false
+      # --- Anchoring ---
+      # Leading content is rejected by the ^ anchor.
+      - params:
+          - time: ' 09:30'
+        result: false
+      # Trailing content is rejected by the $ anchor.
+      - params:
+          - time: '09:30 '
+        result: false

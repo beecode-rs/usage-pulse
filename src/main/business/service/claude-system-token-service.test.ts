@@ -14,7 +14,8 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { ClaudeSystemTokenService } from '#src/main/business/service/claude-system-token-service'
-import { OS, osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { osUtil } from '#src/main/util/os-util'
 
 const createLinuxHomeFixture = async (params: { credentialsJson?: string }) => {
   const homeDir = await mkdtemp(join(tmpdir(), 'usage-pulse-token-home-'))

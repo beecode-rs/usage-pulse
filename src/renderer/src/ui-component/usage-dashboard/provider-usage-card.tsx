@@ -9,7 +9,8 @@ import { dateUtil } from '#src/renderer/src/util/date-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { usageStatusUtil } from '#src/renderer/src/util/usage-status-util'
 import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
-import { type IProviderSnapshot, UsageStatus } from '#src/shared/usage-model'
+import { UsageStatus } from '#src/shared/business/enum/usage-status-enum'
+import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
 
 export const ProviderUsageCard = (props: {
   isAutoRefreshPaused: boolean
@@ -18,8 +19,8 @@ export const ProviderUsageCard = (props: {
   onOpenSettings: () => void
   onRefresh: () => void
   onToggleAutoRefresh: () => void
-  providerSnapshot: IProviderSnapshot
-  refreshIntervalSeconds?: number
+  providerSnapshot: ProviderSnapshot
+  refreshIntervalMs?: number
 }): ReactElement => {
   const {
     isAutoRefreshPaused,
@@ -29,7 +30,7 @@ export const ProviderUsageCard = (props: {
     onRefresh,
     onToggleAutoRefresh,
     providerSnapshot,
-    refreshIntervalSeconds,
+    refreshIntervalMs,
   } = props
   const usageWindows = providerSnapshot.usage ?? []
   const primaryWindow = usageWindows[0]
@@ -160,11 +161,11 @@ export const ProviderUsageCard = (props: {
   }
 
   const resolveIsSnapshotStale = (): boolean => {
-    if (refreshIntervalSeconds === undefined || providerSnapshot.fetchedAt === undefined) {
+    if (refreshIntervalMs === undefined || providerSnapshot.fetchedAt === undefined) {
       return false
     }
 
-    return nowMs - providerSnapshot.fetchedAt > refreshIntervalSeconds * 1000
+    return nowMs - providerSnapshot.fetchedAt > refreshIntervalMs
   }
 
   const renderLastFetchedItem = (): ReactElement | undefined => {
@@ -217,11 +218,11 @@ export const ProviderUsageCard = (props: {
   }
 
   const renderIntervalItem = (): ReactElement | undefined => {
-    if (refreshIntervalSeconds === undefined) {
+    if (refreshIntervalMs === undefined) {
       return undefined
     }
 
-    const intervalText = dateUtil.formatDuration(refreshIntervalSeconds * 1000)
+    const intervalText = dateUtil.formatDuration(refreshIntervalMs)
 
     const resolveIntervalTooltipText = (): string => {
       if (isAutoRefreshPaused) {
@@ -256,15 +257,14 @@ export const ProviderUsageCard = (props: {
   }
 
   const resolveRefreshProgressPercent = (): number | undefined => {
-    if (isAutoRefreshPaused || providerSnapshot.nextRefreshAt === undefined || refreshIntervalSeconds === undefined) {
+    if (isAutoRefreshPaused || providerSnapshot.nextRefreshAt === undefined || refreshIntervalMs === undefined) {
       return undefined
     }
 
-    const intervalMs = refreshIntervalSeconds * 1000
     const remainingMs = Math.max(0, providerSnapshot.nextRefreshAt - nowMs)
-    const elapsedMs = intervalMs - remainingMs
+    const elapsedMs = refreshIntervalMs - remainingMs
 
-    return Math.min(100, Math.max(0, (elapsedMs / intervalMs) * 100))
+    return Math.min(100, Math.max(0, (elapsedMs / refreshIntervalMs) * 100))
   }
 
   const pauseButtonLabel = resolvePauseButtonLabel()

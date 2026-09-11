@@ -1,99 +1,92 @@
 import { type ReactElement, useState } from 'react'
 
+import { PlannerDialToneMapper } from '#src/renderer/src/business/model/planner-dial-tone-mapper-enum'
+import { TriggerPlannerService } from '#src/renderer/src/business/service/trigger-planner-service'
 import { PlannerDial } from '#src/renderer/src/ui-component/scheduling/planner-dial'
-import { type ITriggerPreset, MAX_WINDOW_TRIGGER_PRESET } from '#src/shared/trigger-model'
-import {
-  DEFAULT_FIRST_TRIGGER_MINUTES,
-  DEFAULT_LUNCH_START_MINUTES,
-  DEFAULT_WORK_DURATION_MINUTES,
-  DEFAULT_WORK_START_MINUTES,
-  type IPlannerWindow,
-  LUNCH_DURATION_MINUTES,
-  PLANNER_DAY_MINUTES,
-  formatDayMinutes,
-  resolveCoverageHint,
-  resolvePlannerWindows,
-  resolveTriggerTimes,
-} from '#src/shared/trigger-planner-model'
+import { type ScheduleTriggerPreset } from '#src/shared/business/model/schedule-trigger-model'
+import { type PlannerWindow } from '#src/shared/business/model/trigger-planner-model'
+import { constant } from '#src/shared/util/constant'
 
-const FIRST_TRIGGER_SLIDER_MAX_MINUTES = 1425
+const triggerPlannerService = new TriggerPlannerService()
 
-const FIRST_TRIGGER_SLIDER_STEP_MINUTES = 15
+const FIRST_TRIGGER_SLIDER_MAX_MS = 85_500_000
 
-const TIMELINE_TICKS: { label: string; minutes: number }[] = [
-  { label: '00:00', minutes: 0 },
-  { label: '03:00', minutes: 180 },
-  { label: '06:00', minutes: 360 },
-  { label: '09:00', minutes: 540 },
-  { label: '12:00', minutes: 720 },
-  { label: '15:00', minutes: 900 },
-  { label: '18:00', minutes: 1080 },
-  { label: '21:00', minutes: 1260 },
-  { label: '24:00', minutes: 1440 },
+const FIRST_TRIGGER_SLIDER_STEP_MS = 900_000
+
+const TIMELINE_TICKS: { dayMs: number; label: string }[] = [
+  { dayMs: 0, label: '00:00' },
+  { dayMs: 10_800_000, label: '03:00' },
+  { dayMs: 21_600_000, label: '06:00' },
+  { dayMs: 32_400_000, label: '09:00' },
+  { dayMs: 43_200_000, label: '12:00' },
+  { dayMs: 54_000_000, label: '15:00' },
+  { dayMs: 64_800_000, label: '18:00' },
+  { dayMs: 75_600_000, label: '21:00' },
+  { dayMs: 86_400_000, label: '24:00' },
 ]
 
 const formatHourDialValue = (hour: number): string => {
-  return formatDayMinutes(hour * 60)
+  return triggerPlannerService.formatDayMs({ dayMs: hour * 3_600_000 })
 }
 
 const formatWorkDurationDialValue = (hours: number): string => {
   return `${String(hours)}h`
 }
 
-const resolvePercent = (minutes: number): number => {
-  return (minutes / PLANNER_DAY_MINUTES) * 100
+const resolvePercent = (dayMs: number): number => {
+  return (dayMs / constant.planner.dayMs) * 100
 }
 
 const resolveBarLayout = (params: {
-  endMinutes: number
-  startMinutes: number
+  endMs: number
+  startMs: number
 }): { leftPercent: number; widthPercent: number } => {
-  const clippedEndMinutes = Math.min(params.endMinutes, PLANNER_DAY_MINUTES)
-  const clippedStartMinutes = Math.max(params.startMinutes, 0)
+  const clippedEndMs = Math.min(params.endMs, constant.planner.dayMs)
+  const clippedStartMs = Math.max(params.startMs, 0)
 
   return {
-    leftPercent: resolvePercent(clippedStartMinutes),
-    widthPercent: resolvePercent(clippedEndMinutes - clippedStartMinutes),
+    leftPercent: resolvePercent(clippedStartMs),
+    widthPercent: resolvePercent(clippedEndMs - clippedStartMs),
   }
 }
 
-const resolveBarHourMarks = (params: { endMinutes: number; startMinutes: number }): number[] => {
-  const clippedStartMinutes = Math.max(params.startMinutes, 0)
-  const clippedEndMinutes = Math.min(params.endMinutes, PLANNER_DAY_MINUTES)
-  const spanMinutes = clippedEndMinutes - clippedStartMinutes
+const resolveBarHourMarks = (params: { endMs: number; startMs: number }): number[] => {
+  const clippedStartMs = Math.max(params.startMs, 0)
+  const clippedEndMs = Math.min(params.endMs, constant.planner.dayMs)
+  const spanMs = clippedEndMs - clippedStartMs
 
-  if (spanMinutes <= 60) {
+  if (spanMs <= 3_600_000) {
     return []
   }
 
-  const markCount = Math.ceil(spanMinutes / 60) - 1
+  const markCount = Math.ceil(spanMs / 3_600_000) - 1
 
   return Array.from({ length: markCount }, (_, index) => {
-    return (((index + 1) * 60) / spanMinutes) * 100
+    return (((index + 1) * 3_600_000) / spanMs) * 100
   })
 }
 
-const resolveTickClassName = (minutes: number): string => {
-  if (minutes === 0) {
+const resolveTickClassName = (dayMs: number): string => {
+  if (dayMs === 0) {
     return 'window-planner-tick is-first'
   }
 
-  if (minutes === PLANNER_DAY_MINUTES) {
+  if (dayMs === constant.planner.dayMs) {
     return 'window-planner-tick is-last'
   }
 
   return 'window-planner-tick'
 }
 
-const resolveWindowBarLabel = (window: IPlannerWindow): string => {
-  if (window.endMinutes <= PLANNER_DAY_MINUTES) {
+const resolveWindowBarLabel = (window: PlannerWindow): string => {
+  if (window.endMs <= constant.planner.dayMs) {
     return window.startTime
   }
 
-  return `${window.startTime} → ${formatDayMinutes(window.endMinutes)}`
+  return `${window.startTime} → ${triggerPlannerService.formatDayMs({ dayMs: window.endMs })}`
 }
 
-const renderBarHourMarks = (params: { endMinutes: number; startMinutes: number }): ReactElement[] => {
+const renderBarHourMarks = (params: { endMs: number; startMs: number }): ReactElement[] => {
   return resolveBarHourMarks(params).map((leftPercent, index) => {
     return (
       <span
@@ -105,49 +98,49 @@ const renderBarHourMarks = (params: { endMinutes: number; startMinutes: number }
   })
 }
 
-const resolveWindowsSentence = (windows: IPlannerWindow[]): string => {
+const resolveWindowsSentence = (windows: PlannerWindow[]): string => {
   return windows
     .map((window) => {
-      return `${window.startTime} → ${formatDayMinutes(window.endMinutes)}`
+      return `${window.startTime} → ${triggerPlannerService.formatDayMs({ dayMs: window.endMs })}`
     })
     .join(', ')
 }
 
 export const TriggerPlannerDialog = (props: {
   onClose: () => void
-  onCreateTrigger: (preset: ITriggerPreset) => void
+  onCreateTrigger: (preset: ScheduleTriggerPreset) => void
 }): ReactElement => {
-  const [firstTriggerMinutes, setFirstTriggerMinutes] = useState(DEFAULT_FIRST_TRIGGER_MINUTES)
-  const [lunchStartMinutes, setLunchStartMinutes] = useState(DEFAULT_LUNCH_START_MINUTES)
-  const [workDurationMinutes, setWorkDurationMinutes] = useState(DEFAULT_WORK_DURATION_MINUTES)
-  const [workStartMinutes, setWorkStartMinutes] = useState(DEFAULT_WORK_START_MINUTES)
+  const [firstTriggerMs, setFirstTriggerMs] = useState(constant.planner.firstTrigger.defaultMs)
+  const [lunchStartMs, setLunchStartMs] = useState(constant.planner.lunchStart.defaultMs)
+  const [workDurationMs, setWorkDurationMs] = useState(constant.planner.workDuration.defaultMs)
+  const [workStartMs, setWorkStartMs] = useState(constant.planner.workStart.defaultMs)
 
-  const lunchEndMinutes = lunchStartMinutes + LUNCH_DURATION_MINUTES
-  const workEndMinutes = workStartMinutes + workDurationMinutes
-  const windows = resolvePlannerWindows({ firstTriggerMinutes, workEndMinutes })
-  const coverageHint = resolveCoverageHint({ windows, workEndMinutes, workStartMinutes })
-  const workBarLayout = resolveBarLayout({ endMinutes: workEndMinutes, startMinutes: workStartMinutes })
-  const lunchBarLayout = resolveBarLayout({ endMinutes: lunchEndMinutes, startMinutes: lunchStartMinutes })
-  const lunchBarTitle = `Lunch ${formatDayMinutes(lunchStartMinutes)}–${formatDayMinutes(lunchEndMinutes)}`
-  const workBarTitle = `Work ${formatDayMinutes(workStartMinutes)}–${formatDayMinutes(workEndMinutes)}`
+  const lunchEndMs = lunchStartMs + constant.planner.lunchDurationMs
+  const workEndMs = workStartMs + workDurationMs
+  const windows = triggerPlannerService.resolvePlannerWindows({ firstTriggerMs, workEndMs })
+  const coverageHint = triggerPlannerService.resolveCoverageHint({ windows, workEndMs, workStartMs })
+  const workBarLayout = resolveBarLayout({ endMs: workEndMs, startMs: workStartMs })
+  const lunchBarLayout = resolveBarLayout({ endMs: lunchEndMs, startMs: lunchStartMs })
+  const lunchBarTitle = `Lunch ${triggerPlannerService.formatDayMs({ dayMs: lunchStartMs })}–${triggerPlannerService.formatDayMs({ dayMs: lunchEndMs })}`
+  const workBarTitle = `Work ${triggerPlannerService.formatDayMs({ dayMs: workStartMs })}–${triggerPlannerService.formatDayMs({ dayMs: workEndMs })}`
 
   const handleCreateTrigger = (): void => {
     props.onCreateTrigger({
-      days: [...MAX_WINDOW_TRIGGER_PRESET.days],
-      times: resolveTriggerTimes(windows),
+      days: [...constant.maxWindowScheduleTriggerPreset.days],
+      times: triggerPlannerService.resolveTriggerTimes({ windows }),
     })
   }
 
   const handleLunchStartHourChange = (hour: number): void => {
-    setLunchStartMinutes(hour * 60)
+    setLunchStartMs(hour * 3_600_000)
   }
 
   const handleWorkDurationHoursChange = (hours: number): void => {
-    setWorkDurationMinutes(hours * 60)
+    setWorkDurationMs(hours * 3_600_000)
   }
 
   const handleWorkStartHourChange = (hour: number): void => {
-    setWorkStartMinutes(hour * 60)
+    setWorkStartMs(hour * 3_600_000)
   }
 
   return (
@@ -172,8 +165,8 @@ export const TriggerPlannerDialog = (props: {
               min={0}
               onChange={handleWorkStartHourChange}
               step={1}
-              tone="work"
-              value={workStartMinutes / 60}
+              tone={PlannerDialToneMapper.WORK}
+              value={workStartMs / 3_600_000}
             />
             <PlannerDial
               formatValue={formatWorkDurationDialValue}
@@ -182,8 +175,8 @@ export const TriggerPlannerDialog = (props: {
               min={1}
               onChange={handleWorkDurationHoursChange}
               step={1}
-              tone="work"
-              value={workDurationMinutes / 60}
+              tone={PlannerDialToneMapper.WORK}
+              value={workDurationMs / 3_600_000}
             />
             <PlannerDial
               formatValue={formatHourDialValue}
@@ -192,29 +185,31 @@ export const TriggerPlannerDialog = (props: {
               min={0}
               onChange={handleLunchStartHourChange}
               step={1}
-              tone="lunch"
-              value={lunchStartMinutes / 60}
+              tone={PlannerDialToneMapper.LUNCH}
+              value={lunchStartMs / 3_600_000}
             />
           </div>
           <label className="settings-field">
-            <span className="settings-field-label">First trigger — {formatDayMinutes(firstTriggerMinutes)}</span>
+            <span className="settings-field-label">
+              First trigger — {triggerPlannerService.formatDayMs({ dayMs: firstTriggerMs })}
+            </span>
             <input
               className="window-planner-range"
-              max={FIRST_TRIGGER_SLIDER_MAX_MINUTES}
+              max={FIRST_TRIGGER_SLIDER_MAX_MS}
               min={0}
               onChange={(event) => {
-                setFirstTriggerMinutes(Number.parseInt(event.target.value, 10))
+                setFirstTriggerMs(Number.parseInt(event.target.value, 10))
               }}
-              step={FIRST_TRIGGER_SLIDER_STEP_MINUTES}
+              step={FIRST_TRIGGER_SLIDER_STEP_MS}
               type="range"
-              value={firstTriggerMinutes}
+              value={firstTriggerMs}
             />
             <span className="settings-hint">Local time on weekdays, in 15-minute steps.</span>
           </label>
           <div className="window-planner-timeline">
             <div className="window-planner-lane">
               {windows.map((window) => {
-                const layout = resolveBarLayout({ endMinutes: window.endMinutes, startMinutes: window.startMinutes })
+                const layout = resolveBarLayout({ endMs: window.endMs, startMs: window.startMs })
 
                 return (
                   <div
@@ -225,7 +220,7 @@ export const TriggerPlannerDialog = (props: {
                       width: `${String(layout.widthPercent)}%`,
                     }}
                   >
-                    {renderBarHourMarks({ endMinutes: window.endMinutes, startMinutes: window.startMinutes })}
+                    {renderBarHourMarks({ endMs: window.endMs, startMs: window.startMs })}
                     {resolveWindowBarLabel(window)}
                   </div>
                 )
@@ -240,7 +235,7 @@ export const TriggerPlannerDialog = (props: {
                 }}
                 title={workBarTitle}
               >
-                {renderBarHourMarks({ endMinutes: workEndMinutes, startMinutes: workStartMinutes })}
+                {renderBarHourMarks({ endMs: workEndMs, startMs: workStartMs })}
                 {workBarTitle}
               </div>
               <div
@@ -256,9 +251,9 @@ export const TriggerPlannerDialog = (props: {
               {TIMELINE_TICKS.map((tick) => {
                 return (
                   <span
-                    className={resolveTickClassName(tick.minutes)}
+                    className={resolveTickClassName(tick.dayMs)}
                     key={tick.label}
-                    style={{ left: `${String(resolvePercent(tick.minutes))}%` }}
+                    style={{ left: `${String(resolvePercent(tick.dayMs))}%` }}
                   >
                     {tick.label}
                   </span>

@@ -2,7 +2,8 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { type ISessionFocusSupport } from '#src/shared/session-model'
+import { SessionFocusSupportStatusMapper } from '#src/shared/business/enum/session-focus-support-status-mapper-enum'
+import { type SessionFocusSupport } from '#src/shared/business/model/session-model'
 
 const resolveInstallButtonLabel = (params: { isInstalling: boolean }): string => {
   if (params.isInstalling) {
@@ -13,7 +14,7 @@ const resolveInstallButtonLabel = (params: { isInstalling: boolean }): string =>
 }
 
 export const SessionsFocusSupportFooter = (): ReactElement | null => {
-  const [focusSupport, setFocusSupport] = useState<ISessionFocusSupport | undefined>(undefined)
+  const [focusSupport, setFocusSupport] = useState<SessionFocusSupport | undefined>(undefined)
   const [installErrorMessage, setInstallErrorMessage] = useState('')
   const [isInstalling, setIsInstalling] = useState(false)
 
@@ -46,7 +47,7 @@ export const SessionsFocusSupportFooter = (): ReactElement | null => {
     void loadFocusSupport()
   }, [])
 
-  if (focusSupport?.status !== 'missing-tool') {
+  if (focusSupport?.status !== SessionFocusSupportStatusMapper.MISSING_TOOL) {
     return null
   }
 

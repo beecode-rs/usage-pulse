@@ -1,19 +1,21 @@
-import { OS } from '#src/shared/os-model'
-import { ClaudeTokenSource, type ITrackerConfig } from '#src/shared/settings-model'
+import { ClaudeTokenSource } from '#src/shared/business/enum/claude-token-source-enum'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import { type TrackerConfig } from '#src/shared/business/model/settings-model'
 
-export interface ITrackerSystemTokenOption {
+export type TrackerSystemTokenOption = {
   hint: string
   label: string
 }
 
-export interface ITrackerTokenSelection {
+export type TrackerTokenSelection = {
   selectedTokenSource: ClaudeTokenSource
-  systemTokenOption?: ITrackerSystemTokenOption
+  systemTokenOption?: TrackerSystemTokenOption
 }
 
 export const trackerTokenSourceUtil = {
-  normalizeConfig: (params: { config: ITrackerConfig; osPlatform: OS }): ITrackerConfig => {
-    if (params.config.providerId !== 'claude' || params.osPlatform !== OS.WINDOWS) {
+  normalizeConfig: (params: { config: TrackerConfig; osPlatform: OS }): TrackerConfig => {
+    if (params.config.providerId !== ProviderIdMapper.CLAUDE || params.osPlatform !== OS.WINDOWS) {
       return params.config
     }
 
@@ -24,8 +26,8 @@ export const trackerTokenSourceUtil = {
     return { ...params.config, tokenSource: ClaudeTokenSource.MANUAL }
   },
 
-  resolveSelection: (params: { config: ITrackerConfig; osPlatform: OS }): ITrackerTokenSelection => {
-    if (params.config.providerId !== 'claude') {
+  resolveSelection: (params: { config: TrackerConfig; osPlatform: OS }): TrackerTokenSelection => {
+    if (params.config.providerId !== ProviderIdMapper.CLAUDE) {
       return { selectedTokenSource: ClaudeTokenSource.MANUAL }
     }
 

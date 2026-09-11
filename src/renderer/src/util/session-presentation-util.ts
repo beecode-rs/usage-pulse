@@ -1,5 +1,6 @@
 import { dateUtil } from '#src/renderer/src/util/date-util'
-import { type ISessionInfo, type SessionStatus } from '#src/shared/session-model'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { type SessionInfo } from '#src/shared/business/model/session-model'
 
 export const sessionPresentationUtil = {
   resolveLastActivityLabel: (params: { lastActivityAt: number; nowMs: number }): string => {
@@ -23,7 +24,7 @@ export const sessionPresentationUtil = {
     return lastSegment
   },
 
-  resolveSessionTitle: (params: { session: ISessionInfo }): string => {
+  resolveSessionTitle: (params: { session: SessionInfo }): string => {
     if (params.session.name !== '') {
       return params.session.name
     }
@@ -52,10 +53,10 @@ export const sessionPresentationUtil = {
   },
 
   resolveStatusPresentation: (params: {
-    status: SessionStatus
+    status: SessionStatusMapper
   }): { badgeClassName: string; dotClassName: string; label: string } => {
     switch (params.status) {
-      case 'busy': {
+      case SessionStatusMapper.BUSY: {
         return {
           badgeClassName: 'session-status is-busy',
           dotClassName: 'session-status-dot is-busy',
@@ -63,11 +64,11 @@ export const sessionPresentationUtil = {
         }
       }
 
-      case 'idle': {
+      case SessionStatusMapper.IDLE: {
         return { badgeClassName: 'session-status is-idle', dotClassName: 'session-status-dot is-idle', label: 'Idle' }
       }
 
-      case 'waiting': {
+      case SessionStatusMapper.WAITING: {
         return {
           badgeClassName: 'session-status is-waiting',
           dotClassName: 'session-status-dot is-waiting',

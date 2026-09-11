@@ -6,21 +6,16 @@ import { ProviderIcon } from '#src/renderer/src/ui-component/provider/provider-i
 import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/tracker-config-fields'
 import { errorUtil } from '#src/renderer/src/util/error-util'
 import { providerCatalogUtil } from '#src/renderer/src/util/provider-catalog-util'
-import type { OS } from '#src/shared/os-model'
-import { PROVIDER_CATALOG } from '#src/shared/provider-catalog'
-import {
-  ClaudeTokenSource,
-  type IAppSettings,
-  type ITrackerConfig,
-  MIN_REFRESH_INTERVAL_SECONDS,
-} from '#src/shared/settings-model'
-import { TRIGGER_DAYS } from '#src/shared/trigger-model'
-import type { ProviderId } from '#src/shared/usage-model'
+import { ClaudeTokenSource } from '#src/shared/business/enum/claude-token-source-enum'
+import type { OS } from '#src/shared/business/enum/os-enum'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import { type AppSettings, type TrackerConfig } from '#src/shared/business/model/settings-model'
+import { constant } from '#src/shared/util/constant'
 
 export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => void }): ReactElement => {
   const { onClose, onSaved } = props
-  const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
-  const [newTracker, setNewTracker] = useState<ITrackerConfig | undefined>(undefined)
+  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [newTracker, setNewTracker] = useState<TrackerConfig | undefined>(undefined)
   const [osPlatform, setOsPlatform] = useState<OS | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -45,52 +40,52 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
     void loadOsPlatform()
   }, [])
 
-  const resolveDefaultRefreshIntervalSeconds = (providerId: ProviderId): number => {
-    const catalogEntry = PROVIDER_CATALOG.find((entry) => {
+  const resolveDefaultRefreshIntervalMs = (providerId: ProviderIdMapper): number => {
+    const catalogEntry = constant.providerCatalog.find((entry) => {
       return entry.id === providerId
     })
 
     if (catalogEntry === undefined) {
-      return MIN_REFRESH_INTERVAL_SECONDS
+      return constant.trackerRefreshInterval.minMs
     }
 
-    return catalogEntry.defaultRefreshIntervalSeconds
+    return catalogEntry.defaultRefreshIntervalMs
   }
 
-  const createBlankTracker = (providerId: ProviderId): ITrackerConfig => {
+  const createBlankTracker = (providerId: ProviderIdMapper): TrackerConfig => {
     switch (providerId) {
-      case 'claude': {
+      case ProviderIdMapper.CLAUDE: {
         return {
           accessToken: '',
           id: crypto.randomUUID(),
           isAutoRefreshPaused: false,
           name: '',
-          providerId: 'claude',
-          refreshIntervalSeconds: resolveDefaultRefreshIntervalSeconds('claude'),
+          providerId: ProviderIdMapper.CLAUDE,
+          refreshIntervalMs: resolveDefaultRefreshIntervalMs(ProviderIdMapper.CLAUDE),
           tokenSource: ClaudeTokenSource.MANUAL,
         }
       }
 
-      case 'zai': {
+      case ProviderIdMapper.ZAI: {
         return {
           accessToken: '',
           id: crypto.randomUUID(),
           isAutoRefreshPaused: false,
           name: '',
-          providerId: 'zai',
-          refreshIntervalSeconds: resolveDefaultRefreshIntervalSeconds('zai'),
+          providerId: ProviderIdMapper.ZAI,
+          refreshIntervalMs: resolveDefaultRefreshIntervalMs(ProviderIdMapper.ZAI),
         }
       }
 
-      case 'dummy': {
+      case ProviderIdMapper.DUMMY: {
         return {
           accessToken: '',
-          days: [...TRIGGER_DAYS],
+          days: [...constant.scheduleTrigger.days],
           id: crypto.randomUUID(),
           isAutoRefreshPaused: false,
           name: '',
-          providerId: 'dummy',
-          refreshIntervalSeconds: resolveDefaultRefreshIntervalSeconds('dummy'),
+          providerId: ProviderIdMapper.DUMMY,
+          refreshIntervalMs: resolveDefaultRefreshIntervalMs(ProviderIdMapper.DUMMY),
           times: ['09:00'],
         }
       }
@@ -101,8 +96,8 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
     }
   }
 
-  const resolveTrackerValidationError = (tracker: ITrackerConfig): string | undefined => {
-    if (tracker.providerId === 'dummy') {
+  const resolveTrackerValidationError = (tracker: TrackerConfig): string | undefined => {
+    if (tracker.providerId === ProviderIdMapper.DUMMY) {
       if (tracker.days.length === 0) {
         return 'Pick at least one day for this tracker.'
       }
@@ -114,7 +109,7 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
       return undefined
     }
 
-    if (tracker.providerId === 'claude' && tracker.tokenSource === ClaudeTokenSource.SYSTEM) {
+    if (tracker.providerId === ProviderIdMapper.CLAUDE && tracker.tokenSource === ClaudeTokenSource.SYSTEM) {
       return undefined
     }
 
@@ -125,7 +120,7 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
     return undefined
   }
 
-  const handleSelectProvider = (providerId: ProviderId): void => {
+  const handleSelectProvider = (providerId: ProviderIdMapper): void => {
     setErrorMessage('')
     setNewTracker(createBlankTracker(providerId))
   }

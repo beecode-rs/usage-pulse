@@ -1,12 +1,8 @@
 import { appendFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 
-import {
-  type ITriggerRunLogEntry,
-  TRIGGER_RUN_LOG_READ_ENTRY_LIMIT,
-  TRIGGER_RUN_LOG_ROTATE_KEEP_LINE_COUNT,
-  TRIGGER_RUN_LOG_ROTATE_MAX_BYTES,
-} from '#src/shared/trigger-model'
+import { type ScheduleTriggerRunLogEntry } from '#src/shared/business/model/schedule-trigger-model'
+import { constant } from '#src/shared/util/constant'
 
 export class TriggerRunLogRepo {
   protected readonly _logFilePath: string
@@ -21,18 +17,18 @@ export class TriggerRunLogRepo {
     rotateMaxBytes?: number
   }) {
     this._logFilePath = params.logFilePath
-    this._readEntryLimit = params.readEntryLimit ?? TRIGGER_RUN_LOG_READ_ENTRY_LIMIT
-    this._rotateKeepLineCount = params.rotateKeepLineCount ?? TRIGGER_RUN_LOG_ROTATE_KEEP_LINE_COUNT
-    this._rotateMaxBytes = params.rotateMaxBytes ?? TRIGGER_RUN_LOG_ROTATE_MAX_BYTES
+    this._readEntryLimit = params.readEntryLimit ?? constant.scheduleTrigger.run.log.readEntryLimit
+    this._rotateKeepLineCount = params.rotateKeepLineCount ?? constant.scheduleTrigger.run.log.rotateKeepLineCount
+    this._rotateMaxBytes = params.rotateMaxBytes ?? constant.scheduleTrigger.run.log.rotateMaxBytes
   }
 
-  async append(params: { entry: ITriggerRunLogEntry }): Promise<void> {
+  async append(params: { entry: ScheduleTriggerRunLogEntry }): Promise<void> {
     await mkdir(dirname(this._logFilePath), { recursive: true })
     await appendFile(this._logFilePath, `${JSON.stringify(params.entry)}\n`, 'utf8')
     await this._rotateIfNeeded()
   }
 
-  async listByTriggerId(params: { triggerId: string }): Promise<ITriggerRunLogEntry[]> {
+  async listByTriggerId(params: { triggerId: string }): Promise<ScheduleTriggerRunLogEntry[]> {
     const entries = await this._readEntries()
 
     return entries
@@ -57,22 +53,22 @@ export class TriggerRunLogRepo {
     await writeFile(this._logFilePath, this._resolveLinesContent({ lines: keptLines }), 'utf8')
   }
 
-  protected _parseEntry(params: { line: string }): ITriggerRunLogEntry[] {
+  protected _parseEntry(params: { line: string }): ScheduleTriggerRunLogEntry[] {
     if (params.line.trim() === '') {
       return []
     }
 
     try {
-      return [JSON.parse(params.line) as ITriggerRunLogEntry]
+      return [JSON.parse(params.line) as ScheduleTriggerRunLogEntry]
     } catch {
       return []
     }
   }
 
-  protected async _readEntries(): Promise<ITriggerRunLogEntry[]> {
+  protected async _readEntries(): Promise<ScheduleTriggerRunLogEntry[]> {
     const fileContent = await this._readFileContent()
 
-    return fileContent.split('\n').reduce<ITriggerRunLogEntry[]>((entries, line) => {
+    return fileContent.split('\n').reduce<ScheduleTriggerRunLogEntry[]>((entries, line) => {
       return [...entries, ...this._parseEntry({ line })]
     }, [])
   }

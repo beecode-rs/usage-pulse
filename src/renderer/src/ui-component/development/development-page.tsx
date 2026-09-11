@@ -5,10 +5,12 @@ import { SelectField } from '#src/renderer/src/ui-component/development/select-f
 import { SliderField } from '#src/renderer/src/ui-component/development/slider-field'
 import { ProviderUsageCard } from '#src/renderer/src/ui-component/usage-dashboard/provider-usage-card'
 import { dateUtil } from '#src/renderer/src/util/date-util'
-import { MONTH_WINDOW_MS } from '#src/renderer/src/util/menu-status-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { usageSeverityUtil } from '#src/renderer/src/util/usage-severity-util'
-import { type IProviderSnapshot, UsageStatus } from '#src/shared/usage-model'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import { UsageStatus } from '#src/shared/business/enum/usage-status-enum'
+import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
+import { constant } from '#src/shared/util/constant'
 
 const DEFAULT_FETCHED_ELAPSED_MINUTES = 1
 const MAX_ELAPSED_MINUTES = 300
@@ -18,7 +20,7 @@ const MAX_USED_PERCENT = 100
 const MINUTES_PER_HOUR = 60
 const PREVIEW_MCP_TOTAL_CALLS = 1000
 const PREVIEW_NEXT_REFRESH_OFFSET_MS = 150_000
-const PREVIEW_REFRESH_INTERVAL_SECONDS = 300
+const PREVIEW_REFRESH_INTERVAL_MS = 300_000
 const PREVIEW_REFRESH_SPIN_MS = 1000
 
 const DAY_OFFSETS = [0, 1, 2, 3, 4, 5, 6]
@@ -87,22 +89,22 @@ export const DevelopmentPage = (props: {
 
   const resolveMonthlyResetAt = (): number => {
     const elapsedFraction = elapsedMinutes / MAX_ELAPSED_MINUTES
-    const elapsedMs = elapsedFraction * MONTH_WINDOW_MS
+    const elapsedMs = elapsedFraction * constant.thirtyDayWindowMs
 
-    return Date.now() + MONTH_WINDOW_MS - elapsedMs
+    return Date.now() + constant.thirtyDayWindowMs - elapsedMs
   }
 
   const resolveMcpUsedCalls = (): number => {
     return Math.round((usedPercent / MAX_USED_PERCENT) * PREVIEW_MCP_TOTAL_CALLS)
   }
 
-  const resolvePreviewSnapshot = (): IProviderSnapshot => {
+  const resolvePreviewSnapshot = (): ProviderSnapshot => {
     const previewNowMs = resolvePreviewNowMs()
 
     return {
       fetchedAt: previewNowMs - fetchedElapsedMinutes * 60_000,
       nextRefreshAt: previewNowMs + PREVIEW_NEXT_REFRESH_OFFSET_MS,
-      providerId: 'zai',
+      providerId: ProviderIdMapper.ZAI,
       status: UsageStatus.OK,
       trackerId: 'development-zai',
       trackerName: 'z.ai',
@@ -119,7 +121,7 @@ export const DevelopmentPage = (props: {
           totalAmount: PREVIEW_MCP_TOTAL_CALLS,
           usedAmount: resolveMcpUsedCalls(),
           usedPercent,
-          windowMs: MONTH_WINDOW_MS,
+          windowMs: constant.thirtyDayWindowMs,
         },
       ],
     }
@@ -190,7 +192,7 @@ export const DevelopmentPage = (props: {
         onRefresh={handlePreviewRefresh}
         onToggleAutoRefresh={handlePreviewToggleAutoRefresh}
         providerSnapshot={resolvePreviewSnapshot()}
-        refreshIntervalSeconds={PREVIEW_REFRESH_INTERVAL_SECONDS}
+        refreshIntervalMs={PREVIEW_REFRESH_INTERVAL_MS}
       />
       <section className="development-page-panel">
         <SliderField

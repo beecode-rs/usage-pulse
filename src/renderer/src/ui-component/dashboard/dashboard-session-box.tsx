@@ -6,11 +6,12 @@ import { SessionOriginIcon } from '#src/renderer/src/ui-component/sessions/sessi
 import { SessionTranscriptChips } from '#src/renderer/src/ui-component/sessions/session-transcript-chips'
 import { SessionWaitingPulse } from '#src/renderer/src/ui-component/sessions/session-waiting-pulse'
 import { sessionPresentationUtil } from '#src/renderer/src/util/session-presentation-util'
-import { type ISessionInfo, type SessionStatus } from '#src/shared/session-model'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { type SessionInfo } from '#src/shared/business/model/session-model'
 
 const TICK_INTERVAL_MS = 30_000
 
-const resolveBoxClassName = (params: { isRemote: boolean; status: SessionStatus }): string => {
+const resolveBoxClassName = (params: { isRemote: boolean; status: SessionStatusMapper }): string => {
   const classNames = ['dashboard-session-box', `is-${params.status}`]
 
   if (params.isRemote) {
@@ -23,10 +24,10 @@ const resolveBoxClassName = (params: { isRemote: boolean; status: SessionStatus 
 export const DashboardSessionBox = (props: {
   finishedAtMs?: number
   onFocus: () => void
-  pulseSeconds: number
-  session: ISessionInfo
+  pulseMs: number
+  session: SessionInfo
 }): ReactElement => {
-  const { finishedAtMs, onFocus, pulseSeconds, session } = props
+  const { finishedAtMs, onFocus, pulseMs, session } = props
   const [nowMs, setNowMs] = useState((): number => {
     return Date.now()
   })
@@ -50,8 +51,8 @@ export const DashboardSessionBox = (props: {
       className={resolveBoxClassName({ isRemote: session.hostId !== undefined, status: session.status })}
       title={session.cwd}
     >
-      <SessionFinishedPulse finishedAtMs={finishedAtMs} nowMs={nowMs} pulseSeconds={pulseSeconds} />
-      <SessionWaitingPulse isWaiting={session.status === 'waiting'} />
+      <SessionFinishedPulse finishedAtMs={finishedAtMs} nowMs={nowMs} pulseMs={pulseMs} />
+      <SessionWaitingPulse isWaiting={session.status === SessionStatusMapper.WAITING} />
       <header className="dashboard-session-box-header">
         <div className="dashboard-session-box-heading">
           <span className="dashboard-session-box-origin">

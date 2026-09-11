@@ -1,26 +1,24 @@
-import type {
-  ITriggerRunLogEntry,
-  TriggerRunPhase,
-  TriggerRunSkipReason,
-  TriggerRunSource,
-} from '#src/shared/trigger-model'
+import { ScheduleTriggerRunPhaseMapper } from '#src/shared/business/enum/schedule-trigger-run-phase-mapper-enum'
+import type { ScheduleTriggerRunSkipReasonMapper } from '#src/shared/business/enum/schedule-trigger-run-skip-reason-mapper-enum'
+import type { ScheduleTriggerRunSourceMapper } from '#src/shared/business/enum/schedule-trigger-run-source-mapper-enum'
+import { type ScheduleTriggerRunLogEntry } from '#src/shared/business/model/schedule-trigger-model'
 
-export interface ITriggerRunSummary {
+export type TriggerRunSummary = {
   durationMs: number
   eventId: string
   exitCode: number
   outputSnippet: string
-  phase: TriggerRunPhase
-  skipReason: TriggerRunSkipReason | ''
+  phase: ScheduleTriggerRunPhaseMapper
+  skipReason: ScheduleTriggerRunSkipReasonMapper | ''
   slot: string
   startedAtTimestamp: string
-  trigger: TriggerRunSource
+  trigger: ScheduleTriggerRunSourceMapper
   triggerName: string
 }
 
 export class TriggerRunUtil {
-  groupRunsByEventId(params: { entries: ITriggerRunLogEntry[] }): ITriggerRunSummary[] {
-    const summaryByEventId = params.entries.reduce<Record<string, ITriggerRunSummary>>((summaryRecord, entry) => {
+  groupRunsByEventId(params: { entries: ScheduleTriggerRunLogEntry[] }): TriggerRunSummary[] {
+    const summaryByEventId = params.entries.reduce<Record<string, TriggerRunSummary>>((summaryRecord, entry) => {
       return {
         ...summaryRecord,
         [entry.eventId]: this._mergeEntry({
@@ -36,9 +34,9 @@ export class TriggerRunUtil {
   }
 
   protected _applyTerminalEntry(params: {
-    entry: ITriggerRunLogEntry
-    summary: ITriggerRunSummary
-  }): ITriggerRunSummary {
+    entry: ScheduleTriggerRunLogEntry
+    summary: TriggerRunSummary
+  }): TriggerRunSummary {
     return {
       ...params.summary,
       durationMs: params.entry.durationMs,
@@ -49,7 +47,7 @@ export class TriggerRunUtil {
     }
   }
 
-  protected _createSummaryFromEntry(params: { entry: ITriggerRunLogEntry }): ITriggerRunSummary {
+  protected _createSummaryFromEntry(params: { entry: ScheduleTriggerRunLogEntry }): TriggerRunSummary {
     return {
       durationMs: params.entry.durationMs,
       eventId: params.entry.eventId,
@@ -65,14 +63,14 @@ export class TriggerRunUtil {
   }
 
   protected _mergeEntry(params: {
-    entry: ITriggerRunLogEntry
-    summary: ITriggerRunSummary | undefined
-  }): ITriggerRunSummary {
+    entry: ScheduleTriggerRunLogEntry
+    summary: TriggerRunSummary | undefined
+  }): TriggerRunSummary {
     if (params.summary === undefined) {
       return this._createSummaryFromEntry({ entry: params.entry })
     }
 
-    if (params.entry.phase === 'started') {
+    if (params.entry.phase === ScheduleTriggerRunPhaseMapper.STARTED) {
       return { ...params.summary, startedAtTimestamp: params.entry.timestamp }
     }
 

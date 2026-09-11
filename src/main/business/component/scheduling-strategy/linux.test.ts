@@ -11,7 +11,9 @@ import { delimiter, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { SchedulingStrategyLinuxContractHarness } from '#src/main/business/component/scheduling-strategy/_linux-contract-harness'
-import { OS, osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
+import { osUtil } from '#src/main/util/os-util'
 
 const fakeSystemctlScript = `#!/bin/sh
 if [ -n "$USAGE_PULSE_SYSTEMCTL_ARGS_LOG" ]; then
@@ -204,7 +206,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SchedulingStrategyLinu
         isSystemdUserAvailable: false,
       })
       await strategy.upsertRegistration({
-        days: ['monday', 'wednesday', 'saturday'],
+        days: [ScheduleTriggerDayMapper.MONDAY, ScheduleTriggerDayMapper.WEDNESDAY, ScheduleTriggerDayMapper.SATURDAY],
         executableArgs: ['--fire-trigger', 'd290f1c9-7d44-4fdd-9d95-1b9d45a8f7e3'],
         executablePath: '/usr/lib/usage-pulse/usage-pulse',
         times: ['09:00', '13:00'],

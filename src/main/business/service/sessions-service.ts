@@ -3,13 +3,20 @@ import { homedir } from 'node:os'
 import { basename } from 'node:path'
 import { promisify } from 'node:util'
 
+import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus-outcome-mapper-enum'
 import { SessionsParserService } from '#src/main/business/service/sessions-parser-service'
 import { config } from '#src/main/util/config'
 import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/main/util/error-util'
-import { OS, osUtil } from '#src/main/util/os-util'
+import { osUtil } from '#src/main/util/os-util'
 import { rawEnvUtil } from '#src/main/util/raw-env-util'
-import { type ISessionFocusSupport, type ISessionInfo, type ISessionSnapshot } from '#src/shared/session-model'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { SessionFocusSupportStatusMapper } from '#src/shared/business/enum/session-focus-support-status-mapper-enum'
+import {
+  type SessionFocusSupport,
+  type SessionInfo,
+  type SessionSnapshot,
+} from '#src/shared/business/model/session-model'
 
 const execFileAsync = promisify(execFile)
 
@@ -156,35 +163,33 @@ const PS_QUERY_TIMEOUT_MS = 5_000
 
 const XDOTOOL_TIMEOUT_MS = 5_000
 
-interface IProcessEntry {
+type ProcessEntry = {
   comm: string
   ppid: number
 }
 
-export interface IAppBundleAncestry {
+export type AppBundleAncestry = {
   bundlePath: string
   hostPid: number
 }
 
-export interface IGhosttyFocusPeer {
+export type GhosttyFocusPeer = {
   hostPid: number
   hostStartedAtMs: number | undefined
   pid: number
 }
 
-export type IGhosttyFocusOutcome = 'focused' | 'hidden' | 'missing'
-
 export class SessionsService {
-  protected _focusSupport: Promise<ISessionFocusSupport> | undefined
+  protected _focusSupport: Promise<SessionFocusSupport> | undefined
   protected _ghosttyTtySupport: Promise<boolean> | undefined
-  protected _inFlightSnapshot: Promise<ISessionSnapshot> | undefined
+  protected _inFlightSnapshot: Promise<SessionSnapshot> | undefined
   protected readonly _isWaylandSessionOverride: boolean | undefined
 
   constructor(params: { isWaylandSession?: boolean } = {}) {
     this._isWaylandSessionOverride = params.isWaylandSession
   }
 
-  async listSessions(): Promise<ISessionSnapshot> {
+  async listSessions(): Promise<SessionSnapshot> {
     if (this._inFlightSnapshot !== undefined) {
       return this._inFlightSnapshot
     }
@@ -200,17 +205,17 @@ export class SessionsService {
     })
   }
 
-  getFocusSupport(): Promise<ISessionFocusSupport> {
+  getFocusSupport(): Promise<SessionFocusSupport> {
     this._focusSupport ??= this._resolveFocusSupport()
 
     return this._focusSupport
   }
 
-  async installFocusTool(): Promise<ISessionFocusSupport> {
+  async installFocusTool(): Promise<SessionFocusSupport> {
     const platform = this._resolveFocusPlatform()
 
     if (platform !== OS.LINUX) {
-      return { status: 'ready' }
+      return { status: SessionFocusSupportStatusMapper.READY }
     }
 
     try {
@@ -274,18 +279,18 @@ export class SessionsService {
 
   protected async _applyGhosttyFocusOutcome(params: {
     bundlePath: string
-    outcome: IGhosttyFocusOutcome
+    outcome: GhosttyFocusOutcomeMapper
   }): Promise<void> {
     switch (params.outcome) {
-      case 'focused': {
+      case GhosttyFocusOutcomeMapper.FOCUSED: {
         return
       }
 
-      case 'hidden': {
+      case GhosttyFocusOutcomeMapper.HIDDEN: {
         throw new Error(GHOSTTY_OTHER_DESKTOP_MESSAGE)
       }
 
-      case 'missing': {
+      case GhosttyFocusOutcomeMapper.MISSING: {
         return this._activateAppBundle({ bundlePath: params.bundlePath })
       }
 
@@ -295,10 +300,13 @@ export class SessionsService {
     }
   }
 
-  protected async _resolveGhosttyFocusOutcome(params: { cwd: string; pid: number }): Promise<IGhosttyFocusOutcome> {
+  protected async _resolveGhosttyFocusOutcome(params: {
+    cwd: string
+    pid: number
+  }): Promise<GhosttyFocusOutcomeMapper> {
     const ttyOutcome = await this._resolveGhosttyTtyFocusOutcome({ pid: params.pid })
 
-    if (ttyOutcome !== 'missing') {
+    if (ttyOutcome !== GhosttyFocusOutcomeMapper.MISSING) {
       return ttyOutcome
     }
 
@@ -307,11 +315,11 @@ export class SessionsService {
     return this._focusGhosttyTab({ cwd: params.cwd, matchRank })
   }
 
-  protected async _resolveGhosttyTtyFocusOutcome(params: { pid: number }): Promise<IGhosttyFocusOutcome> {
+  protected async _resolveGhosttyTtyFocusOutcome(params: { pid: number }): Promise<GhosttyFocusOutcomeMapper> {
     const sessionTty = await this._resolveGhosttySessionTty({ pid: params.pid })
 
     if (sessionTty === undefined) {
-      return 'missing'
+      return GhosttyFocusOutcomeMapper.MISSING
     }
 
     return this._focusGhosttyTerminalByTty({ sessionTty })
@@ -345,7 +353,7 @@ export class SessionsService {
     return this._resolvePeerRank({ peers, pid: params.pid })
   }
 
-  protected async _listGhosttyFocusPeers(params: { cwd: string; pid: number }): Promise<IGhosttyFocusPeer[]> {
+  protected async _listGhosttyFocusPeers(params: { cwd: string; pid: number }): Promise<GhosttyFocusPeer[]> {
     const sameCwdSessions = await this._listSameCwdSessions({ cwd: params.cwd })
     const sessionPids = [
       params.pid,
@@ -359,12 +367,12 @@ export class SessionsService {
       }),
     )
 
-    return peers.filter((peer): peer is IGhosttyFocusPeer => {
+    return peers.filter((peer): peer is GhosttyFocusPeer => {
       return peer !== undefined
     })
   }
 
-  protected async _listSameCwdSessions(params: { cwd: string }): Promise<ISessionInfo[]> {
+  protected async _listSameCwdSessions(params: { cwd: string }): Promise<SessionInfo[]> {
     const sessions = await this._runAgentsQuery()
       .then((stdout) => {
         return new SessionsParserService().parseSessionEntries({ stdout })
@@ -378,7 +386,7 @@ export class SessionsService {
     })
   }
 
-  protected async _resolveGhosttyFocusPeer(params: { pid: number }): Promise<IGhosttyFocusPeer | undefined> {
+  protected async _resolveGhosttyFocusPeer(params: { pid: number }): Promise<GhosttyFocusPeer | undefined> {
     try {
       const ancestry = await this._resolveAppBundleAncestry({ childPid: params.pid, hopCount: 0, pid: params.pid })
 
@@ -396,7 +404,7 @@ export class SessionsService {
     }
   }
 
-  protected _resolvePeerRank(params: { peers: IGhosttyFocusPeer[]; pid: number }): number {
+  protected _resolvePeerRank(params: { peers: GhosttyFocusPeer[]; pid: number }): number {
     const orderedPeers = [...params.peers].sort((left, right) => {
       const startDiff = this._resolvePeerStartMs(left) - this._resolvePeerStartMs(right)
 
@@ -417,7 +425,7 @@ export class SessionsService {
     return position
   }
 
-  protected _resolvePeerStartMs(peer: IGhosttyFocusPeer): number {
+  protected _resolvePeerStartMs(peer: GhosttyFocusPeer): number {
     if (peer.hostStartedAtMs === undefined) {
       return Number.MAX_SAFE_INTEGER
     }
@@ -529,20 +537,20 @@ export class SessionsService {
     return (params.error as { code?: unknown }).code === 'ENOENT'
   }
 
-  protected async _resolveFocusSupport(): Promise<ISessionFocusSupport> {
+  protected async _resolveFocusSupport(): Promise<SessionFocusSupport> {
     const platform = this._resolveFocusPlatform()
 
     if (platform !== OS.LINUX) {
-      return { status: 'ready' }
+      return { status: SessionFocusSupportStatusMapper.READY }
     }
 
     const isToolInstalled = await this._isLinuxFocusToolInstalled()
 
     if (isToolInstalled) {
-      return { status: 'ready' }
+      return { status: SessionFocusSupportStatusMapper.READY }
     }
 
-    return { status: 'missing-tool' }
+    return { status: SessionFocusSupportStatusMapper.MISSING_TOOL }
   }
 
   protected async _isLinuxFocusToolInstalled(): Promise<boolean> {
@@ -565,7 +573,7 @@ export class SessionsService {
     })
   }
 
-  protected _startSnapshotFetch(): Promise<ISessionSnapshot> {
+  protected _startSnapshotFetch(): Promise<SessionSnapshot> {
     const trackedPromise = this._fetchSnapshot().finally(() => {
       this._inFlightSnapshot = undefined
     })
@@ -575,7 +583,7 @@ export class SessionsService {
     return trackedPromise
   }
 
-  protected async _fetchSnapshot(): Promise<ISessionSnapshot> {
+  protected async _fetchSnapshot(): Promise<SessionSnapshot> {
     const stdout = await this._runAgentsQuery()
 
     return {
@@ -630,7 +638,7 @@ export class SessionsService {
     childPid: number
     hopCount: number
     pid: number
-  }): Promise<IAppBundleAncestry> {
+  }): Promise<AppBundleAncestry> {
     if (params.hopCount >= MAX_ANCESTOR_HOPS) {
       throw new Error(
         `could not find an application bundle for the session process; the ancestor walk exceeded ${String(MAX_ANCESTOR_HOPS)} hops`,
@@ -662,7 +670,7 @@ export class SessionsService {
     })
   }
 
-  protected async _resolveProcessEntry(params: { pid: number }): Promise<IProcessEntry | undefined> {
+  protected async _resolveProcessEntry(params: { pid: number }): Promise<ProcessEntry | undefined> {
     try {
       const { stdout } = await execFileAsync('ps', ['-o', 'ppid=,comm=', '-p', String(params.pid)], {
         timeout: PS_QUERY_TIMEOUT_MS,
@@ -713,7 +721,7 @@ export class SessionsService {
     }
   }
 
-  protected _parseProcessLine(params: { line: string }): IProcessEntry | undefined {
+  protected _parseProcessLine(params: { line: string }): ProcessEntry | undefined {
     const match = constant.processLineRegex.exec(params.line)
 
     if (match === null) {
@@ -751,7 +759,7 @@ export class SessionsService {
     return basename(params.bundlePath) === 'Ghostty.app'
   }
 
-  protected async _focusGhosttyTab(params: { cwd: string; matchRank: number }): Promise<IGhosttyFocusOutcome> {
+  protected async _focusGhosttyTab(params: { cwd: string; matchRank: number }): Promise<GhosttyFocusOutcomeMapper> {
     try {
       const { stdout } = await execFileAsync(
         'osascript',
@@ -767,18 +775,18 @@ export class SessionsService {
     }
   }
 
-  protected _parseGhosttyFocusOutcome(params: { stdout: string }): IGhosttyFocusOutcome {
+  protected _parseGhosttyFocusOutcome(params: { stdout: string }): GhosttyFocusOutcomeMapper {
     switch (params.stdout.trim()) {
       case 'focused': {
-        return 'focused'
+        return GhosttyFocusOutcomeMapper.FOCUSED
       }
 
       case 'hidden': {
-        return 'hidden'
+        return GhosttyFocusOutcomeMapper.HIDDEN
       }
 
       default: {
-        return 'missing'
+        return GhosttyFocusOutcomeMapper.MISSING
       }
     }
   }
@@ -791,7 +799,7 @@ export class SessionsService {
     return `focusing the Ghostty tab failed: ${this._resolveQueryErrorMessage(params.error)}`
   }
 
-  protected async _focusGhosttyTerminalByTty(params: { sessionTty: string }): Promise<IGhosttyFocusOutcome> {
+  protected async _focusGhosttyTerminalByTty(params: { sessionTty: string }): Promise<GhosttyFocusOutcomeMapper> {
     try {
       const { stdout } = await execFileAsync('osascript', ['-e', GHOSTTY_TTY_FOCUS_SCRIPT, '--', params.sessionTty], {
         timeout: OSASCRIPT_TIMEOUT_MS,

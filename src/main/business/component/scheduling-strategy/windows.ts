@@ -1,18 +1,18 @@
 import type {
-  ISchedulingInspection,
-  ISchedulingRegistrationParams,
-  ISchedulingStrategy,
+  SchedulingInspection,
+  SchedulingRegistrationParams,
+  SchedulingStrategy,
 } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
-import { OS } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
 
-export class SchedulingStrategyWindows implements ISchedulingStrategy {
+export class SchedulingStrategyWindows implements SchedulingStrategy {
   readonly isSupported = false
 
   getSchedulingPlatform(): OS {
     return OS.WINDOWS
   }
 
-  inspectRegistration(_params: { triggerId: string }): Promise<ISchedulingInspection> {
+  inspectRegistration(_params: { triggerId: string }): Promise<SchedulingInspection> {
     return Promise.reject(new Error('OS scheduling is not implemented on Windows yet'))
   }
 
@@ -24,7 +24,7 @@ export class SchedulingStrategyWindows implements ISchedulingStrategy {
     return Promise.reject(new Error('OS scheduling is not implemented on Windows yet'))
   }
 
-  upsertRegistration(_params: ISchedulingRegistrationParams): Promise<void> {
+  upsertRegistration(_params: SchedulingRegistrationParams): Promise<void> {
     return Promise.reject(new Error('OS scheduling is not implemented on Windows yet'))
   }
 }

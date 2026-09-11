@@ -1,17 +1,15 @@
-export const DIAL_ANGLE_RANGE_DEGREES = 270
-
-export const DIAL_START_ANGLE_DEGREES = 135
+import { constant } from '#src/renderer/src/util/constant'
 
 export class PlannerDialUtil {
   resolveDialDeltaDegrees(params: { angleDegrees: number }): number {
-    const deltaDegrees = (((params.angleDegrees - DIAL_START_ANGLE_DEGREES) % 360) + 360) % 360
+    const deltaDegrees = (((params.angleDegrees - constant.plannerDialStartAngleDegrees) % 360) + 360) % 360
 
-    if (deltaDegrees <= DIAL_ANGLE_RANGE_DEGREES) {
+    if (deltaDegrees <= constant.plannerDialAngleRangeDegrees) {
       return deltaDegrees
     }
 
-    if (deltaDegrees - DIAL_ANGLE_RANGE_DEGREES < 360 - deltaDegrees) {
-      return DIAL_ANGLE_RANGE_DEGREES
+    if (deltaDegrees - constant.plannerDialAngleRangeDegrees < 360 - deltaDegrees) {
+      return constant.plannerDialAngleRangeDegrees
     }
 
     return 0
@@ -54,7 +52,7 @@ export class PlannerDialUtil {
   resolvePointerValue(params: { dx: number; dy: number; max: number; min: number; step: number }): number {
     const pointerAngleDegrees = (Math.atan2(params.dy, params.dx) * 180) / Math.PI
     const deltaDegrees = this.resolveDialDeltaDegrees({ angleDegrees: pointerAngleDegrees })
-    const valueFraction = deltaDegrees / DIAL_ANGLE_RANGE_DEGREES
+    const valueFraction = deltaDegrees / constant.plannerDialAngleRangeDegrees
     const rawValue = params.min + valueFraction * (params.max - params.min)
 
     return this.resolveSteppedValue({ max: params.max, min: params.min, rawValue, step: params.step })
@@ -70,7 +68,7 @@ export class PlannerDialUtil {
   resolveValueAngleDegrees(params: { max: number; min: number; value: number }): number {
     const valueFraction = (params.value - params.min) / (params.max - params.min)
 
-    return DIAL_START_ANGLE_DEGREES + valueFraction * DIAL_ANGLE_RANGE_DEGREES
+    return constant.plannerDialStartAngleDegrees + valueFraction * constant.plannerDialAngleRangeDegrees
   }
 
   protected _resolveClampedValue(params: { max: number; min: number; value: number }): number {

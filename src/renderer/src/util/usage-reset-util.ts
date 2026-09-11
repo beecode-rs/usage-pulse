@@ -1,8 +1,8 @@
 import { dateUtil } from '#src/renderer/src/util/date-util'
-import { FIVE_HOUR_WINDOW_MS } from '#src/shared/usage-model'
+import { constant } from '#src/shared/util/constant'
 
 export const usageResetUtil = {
-  fiveHourWindowMs: FIVE_HOUR_WINDOW_MS,
+  fiveHourWindowMs: constant.fiveHourWindowMs,
 
   resolveElapsedPercent: (params: { remainingMs: number; windowMs: number }): number => {
     const elapsedFraction = 1 - params.remainingMs / params.windowMs

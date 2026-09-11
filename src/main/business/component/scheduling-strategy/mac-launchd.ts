@@ -5,37 +5,39 @@ import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 
 import type {
-  ISchedulingInspection,
-  ISchedulingRegistrationParams,
-  ISchedulingStrategy,
+  SchedulingInspection,
+  SchedulingRegistrationParams,
+  SchedulingStrategy,
 } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
+import { config } from '#src/main/util/config'
 import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/main/util/error-util'
-import { OS, osUtil } from '#src/main/util/os-util'
-import type { TriggerDay } from '#src/shared/trigger-model'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 
 const execFileAsync = promisify(execFile)
 
-interface ILaunchdCalendarInterval {
+type LaunchdCalendarInterval = {
   hour: number
   minute: number
   weekday: number
 }
 
-export class SchedulingStrategyMacLaunchd implements ISchedulingStrategy {
+export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
   readonly isSupported = true
 
   protected readonly _homeDir: string
   protected readonly _labelPrefix = 'com.usage-pulse.trigger.'
-  protected readonly _launchctlTimeoutMs = 10000
-  protected readonly _launchdWeekdayByTriggerDay: Record<TriggerDay, number> = {
-    friday: 5,
-    monday: 1,
-    saturday: 6,
-    sunday: 0,
-    thursday: 4,
-    tuesday: 2,
-    wednesday: 3,
+  protected readonly _launchctlTimeoutMs = config.launchctlTimeoutMs
+  protected readonly _launchdWeekdayByTriggerDay: Record<ScheduleTriggerDayMapper, number> = {
+    [ScheduleTriggerDayMapper.FRIDAY]: 5,
+    [ScheduleTriggerDayMapper.MONDAY]: 1,
+    [ScheduleTriggerDayMapper.SATURDAY]: 6,
+    [ScheduleTriggerDayMapper.SUNDAY]: 0,
+    [ScheduleTriggerDayMapper.THURSDAY]: 4,
+    [ScheduleTriggerDayMapper.TUESDAY]: 2,
+    [ScheduleTriggerDayMapper.WEDNESDAY]: 3,
   }
 
   protected readonly _uid: number
@@ -50,7 +52,7 @@ export class SchedulingStrategyMacLaunchd implements ISchedulingStrategy {
     return OS.MACOS
   }
 
-  async inspectRegistration(params: { triggerId: string }): Promise<ISchedulingInspection> {
+  async inspectRegistration(params: { triggerId: string }): Promise<SchedulingInspection> {
     const isPlistPresent = await this._resolveIsPlistPresent({ triggerId: params.triggerId })
     const isLabelLoaded = await this._resolveIsLabelLoaded({ triggerId: params.triggerId })
 
@@ -74,7 +76,7 @@ export class SchedulingStrategyMacLaunchd implements ISchedulingStrategy {
     await this._removePlist({ triggerId: params.triggerId })
   }
 
-  async upsertRegistration(params: ISchedulingRegistrationParams): Promise<void> {
+  async upsertRegistration(params: SchedulingRegistrationParams): Promise<void> {
     this._assertRegistrationParams(params)
     await this._bootoutIfLoaded({ triggerId: params.triggerId })
     await this._writePlist(params)
@@ -89,7 +91,7 @@ export class SchedulingStrategyMacLaunchd implements ISchedulingStrategy {
     }
   }
 
-  protected _assertRegistrationParams(params: ISchedulingRegistrationParams): void {
+  protected _assertRegistrationParams(params: SchedulingRegistrationParams): void {
     if (!/^[A-Za-z0-9_-]+$/.test(params.triggerId)) {
       throw new Error(
         `Invalid trigger id '${params.triggerId}': only alphanumerics, underscores and hyphens are allowed`,
@@ -153,7 +155,10 @@ export class SchedulingStrategyMacLaunchd implements ISchedulingStrategy {
     })
   }
 
-  protected _buildCalendarIntervals(params: { days: TriggerDay[]; times: string[] }): ILaunchdCalendarInterval[] {
+  protected _buildCalendarIntervals(params: {
+    days: ScheduleTriggerDayMapper[]
+    times: string[]
+  }): LaunchdCalendarInterval[] {
     return params.days.flatMap((day) => {
       return params.times.map((time) => {
         const timeOfDay = this._parseTimeOfDay({ time })
@@ -167,13 +172,13 @@ export class SchedulingStrategyMacLaunchd implements ISchedulingStrategy {
     })
   }
 
-  protected _buildProgramArgumentLines(params: ISchedulingRegistrationParams): string[] {
+  protected _buildProgramArgumentLines(params: SchedulingRegistrationParams): string[] {
     return [params.executablePath, ...params.executableArgs].map((argument) => {
       return `\t\t<string>${this._escapeXml(argument)}</string>`
     })
   }
 
-  protected _buildPlistXml(params: ISchedulingRegistrationParams): string {
+  protected _buildPlistXml(params: SchedulingRegistrationParams): string {
     const calendarIntervals = this._buildCalendarIntervals({ days: params.days, times: params.times })
     const calendarIntervalLines = calendarIntervals.flatMap((interval) => {
       return [
@@ -307,7 +312,7 @@ export class SchedulingStrategyMacLaunchd implements ISchedulingStrategy {
     return `${this._resolveDomainTarget()}/${this._resolveLabel({ triggerId: params.triggerId })}`
   }
 
-  protected async _writePlist(params: ISchedulingRegistrationParams): Promise<void> {
+  protected async _writePlist(params: SchedulingRegistrationParams): Promise<void> {
     const plistPath = this._resolvePlistPath({ triggerId: params.triggerId })
 
     await mkdir(dirname(plistPath), { recursive: true })

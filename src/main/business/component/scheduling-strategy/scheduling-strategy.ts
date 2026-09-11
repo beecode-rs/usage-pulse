@@ -1,23 +1,23 @@
-import type { OS } from '#src/main/util/os-util'
-import type { TriggerDay } from '#src/shared/trigger-model'
+import type { OS } from '#src/shared/business/enum/os-enum'
+import type { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 
-export interface ISchedulingRegistrationParams {
-  days: TriggerDay[]
+export type SchedulingRegistrationParams = {
+  days: ScheduleTriggerDayMapper[]
   executableArgs: string[]
   executablePath: string
   times: string[]
   triggerId: string
 }
 
-export interface ISchedulingInspection {
+export type SchedulingInspection = {
   isRegistered: boolean
 }
 
-export interface ISchedulingStrategy {
+export interface SchedulingStrategy {
   getSchedulingPlatform: () => OS
-  inspectRegistration: (params: { triggerId: string }) => Promise<ISchedulingInspection>
+  inspectRegistration: (params: { triggerId: string }) => Promise<SchedulingInspection>
   readonly isSupported: boolean
   listRegistrationIds: () => Promise<string[]>
   removeRegistration: (params: { triggerId: string }) => Promise<void>
-  upsertRegistration: (params: ISchedulingRegistrationParams) => Promise<void>
+  upsertRegistration: (params: SchedulingRegistrationParams) => Promise<void>
 }

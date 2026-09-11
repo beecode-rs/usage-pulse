@@ -12,9 +12,9 @@
 # restarts the pulse from full brightness.
 #
 # resolveIsPulsing turns a recorded timestamp into the render decision: pulsing
-# while less than pulseSeconds have passed, done exactly at the boundary. A session
-# with no recorded timestamp never pulses, and a pulseSeconds of 0 (or lower) turns
-# the indicator off for everyone.
+# while less than pulseMs (milliseconds) have passed, done exactly at the boundary.
+# A session with no recorded timestamp never pulses, and a pulseMs of 0 (or lower)
+# turns the indicator off for everyone.
 subject: sessionFinishedPulseUtil
 module: ./session-finished-pulse-util.js
 subjectType: function
@@ -25,55 +25,55 @@ methods:
       - params:
           - finishedAtMs: !undefined
             nowMs: 5000
-            pulseSeconds: 10
+            pulseMs: 10000
         result: false
       # Just finished: the full duration is still ahead.
       - params:
           - finishedAtMs: 5000
             nowMs: 5000
-            pulseSeconds: 10
+            pulseMs: 10000
         result: true
       # Mid-pulse, a second before the end.
       - params:
           - finishedAtMs: 5000
             nowMs: 14000
-            pulseSeconds: 10
+            pulseMs: 10000
         result: true
       # Exactly at the boundary the pulse is over, not still running.
       - params:
           - finishedAtMs: 5000
             nowMs: 15000
-            pulseSeconds: 10
+            pulseMs: 10000
         result: false
       # Long past the boundary.
       - params:
           - finishedAtMs: 5000
             nowMs: 60000
-            pulseSeconds: 10
+            pulseMs: 10000
         result: false
       # A zero duration is the "indicator off" setting, even for a session that
       # finished this very tick.
       - params:
           - finishedAtMs: 5000
             nowMs: 5000
-            pulseSeconds: 0
+            pulseMs: 0
         result: false
       # A negative duration cannot survive sanitizing, but is treated as off too.
       - params:
           - finishedAtMs: 5000
             nowMs: 5000
-            pulseSeconds: -5
+            pulseMs: -5000
         result: false
-      # A one second duration pulses within that second and stops after it.
+      # A one second (1000 ms) duration pulses within that second and stops after it.
       - params:
           - finishedAtMs: 5000
             nowMs: 5999
-            pulseSeconds: 1
+            pulseMs: 1000
         result: true
       - params:
           - finishedAtMs: 5000
             nowMs: 6000
-            pulseSeconds: 1
+            pulseMs: 1000
         result: false
   resolveFinishedAtBySessionId:
     terms:

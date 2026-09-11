@@ -1,17 +1,19 @@
-import { type IUsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
+import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
 import { httpUtil } from '#src/main/util/http-util'
 import { objectUtil } from '#src/main/util/object-util'
 import { percentUtil } from '#src/main/util/percent-util'
-import { FIVE_HOUR_WINDOW_MS, type IUsageWindow, type ProviderId } from '#src/shared/usage-model'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import type { UsageWindow } from '#src/shared/business/model/usage-model'
+import { constant } from '#src/shared/util/constant'
 
-export class UsageProviderZai implements IUsageProvider {
+export class UsageProviderZai implements UsageProvider {
   protected readonly _quotaLimitUrl = 'https://api.z.ai/api/monitor/usage/quota/limit'
 
-  getProviderId(): ProviderId {
-    return 'zai'
+  getProviderId(): ProviderIdMapper {
+    return ProviderIdMapper.ZAI
   }
 
-  async fetchUsage(params: { accessToken: string }): Promise<IUsageWindow[]> {
+  async fetchUsage(params: { accessToken: string }): Promise<UsageWindow[]> {
     const headers = Object.fromEntries([
       ['Accept-Language', 'en-US,en'],
       ['Authorization', params.accessToken],
@@ -49,7 +51,7 @@ export class UsageProviderZai implements IUsageProvider {
     return objectUtil.asRecord(rootRecord['data'])
   }
 
-  protected _buildWindows(params: { limits: unknown[] }): IUsageWindow[] {
+  protected _buildWindows(params: { limits: unknown[] }): UsageWindow[] {
     const windows = [
       this._buildWindow({
         expectedLabel: '5-hour window',
@@ -59,7 +61,7 @@ export class UsageProviderZai implements IUsageProvider {
           limitType: 'TOKENS_LIMIT',
           limitUnit: 3,
         }),
-        windowMs: FIVE_HOUR_WINDOW_MS,
+        windowMs: constant.fiveHourWindowMs,
       }),
       this._buildMcpQuotaWindow({ limits: params.limits }),
     ].filter((window) => {
@@ -73,7 +75,7 @@ export class UsageProviderZai implements IUsageProvider {
     return windows
   }
 
-  protected _buildMcpQuotaWindow(params: { limits: unknown[] }): IUsageWindow | undefined {
+  protected _buildMcpQuotaWindow(params: { limits: unknown[] }): UsageWindow | undefined {
     const limitRecord = this._findLimitRecord({ limits: params.limits, limitType: 'TIME_LIMIT' })
 
     return this._stampMcpAmounts({
@@ -86,8 +88,8 @@ export class UsageProviderZai implements IUsageProvider {
 
   protected _stampMcpAmounts(params: {
     limitRecord?: Record<string, unknown>
-    window?: IUsageWindow
-  }): IUsageWindow | undefined {
+    window?: UsageWindow
+  }): UsageWindow | undefined {
     if (params.window === undefined || params.limitRecord === undefined) {
       return params.window
     }
@@ -110,7 +112,7 @@ export class UsageProviderZai implements IUsageProvider {
     return Math.round(params.value)
   }
 
-  protected _stampCalendarMonthWindowMs(params: { window?: IUsageWindow }): IUsageWindow | undefined {
+  protected _stampCalendarMonthWindowMs(params: { window?: UsageWindow }): UsageWindow | undefined {
     if (params.window?.resetAt === undefined) {
       return params.window
     }
@@ -157,7 +159,7 @@ export class UsageProviderZai implements IUsageProvider {
     expectedLabel: string
     limitRecord?: Record<string, unknown>
     windowMs?: number
-  }): IUsageWindow | undefined {
+  }): UsageWindow | undefined {
     if (params.limitRecord === undefined) {
       return undefined
     }

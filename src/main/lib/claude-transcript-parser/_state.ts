@@ -1,6 +1,6 @@
-import { type ISessionTranscriptStats } from '#src/shared/session-model'
+import { type SessionTranscriptStats } from '#src/shared/business/model/session-model'
 
-export interface ITranscriptParseState {
+export type TranscriptParseState = {
   aiTitle: string
   cacheCreationTokens: number
   cacheReadTokens: number
@@ -18,7 +18,7 @@ export interface ITranscriptParseState {
 }
 
 export const claudeTranscriptParserState = {
-  create: (): ITranscriptParseState => {
+  create: (): TranscriptParseState => {
     return {
       aiTitle: '',
       cacheCreationTokens: 0,
@@ -37,7 +37,7 @@ export const claudeTranscriptParserState = {
     }
   },
 
-  resolveStats: (params: { state: ITranscriptParseState }): ISessionTranscriptStats => {
+  resolveStats: (params: { state: TranscriptParseState }): SessionTranscriptStats => {
     return {
       aiTitle: params.state.aiTitle,
       cacheCreationTokens: params.state.cacheCreationTokens,

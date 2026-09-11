@@ -1,4 +1,4 @@
-import { UsageStatus } from '#src/shared/usage-model'
+import { UsageStatus } from '#src/shared/business/enum/usage-status-enum'
 
 export const usageStatusUtil = {
   resolveStatusText: (status: UsageStatus): string => {

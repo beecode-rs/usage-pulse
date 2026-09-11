@@ -1,12 +1,13 @@
-import { type IUsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
-import { type IUsageWindow, type ProviderId } from '#src/shared/usage-model'
+import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import { type UsageWindow } from '#src/shared/business/model/usage-model'
 
-export class UsageProviderDummy implements IUsageProvider {
-  getProviderId(): ProviderId {
-    return 'dummy'
+export class UsageProviderDummy implements UsageProvider {
+  getProviderId(): ProviderIdMapper {
+    return ProviderIdMapper.DUMMY
   }
 
-  fetchUsage(_params: { accessToken: string }): Promise<IUsageWindow[]> {
+  fetchUsage(_params: { accessToken: string }): Promise<UsageWindow[]> {
     return Promise.resolve([])
   }
 }

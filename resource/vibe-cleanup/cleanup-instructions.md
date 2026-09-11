@@ -28,4 +28,42 @@
 ---
 - in @src/main/util/os-util.ts do not return string, return enum OS with UPPER_CASE_NAMES
 ---
+- we still have export const UPPER_CASE_NAME constant and config values, move values that can be set using env to config, and values that should not be change by user to constants. make sure that the name reflects what the value is and not what the value is used for. if it makes sense to group constant or config in values buy grouping them by name of where they are being used
 - i see that we are using throught the code the process.platform, we encapsulated the platofrm into the OS enum and we have a util function to extract the OS enum using @src/main/util/os-util.ts (targets: src/main/index.ts, src/main/lib/app-window.ts, src/main/lib/dev-desktop-entry.ts, src/main/business/service/trigger-command-service.ts)
+---
+- in @src/shared/util/constant.ts fix regex name to reflect what regex checks and not what it is used for
+---
+- in sec shared folder (@src/shared) group models into business model folder
+- enum must be in separate file and the name if the enum must be the file name plus enum suffix. and enums are a part of business model so move them to model folder
+- file name that holds only enum must have the enum suffix but the actual enum that is exportet must not have the Enum suffix
+- fix the mappers as well, thi file name ends with mapper-enum.ts
+---
+- ok lets move it (src/shared/provider-catalog.ts) to shared business model, and rename the it from entity to model. and if we don't need to use interface i would rather it to be type, like other models
+---
+- wirte contract tests for @src/shared/util/constant.ts
+---
+- we are currently using string union type for the provider id, for example in UsageModel (@src/shared/business/model/usage-model.ts) we must move the providers to enum and use them instead of string zai, claude and dummy.
+---
+- if you find type that start with I rename it by removing I as in Interface this is leftover from when we replaced interface with type. suggest a bettter name if removing I creates some conflict in naming
+---
+- src/shared/business/enum/session-sound-id-enum.ts: session sound id enum is actually a mapper, rename it
+- src/shared/business/enum/session-sound-mapper-enum.ts: session sound mapper enum soinds that it is only for session which currently is, but we must name our models what they are and not where they are used. so call it sound name mapper
+---
+@src/shared/business/model/trigger-model.ts name is so vage it is not explaining what the trigger is actually a schedule trigget. trigger is a good name but in our app we have multiple triggers one for schedule, one for usage reload per provider and one for session reload
+---
+- in the code we must convert string union types into enum and make new files per enum (like ScheduleTriggerRunPhase)
+- all enums that have different key vlaue names must have mapper in the name
+---
+- move all enums into a folder next to model named enum. in src main and shared, where you find an enum in model folder, just move it to folder next to that model folder named enum
+---
+- in the schedule trigger ts (@src/shared/business/model/schedule-trigger-model.ts) in shared golder we have a lots of config hardcoded vslues, move them to util/config. there is one constant vslue max window schedule trigger preset, move it to util consstsnt
+- we still have some export interface replace them with export type, we must use interface only if we are using inheritance for class
+---
+- in @src/shared/util/constant.ts if multiple keys have the same prefix like scheduleTriggerRun or scheduleTriggerRunLog create a parent kye like scheduleTriggerRun and scheduleTriggerRun.log.
+- do the same for planner, scheduleTrigger but move min/max. also move min/max to other const values more to the right to the value it is representing, not the feature, like scheduleTrigger
+- do the same for the default like min and max
+---
+- in the constants we are using different time valuse, like seconds, hours, minutes, we need to standardise the time and use only milliseconds ms
+- we still have minutes in planner under constants (@src/shared/util/constant.ts), use ms here as well
+---
+- @src/shared/business/model/trigger-planner-model.ts has some business logic, split the model definition from business locig, move the business logic to the service layer and leave the model here

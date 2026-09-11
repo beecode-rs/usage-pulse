@@ -1,5 +1,6 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
+import { AppViewIdMapper } from '#src/renderer/src/business/model/app-view-id-mapper-enum'
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { DashboardEmptyBox } from '#src/renderer/src/ui-component/dashboard/dashboard-empty-box'
@@ -9,10 +10,10 @@ import '#src/renderer/src/ui-component/dashboard/dashboard.css'
 import '#src/renderer/src/ui-component/sessions/sessions.css'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { type ISessionInfo, type ISessionSnapshot } from '#src/shared/session-model'
-import type { IUsageSnapshot } from '#src/shared/usage-model'
+import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
+import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
 
-const resolveSessionKey = (session: ISessionInfo): string => {
+const resolveSessionKey = (session: SessionInfo): string => {
   const hostId = session.hostId ?? 'local'
 
   return `${hostId}:${session.sessionId}:${String(session.pid)}`
@@ -20,13 +21,13 @@ const resolveSessionKey = (session: ISessionInfo): string => {
 
 export const DashboardPage = (props: {
   finishedAtBySessionId: Record<string, number>
-  onNavigate: (viewId: 'sessions' | 'usage') => void
-  pulseSeconds: number
+  onNavigate: (viewId: AppViewIdMapper.SESSIONS | AppViewIdMapper.USAGE) => void
+  pulseMs: number
 }): ReactElement => {
-  const { finishedAtBySessionId, onNavigate, pulseSeconds } = props
+  const { finishedAtBySessionId, onNavigate, pulseMs } = props
 
-  const [usageSnapshot, setUsageSnapshot] = useState<IUsageSnapshot | undefined>(undefined)
-  const [sessionSnapshot, setSessionSnapshot] = useState<ISessionSnapshot | undefined>(undefined)
+  const [usageSnapshot, setUsageSnapshot] = useState<UsageSnapshot | undefined>(undefined)
+  const [sessionSnapshot, setSessionSnapshot] = useState<SessionSnapshot | undefined>(undefined)
   const [focusErrorMessage, setFocusErrorMessage] = useState('')
   const [sessionsErrorMessage, setSessionsErrorMessage] = useState('')
 
@@ -112,7 +113,7 @@ export const DashboardPage = (props: {
           <DashboardEmptyBox
             label="Set up a tracker to monitor plan usage"
             onOpen={() => {
-              onNavigate('usage')
+              onNavigate(AppViewIdMapper.USAGE)
             }}
             title="Usage"
           />
@@ -125,7 +126,7 @@ export const DashboardPage = (props: {
               onFocus={() => {
                 void focusSession({ cwd: session.cwd, pid: session.pid })
               }}
-              pulseSeconds={pulseSeconds}
+              pulseMs={pulseMs}
               session={session}
             />
           )
@@ -134,7 +135,7 @@ export const DashboardPage = (props: {
           <DashboardEmptyBox
             label="No active sessions detected"
             onOpen={() => {
-              onNavigate('sessions')
+              onNavigate(AppViewIdMapper.SESSIONS)
             }}
             title="Sessions"
           />

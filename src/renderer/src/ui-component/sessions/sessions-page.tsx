@@ -15,18 +15,20 @@ import { SshHostsDialog } from '#src/renderer/src/ui-component/sessions/ssh-host
 import '#src/renderer/src/ui-component/sessions/sessions.css'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { type ISessionInfo, type ISessionSnapshot, type IUnreachableHost } from '#src/shared/session-model'
-import { DEFAULT_SESSIONS_REFRESH_INTERVAL_SECONDS, type IAppSettings } from '#src/shared/settings-model'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { type SessionInfo, type SessionSnapshot, type UnreachableHost } from '#src/shared/business/model/session-model'
+import type { AppSettings } from '#src/shared/business/model/settings-model'
+import { constant } from '#src/shared/util/constant'
 
 const NOW_TICK_INTERVAL_MS = 1000
 
-const resolveSessionKey = (session: ISessionInfo): string => {
+const resolveSessionKey = (session: SessionInfo): string => {
   const hostId = session.hostId ?? 'local'
 
   return `${hostId}:${session.sessionId}:${String(session.pid)}`
 }
 
-const resolveUnreachableHostsLabel = (hosts: IUnreachableHost[]): string => {
+const resolveUnreachableHostsLabel = (hosts: UnreachableHost[]): string => {
   const hostParts = hosts.map((host) => {
     return `${host.hostLabel} (${host.errorMessage})`
   })
@@ -44,18 +46,17 @@ const resolveSessionsWord = (count: number): string => {
 
 const resolveRefreshProgressPercent = (params: {
   cycleStartedAtMs: number
-  intervalSeconds: number
+  intervalMs: number
   nowMs: number
 }): number => {
-  const intervalMs = params.intervalSeconds * 1000
-  const elapsedMs = Math.min(intervalMs, Math.max(0, params.nowMs - params.cycleStartedAtMs))
+  const elapsedMs = Math.min(params.intervalMs, Math.max(0, params.nowMs - params.cycleStartedAtMs))
 
-  return (elapsedMs / intervalMs) * 100
+  return (elapsedMs / params.intervalMs) * 100
 }
 
 const resolveDisplayedErrorMessage = (params: {
   fetchErrorMessage: string
-  snapshot: ISessionSnapshot | undefined
+  snapshot: SessionSnapshot | undefined
 }): string => {
   if (params.fetchErrorMessage !== '') {
     return params.fetchErrorMessage
@@ -64,18 +65,18 @@ const resolveDisplayedErrorMessage = (params: {
   return params.snapshot?.errorMessage ?? ''
 }
 
-const resolveSummaryLabel = (sessions: ISessionInfo[]): string => {
+const resolveSummaryLabel = (sessions: SessionInfo[]): string => {
   const counts = sessions.reduce<{ busy: number; idle: number; unknown: number; waiting: number }>(
     (statusCounts, session) => {
-      if (session.status === 'busy') {
+      if (session.status === SessionStatusMapper.BUSY) {
         return { ...statusCounts, busy: statusCounts.busy + 1 }
       }
 
-      if (session.status === 'waiting') {
+      if (session.status === SessionStatusMapper.WAITING) {
         return { ...statusCounts, waiting: statusCounts.waiting + 1 }
       }
 
-      if (session.status === 'idle') {
+      if (session.status === SessionStatusMapper.IDLE) {
         return { ...statusCounts, idle: statusCounts.idle + 1 }
       }
 
@@ -107,14 +108,14 @@ const resolveSummaryLabel = (sessions: ISessionInfo[]): string => {
 
 export const SessionsPage = (props: {
   finishedAtBySessionId: Record<string, number>
-  pulseSeconds: number
+  pulseMs: number
 }): ReactElement => {
-  const { finishedAtBySessionId, pulseSeconds } = props
-  const [snapshot, setSnapshot] = useState<ISessionSnapshot | undefined>(undefined)
+  const { finishedAtBySessionId, pulseMs } = props
+  const [snapshot, setSnapshot] = useState<SessionSnapshot | undefined>(undefined)
   const [errorMessage, setErrorMessage] = useState('')
   const [isHostsOpen, setIsHostsOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
   const [nowMs, setNowMs] = useState((): number => {
     return Date.now()
   })
@@ -190,7 +191,7 @@ export const SessionsPage = (props: {
     })
   }
 
-  const refreshIntervalSeconds = settings?.sessionsRefreshIntervalSeconds ?? DEFAULT_SESSIONS_REFRESH_INTERVAL_SECONDS
+  const refreshIntervalMs = settings?.sessionsRefreshIntervalMs ?? constant.sessionsRefreshInterval.defaultMs
   const isAutoRefreshPaused = settings?.isSessionsAutoRefreshPaused ?? false
 
   useEffect(() => {
@@ -297,7 +298,7 @@ export const SessionsPage = (props: {
               onToggle={() => {
                 handleToggleSession({ key: sessionKey })
               }}
-              pulseSeconds={pulseSeconds}
+              pulseMs={pulseMs}
               session={session}
             />
           )
@@ -329,7 +330,7 @@ export const SessionsPage = (props: {
         <SessionsRefreshProgressBar
           percent={resolveRefreshProgressPercent({
             cycleStartedAtMs: snapshot.fetchedAt,
-            intervalSeconds: refreshIntervalSeconds,
+            intervalMs: refreshIntervalMs,
             nowMs,
           })}
         />

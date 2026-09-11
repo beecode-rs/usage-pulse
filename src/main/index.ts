@@ -20,7 +20,9 @@ import { devDesktopEntry } from '#src/main/lib/dev-desktop-entry'
 import { config } from '#src/main/util/config'
 import { errorUtil } from '#src/main/util/error-util'
 import { NoSandboxReexecUtil } from '#src/main/util/no-sandbox-reexec-util'
-import { OS, osUtil } from '#src/main/util/os-util'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { ScheduleTriggerRunSourceMapper } from '#src/shared/business/enum/schedule-trigger-run-source-mapper-enum'
 
 const resolveFiredTriggerId = (): string | undefined => {
   const flagIndex = process.argv.indexOf('--fire-trigger')
@@ -46,7 +48,7 @@ const bootstrapTriggerWorker = (params: { triggerId: string }): void => {
   })
 
   void runner
-    .runTrigger({ source: 'os-schedule', triggerId: params.triggerId })
+    .runTrigger({ source: ScheduleTriggerRunSourceMapper.OS_SCHEDULE, triggerId: params.triggerId })
     .then(({ exitCode }) => {
       app.exit(exitCode)
     })

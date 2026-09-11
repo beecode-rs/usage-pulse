@@ -3,24 +3,24 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 
 import { ClaudeTranscriptParserService } from '#src/main/lib/claude-transcript-parser/service'
-import { type ISessionInfo, type ISessionTranscriptStats } from '#src/shared/session-model'
+import { type SessionInfo, type SessionTranscriptStats } from '#src/shared/business/model/session-model'
 
 const CACHE_ENTRY_LIMIT = 500
 
-interface ITranscriptCacheEntry {
+type TranscriptCacheEntry = {
   mtimeMs: number
-  transcript: ISessionTranscriptStats | undefined
+  transcript: SessionTranscriptStats | undefined
 }
 
 export class SessionTranscriptService {
-  protected readonly _cacheByPath = new Map<string, ITranscriptCacheEntry>()
+  protected readonly _cacheByPath = new Map<string, TranscriptCacheEntry>()
   protected readonly _homeDir: string
 
   constructor(params: { homeDir?: string } = {}) {
     this._homeDir = params.homeDir ?? homedir()
   }
 
-  async enrichSessions(params: { sessions: ISessionInfo[] }): Promise<ISessionInfo[]> {
+  async enrichSessions(params: { sessions: SessionInfo[] }): Promise<SessionInfo[]> {
     return Promise.all(
       params.sessions.map((session) => {
         return this._enrichSession({ session })
@@ -28,7 +28,7 @@ export class SessionTranscriptService {
     )
   }
 
-  protected async _enrichSession(params: { session: ISessionInfo }): Promise<ISessionInfo> {
+  protected async _enrichSession(params: { session: SessionInfo }): Promise<SessionInfo> {
     if (params.session.hostId !== undefined) {
       return params.session
     }
@@ -46,8 +46,8 @@ export class SessionTranscriptService {
   }
 
   protected _resolveDisplayableTranscript(params: {
-    stats: ISessionTranscriptStats
-  }): ISessionTranscriptStats | undefined {
+    stats: SessionTranscriptStats
+  }): SessionTranscriptStats | undefined {
     if (new ClaudeTranscriptParserService().hasSignal(params.stats)) {
       return params.stats
     }
@@ -64,7 +64,7 @@ export class SessionTranscriptService {
   protected async _resolveTranscript(params: {
     cwd: string
     sessionId: string
-  }): Promise<ISessionTranscriptStats | undefined> {
+  }): Promise<SessionTranscriptStats | undefined> {
     if (params.cwd === '' || params.sessionId === '') {
       return undefined
     }
@@ -94,7 +94,7 @@ export class SessionTranscriptService {
   protected _storeCacheEntry(params: {
     filePath: string
     mtimeMs: number
-    transcript: ISessionTranscriptStats | undefined
+    transcript: SessionTranscriptStats | undefined
   }): void {
     if (this._cacheByPath.size >= CACHE_ENTRY_LIMIT) {
       this._cacheByPath.clear()

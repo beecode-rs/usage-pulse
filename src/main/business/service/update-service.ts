@@ -1,15 +1,15 @@
 import { objectUtil } from '#src/main/util/object-util'
 import { VersionCompareUtil } from '#src/main/util/version-compare-util'
-import { type IUpdateStatus, type UpdateStatusListener } from '#src/shared/update-model'
+import { type UpdateStatus, type UpdateStatusListener } from '#src/shared/business/model/update-model'
 
-interface ILatestRelease {
+type LatestRelease = {
   htmlUrl: string
   tagName: string
 }
 
 export class UpdateService {
   protected _listeners: UpdateStatusListener[] = []
-  protected _status: IUpdateStatus
+  protected _status: UpdateStatus
   protected readonly _latestReleaseUrl = 'https://api.github.com/repos/beecode-rs/usage-pulse/releases/latest'
   protected readonly _requestTimeoutMs = 10_000
 
@@ -17,11 +17,11 @@ export class UpdateService {
     this._status = { currentVersion: params.currentVersion, isUpdateAvailable: false }
   }
 
-  getStatus(): IUpdateStatus {
+  getStatus(): UpdateStatus {
     return this._status
   }
 
-  async checkForUpdate(): Promise<IUpdateStatus> {
+  async checkForUpdate(): Promise<UpdateStatus> {
     try {
       const latestRelease = await this._fetchLatestRelease()
       const nextStatus = this._resolveNextStatus({ latestRelease })
@@ -45,7 +45,7 @@ export class UpdateService {
     }
   }
 
-  protected _resolveNextStatus(params: { latestRelease: ILatestRelease }): IUpdateStatus {
+  protected _resolveNextStatus(params: { latestRelease: LatestRelease }): UpdateStatus {
     const currentVersion = this._status.currentVersion
     const isUpdateAvailable = new VersionCompareUtil().isNewerVersion({
       candidateVersion: params.latestRelease.tagName,
@@ -74,7 +74,7 @@ export class UpdateService {
     return trimmedTagName
   }
 
-  protected async _fetchLatestRelease(): Promise<ILatestRelease> {
+  protected async _fetchLatestRelease(): Promise<LatestRelease> {
     const response = await fetch(this._latestReleaseUrl, {
       headers: { accept: 'application/vnd.github+json' },
       signal: AbortSignal.timeout(this._requestTimeoutMs),
@@ -94,7 +94,7 @@ export class UpdateService {
     return this._extractLatestRelease({ rawRelease })
   }
 
-  protected _extractLatestRelease(params: { rawRelease: Record<string, unknown> }): ILatestRelease {
+  protected _extractLatestRelease(params: { rawRelease: Record<string, unknown> }): LatestRelease {
     const htmlUrl = params.rawRelease['html_url']
     const tagName = params.rawRelease['tag_name']
 
@@ -105,7 +105,7 @@ export class UpdateService {
     return { htmlUrl, tagName }
   }
 
-  protected _notifyListeners(params: { status: IUpdateStatus }): void {
+  protected _notifyListeners(params: { status: UpdateStatus }): void {
     this._listeners.forEach((listener) => {
       listener(params.status)
     })

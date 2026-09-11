@@ -1,16 +1,17 @@
 import { developmentPrefsUtil } from '#src/renderer/src/util/development-prefs-util'
-import { type IProviderCatalogEntry, PROVIDER_CATALOG } from '#src/shared/provider-catalog'
-import type { ProviderId } from '#src/shared/usage-model'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import { type ProviderCatalogEntry } from '#src/shared/business/model/provider-catalog-model'
+import { constant } from '#src/shared/util/constant'
 
-const DEV_ONLY_PROVIDER_IDS: ProviderId[] = ['dummy']
+const DEV_ONLY_PROVIDER_IDS: ProviderIdMapper[] = [ProviderIdMapper.DUMMY]
 
 export const providerCatalogUtil = {
-  resolveVisibleCatalogEntries: (): IProviderCatalogEntry[] => {
+  resolveVisibleCatalogEntries: (): ProviderCatalogEntry[] => {
     if (developmentPrefsUtil.loadIsUnlocked()) {
-      return PROVIDER_CATALOG
+      return constant.providerCatalog
     }
 
-    return PROVIDER_CATALOG.filter((catalogEntry) => {
+    return constant.providerCatalog.filter((catalogEntry) => {
       return !DEV_ONLY_PROVIDER_IDS.includes(catalogEntry.id)
     })
   },

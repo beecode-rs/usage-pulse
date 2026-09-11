@@ -1,6 +1,4 @@
-import { OS } from '#src/shared/os-model'
-
-export { OS }
+import { OS } from '#src/shared/business/enum/os-enum'
 
 export const osUtil = {
   resolvePlatform: (): OS => {

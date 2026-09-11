@@ -2,29 +2,36 @@ import type { ReactElement } from 'react'
 
 import '#src/renderer/src/ui-component/schedule/day-time-schedule-fields.css'
 import { DayTimeSelect } from '#src/renderer/src/ui-component/schedule/day-time-select'
-import { TRIGGER_DAYS, type TriggerDay } from '#src/shared/trigger-model'
+import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
+import { constant } from '#src/shared/util/constant'
 
-const TRIGGER_DAY_LABELS: Record<TriggerDay, string> = {
-  friday: 'Fri',
-  monday: 'Mon',
-  saturday: 'Sat',
-  sunday: 'Sun',
-  thursday: 'Thu',
-  tuesday: 'Tue',
-  wednesday: 'Wed',
+const TRIGGER_DAY_LABELS: Record<ScheduleTriggerDayMapper, string> = {
+  [ScheduleTriggerDayMapper.FRIDAY]: 'Fri',
+  [ScheduleTriggerDayMapper.MONDAY]: 'Mon',
+  [ScheduleTriggerDayMapper.SATURDAY]: 'Sat',
+  [ScheduleTriggerDayMapper.SUNDAY]: 'Sun',
+  [ScheduleTriggerDayMapper.THURSDAY]: 'Thu',
+  [ScheduleTriggerDayMapper.TUESDAY]: 'Tue',
+  [ScheduleTriggerDayMapper.WEDNESDAY]: 'Wed',
 }
 
-const WEEKDAY_DAYS: TriggerDay[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
-const WEEKEND_DAYS: TriggerDay[] = ['saturday', 'sunday']
+const WEEKDAY_DAYS: ScheduleTriggerDayMapper[] = [
+  ScheduleTriggerDayMapper.MONDAY,
+  ScheduleTriggerDayMapper.TUESDAY,
+  ScheduleTriggerDayMapper.WEDNESDAY,
+  ScheduleTriggerDayMapper.THURSDAY,
+  ScheduleTriggerDayMapper.FRIDAY,
+]
+const WEEKEND_DAYS: ScheduleTriggerDayMapper[] = [ScheduleTriggerDayMapper.SATURDAY, ScheduleTriggerDayMapper.SUNDAY]
 
 export const DayTimeScheduleFields = (props: {
-  days: TriggerDay[]
-  onChange: (schedule: { days: TriggerDay[]; times: string[] }) => void
+  days: ScheduleTriggerDayMapper[]
+  onChange: (schedule: { days: ScheduleTriggerDayMapper[]; times: string[] }) => void
   times: string[]
 }): ReactElement => {
   const { days, onChange, times } = props
 
-  const resolveChipClassName = (day: TriggerDay): string => {
+  const resolveChipClassName = (day: ScheduleTriggerDayMapper): string => {
     if (days.includes(day)) {
       return 'trigger-chip is-active'
     }
@@ -32,7 +39,7 @@ export const DayTimeScheduleFields = (props: {
     return 'trigger-chip'
   }
 
-  const handleToggleDay = (day: TriggerDay): void => {
+  const handleToggleDay = (day: ScheduleTriggerDayMapper): void => {
     const selectedDays = new Set(days)
 
     if (selectedDays.has(day)) {
@@ -42,14 +49,14 @@ export const DayTimeScheduleFields = (props: {
     }
 
     onChange({
-      days: TRIGGER_DAYS.filter((candidateDay) => {
+      days: constant.scheduleTrigger.days.filter((candidateDay) => {
         return selectedDays.has(candidateDay)
       }),
       times,
     })
   }
 
-  const handleSelectDays = (selectedDays: TriggerDay[]): void => {
+  const handleSelectDays = (selectedDays: ScheduleTriggerDayMapper[]): void => {
     onChange({ days: selectedDays, times })
   }
 
@@ -84,7 +91,7 @@ export const DayTimeScheduleFields = (props: {
       <div className="settings-field">
         <span className="settings-field-label">Days</span>
         <div className="trigger-card-chips">
-          {TRIGGER_DAYS.map((day) => {
+          {constant.scheduleTrigger.days.map((day) => {
             return (
               <button
                 className={resolveChipClassName(day)}
@@ -121,7 +128,7 @@ export const DayTimeScheduleFields = (props: {
           <button
             className="button"
             onClick={() => {
-              handleSelectDays([...TRIGGER_DAYS])
+              handleSelectDays([...constant.scheduleTrigger.days])
             }}
             type="button"
           >

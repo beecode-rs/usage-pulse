@@ -9,11 +9,12 @@ import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { usageStatusUtil } from '#src/renderer/src/util/usage-status-util'
 import { usageWindowUtil } from '#src/renderer/src/util/usage-window-util'
 import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
-import { type IProviderSnapshot, UsageStatus } from '#src/shared/usage-model'
+import { UsageStatus } from '#src/shared/business/enum/usage-status-enum'
+import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
 
 const TICK_INTERVAL_MS = 30_000
 
-const resolveStatusMessage = (params: { providerSnapshot: IProviderSnapshot }): string => {
+const resolveStatusMessage = (params: { providerSnapshot: ProviderSnapshot }): string => {
   switch (params.providerSnapshot.status) {
     case UsageStatus.ERROR: {
       return params.providerSnapshot.errorMessage ?? usageStatusUtil.resolveStatusText(UsageStatus.ERROR)
@@ -33,7 +34,7 @@ const resolveStatusMessage = (params: { providerSnapshot: IProviderSnapshot }): 
   }
 }
 
-export const DashboardUsageBox = (props: { providerSnapshot: IProviderSnapshot }): ReactElement => {
+export const DashboardUsageBox = (props: { providerSnapshot: ProviderSnapshot }): ReactElement => {
   const { providerSnapshot } = props
   const [now, setNow] = useState((): number => {
     return Date.now()

@@ -1,8 +1,8 @@
-import { type ITriggerConfig } from '#src/shared/trigger-model'
+import { type ScheduleTriggerConfig } from '#src/shared/business/model/schedule-trigger-model'
 import { constant } from '#src/shared/util/constant'
 
 export const triggerValidationUtil = {
-  resolveValidationError(params: { trigger: ITriggerConfig }): string | undefined {
+  resolveValidationError(params: { trigger: ScheduleTriggerConfig }): string | undefined {
     if (params.trigger.command.trim() === '') {
       return 'Enter a command for this trigger to run.'
     }
@@ -20,7 +20,7 @@ export const triggerValidationUtil = {
     }
 
     const hasInvalidTime = filledTimes.some((time) => {
-      return !constant.triggerTimeRegex.test(time)
+      return !constant.twentyFourHourTimeRegex.test(time)
     })
 
     if (hasInvalidTime) {

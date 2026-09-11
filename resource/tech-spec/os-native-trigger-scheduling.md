@@ -6,9 +6,9 @@
   * 1.3 [renderer (Triggers tab)](#renderer-triggers-tab)
 * 2 [Model](#Model)
   * 2.1 [main (Electron)](#main-electron-1)
-    * 2.1.1 [IAppSettings (delta)](#iappsettings-delta)
-    * 2.1.2 [ITriggerConfig (new)](#itriggerconfig-new)
-    * 2.1.3 [ITriggerRunLogEntry (new)](#itriggerrunlogentry-new)
+    * 2.1.1 [AppSettings (delta)](#iappsettings-delta)
+    * 2.1.2 [TriggerConfig (new)](#itriggerconfig-new)
+    * 2.1.3 [TriggerRunLogEntry (new)](#itriggerrunlogentry-new)
 * 3 [Flow](#Flow)
   * 3.1 [Backend](#Backend)
     * 3.1.1 [Create / update / delete trigger](#create-update-delete-trigger)
@@ -34,7 +34,7 @@ Companion research with full per-OS templates (plist XML, `schtasks` commands, s
 New IPC channels:
 
 * `TRIGGER_LIST` — return all trigger configs joined with their last run log entry and OS registration health.
-* `TRIGGER_SAVE` — create or update a trigger config; body: full `ITriggerConfig`; upserts the OS registration.
+* `TRIGGER_SAVE` — create or update a trigger config; body: full `TriggerConfig`; upserts the OS registration.
 * `TRIGGER_DELETE` — remove the OS registration and the trigger config; keeps log history.
 * `TRIGGER_RUN_NOW` — execute the trigger pipeline immediately; logged with `trigger: 'manual'`.
 * `TRIGGER_LOG_LIST` — paged read of the run log; filter by `triggerId`.
@@ -45,7 +45,7 @@ New headless entry mode:
 
 * App started with `--fire-trigger <triggerId>` runs the worker pipeline and exits; it never creates a window. Exit code 0 = command succeeded, non-zero = failed/skipped-error (gives `schtasks Last Result` / systemd something truthful).
 
-Worker-side guards (safety net on top of OS schedule): trigger must exist and be enabled; today must be one of its days; "now" must be within `staleSkipMinutes` of a configured slot (default 30 — suppresses launchd/systemd wake catch-up firing a 09:00 slot at 11:47). Skipped runs are logged as `skipped` with a reason.
+Worker-side guards (safety net on top of OS schedule): trigger must exist and be enabled; today must be one of its days; "now" must be within `staleSkipMs` of a configured slot (default 1_800_000 ms, i.e. 30 minutes — suppresses launchd/systemd wake catch-up firing a 09:00 slot at 11:47). Skipped runs are logged as `skipped` with a reason.
 
 ## OS registrations
 
@@ -79,24 +79,24 @@ New side-menu page **Triggers**:
 
 ## main (Electron)
 
-### IAppSettings (delta)
+### AppSettings (delta)
 
 ```
 @startuml
-class IAppSettings {
+class AppSettings {
   ..
-  +triggers: ITriggerConfig[]
+  +triggers: TriggerConfig[]
 }
 @enduml
 ```
 
 Optional field; absent (`undefined`) is treated as "no triggers" — no migration.
 
-### ITriggerConfig (new)
+### TriggerConfig (new)
 
 ```
 @startuml
-class ITriggerConfig {
+class TriggerConfig {
   +id: string
   +name: string
   +command: string
@@ -106,7 +106,7 @@ class ITriggerConfig {
   +isEnabled: boolean
   +createdAt: number
 }
-note for ITriggerConfig
+note for TriggerConfig
   id: stable unique id "tr_" + 8 random
   alphanumeric chars, generated once at
   creation. Embedded in: OS artifact
@@ -115,13 +115,13 @@ note for ITriggerConfig
   worker argv (--fire-trigger <id>),
   and every log line.
 end note
-note for ITriggerConfig
+note for TriggerConfig
   command: full shell command line as
   typed by the user, e.g.
   claude -p "What is your name?"
   or claudez -p "What is your name?"
 end note
-note for ITriggerConfig
+note for TriggerConfig
   days: subset of Mon..Sun
   times: ["HH:mm", ...] local time
   timeoutMs: kill the CLI after this
@@ -129,11 +129,11 @@ end note
 @enduml
 ```
 
-### ITriggerRunLogEntry (new)
+### TriggerRunLogEntry (new)
 
 ```
 @startuml
-class ITriggerRunLogEntry {
+class TriggerRunLogEntry {
   +eventId: string
   +triggerId: string
   +triggerName: string
@@ -146,7 +146,7 @@ class ITriggerRunLogEntry {
   +outputSnippet: string
   +skipReason: string
 }
-note for ITriggerRunLogEntry
+note for TriggerRunLogEntry
   Stored as JSONL in
   userData/usage-pulse-trigger-log.jsonl
   (one line per event). eventId:

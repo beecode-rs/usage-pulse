@@ -2,22 +2,23 @@ import type { ReactElement } from 'react'
 
 import { DayTimeScheduleFields } from '#src/renderer/src/ui-component/schedule/day-time-schedule-fields'
 import { trackerTokenSourceUtil } from '#src/renderer/src/util/tracker-token-source-util'
-import type { OS } from '#src/shared/os-model'
-import { PROVIDER_CATALOG } from '#src/shared/provider-catalog'
-import {
-  ClaudeTokenSource,
-  type ITrackerConfig,
-  MAX_REFRESH_INTERVAL_MINUTES,
-  MIN_REFRESH_INTERVAL_MINUTES,
-} from '#src/shared/settings-model'
+import { ClaudeTokenSource } from '#src/shared/business/enum/claude-token-source-enum'
+import type { OS } from '#src/shared/business/enum/os-enum'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import type { TrackerConfig } from '#src/shared/business/model/settings-model'
+import { constant } from '#src/shared/util/constant'
+
+const maxTrackerRefreshIntervalMinutes = constant.trackerRefreshInterval.maxMs / 60_000
+
+const minTrackerRefreshIntervalMinutes = constant.trackerRefreshInterval.minMs / 60_000
 
 export const TrackerConfigFields = (props: {
-  config: ITrackerConfig
-  onChange: (config: ITrackerConfig) => void
+  config: TrackerConfig
+  onChange: (config: TrackerConfig) => void
   osPlatform: OS
 }): ReactElement => {
   const { config, onChange, osPlatform } = props
-  const catalogEntry = PROVIDER_CATALOG.find((entry) => {
+  const catalogEntry = constant.providerCatalog.find((entry) => {
     return entry.id === config.providerId
   })
   const providerDisplayName = catalogEntry?.name ?? config.providerId
@@ -37,7 +38,7 @@ export const TrackerConfigFields = (props: {
           value={config.name}
         />
       </label>
-      {config.providerId === 'claude' && (
+      {config.providerId === ProviderIdMapper.CLAUDE && (
         <div className="settings-field">
           <span className="settings-field-label">Access token</span>
           <div className="settings-token-source-row">
@@ -82,7 +83,7 @@ export const TrackerConfigFields = (props: {
           )}
         </div>
       )}
-      {config.providerId === 'zai' && (
+      {config.providerId === ProviderIdMapper.ZAI && (
         <label className="settings-field">
           <span className="settings-field-label">Access token</span>
           <input
@@ -96,7 +97,7 @@ export const TrackerConfigFields = (props: {
           />
         </label>
       )}
-      {config.providerId === 'dummy' && (
+      {config.providerId === ProviderIdMapper.DUMMY && (
         <>
           <DayTimeScheduleFields
             days={config.days}
@@ -115,8 +116,8 @@ export const TrackerConfigFields = (props: {
         <span className="settings-field-label">Refresh interval (minutes)</span>
         <input
           className="settings-field-input"
-          max={MAX_REFRESH_INTERVAL_MINUTES}
-          min={MIN_REFRESH_INTERVAL_MINUTES}
+          max={maxTrackerRefreshIntervalMinutes}
+          min={minTrackerRefreshIntervalMinutes}
           onChange={(event) => {
             const minutes = Number.parseInt(event.target.value, 10)
 
@@ -125,14 +126,14 @@ export const TrackerConfigFields = (props: {
             }
 
             const clampedMinutes = Math.min(
-              Math.max(minutes, MIN_REFRESH_INTERVAL_MINUTES),
-              MAX_REFRESH_INTERVAL_MINUTES,
+              Math.max(minutes, minTrackerRefreshIntervalMinutes),
+              maxTrackerRefreshIntervalMinutes,
             )
 
-            onChange({ ...config, refreshIntervalSeconds: clampedMinutes * 60 })
+            onChange({ ...config, refreshIntervalMs: clampedMinutes * 60_000 })
           }}
           type="number"
-          value={Math.round(config.refreshIntervalSeconds / 60)}
+          value={Math.round(config.refreshIntervalMs / 60_000)}
         />
         <span className="settings-hint">How often this tracker refreshes automatically.</span>
       </label>

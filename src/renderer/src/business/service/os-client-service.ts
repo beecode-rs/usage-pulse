@@ -1,4 +1,4 @@
-import type { OS } from '#src/shared/os-model'
+import type { OS } from '#src/shared/business/enum/os-enum'
 
 export const osClientService = {
   getPlatform: (): Promise<OS> => {

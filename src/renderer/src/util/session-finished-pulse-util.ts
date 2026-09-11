@@ -1,19 +1,18 @@
 import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
-import { type ISessionInfo } from '#src/shared/session-model'
-
-const MILLISECONDS_PER_SECOND = 1000
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { type SessionInfo } from '#src/shared/business/model/session-model'
 
 export const sessionFinishedPulseUtil = {
   resolveFinishedAtBySessionId: (params: {
-    currentSessions: ISessionInfo[]
+    currentSessions: SessionInfo[]
     finishedAtBySessionId: Record<string, number>
     nowMs: number
-    previousSessions?: ISessionInfo[]
+    previousSessions?: SessionInfo[]
   }): Record<string, number> => {
     const idleSessionIds = new Set(
       params.currentSessions
         .filter((session) => {
-          return session.status === 'idle'
+          return session.status === SessionStatusMapper.IDLE
         })
         .map((session) => {
           return session.sessionId
@@ -25,9 +24,9 @@ export const sessionFinishedPulseUtil = {
     const finishedEntries = new SessionSoundUtil()
       .resolveStatusTransitionSessionIds({
         currentSessions: params.currentSessions,
-        fromStatus: 'busy',
+        fromStatus: SessionStatusMapper.BUSY,
         previousSessions: params.previousSessions,
-        toStatus: 'idle',
+        toStatus: SessionStatusMapper.IDLE,
       })
       .map((sessionId): [string, number] => {
         return [sessionId, params.nowMs]
@@ -36,11 +35,11 @@ export const sessionFinishedPulseUtil = {
     return Object.fromEntries([...keptEntries, ...finishedEntries])
   },
 
-  resolveIsPulsing: (params: { finishedAtMs?: number; nowMs: number; pulseSeconds: number }): boolean => {
-    if (params.finishedAtMs === undefined || params.pulseSeconds <= 0) {
+  resolveIsPulsing: (params: { finishedAtMs?: number; nowMs: number; pulseMs: number }): boolean => {
+    if (params.finishedAtMs === undefined || params.pulseMs <= 0) {
       return false
     }
 
-    return params.nowMs - params.finishedAtMs < params.pulseSeconds * MILLISECONDS_PER_SECOND
+    return params.nowMs - params.finishedAtMs < params.pulseMs
   },
 }

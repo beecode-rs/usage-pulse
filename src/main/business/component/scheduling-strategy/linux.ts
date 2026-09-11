@@ -5,32 +5,34 @@ import { join } from 'node:path'
 import { promisify } from 'node:util'
 
 import type {
-  ISchedulingInspection,
-  ISchedulingRegistrationParams,
-  ISchedulingStrategy,
+  SchedulingInspection,
+  SchedulingRegistrationParams,
+  SchedulingStrategy,
 } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
 import { config } from '#src/main/util/config'
 import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/main/util/error-util'
-import { OS, osUtil } from '#src/main/util/os-util'
-import { TRIGGER_DAYS, type TriggerDay } from '#src/shared/trigger-model'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
+import { constant as sharedConstant } from '#src/shared/util/constant'
 
 const execFileAsync = promisify(execFile)
 
-export class SchedulingStrategyLinux implements ISchedulingStrategy {
+export class SchedulingStrategyLinux implements SchedulingStrategy {
   readonly isSupported: boolean
 
   protected readonly _homeDir: string
-  protected readonly _systemctlProbeTimeoutMs = 5000
-  protected readonly _systemctlTimeoutMs = 10000
-  protected readonly _systemdDayByTriggerDay: Record<TriggerDay, string> = {
-    friday: 'Fri',
-    monday: 'Mon',
-    saturday: 'Sat',
-    sunday: 'Sun',
-    thursday: 'Thu',
-    tuesday: 'Tue',
-    wednesday: 'Wed',
+  protected readonly _systemctlProbeTimeoutMs = config.systemctlProbeTimeoutMs
+  protected readonly _systemctlTimeoutMs = config.systemctlTimeoutMs
+  protected readonly _systemdDayByTriggerDay: Record<ScheduleTriggerDayMapper, string> = {
+    [ScheduleTriggerDayMapper.FRIDAY]: 'Fri',
+    [ScheduleTriggerDayMapper.MONDAY]: 'Mon',
+    [ScheduleTriggerDayMapper.SATURDAY]: 'Sat',
+    [ScheduleTriggerDayMapper.SUNDAY]: 'Sun',
+    [ScheduleTriggerDayMapper.THURSDAY]: 'Thu',
+    [ScheduleTriggerDayMapper.TUESDAY]: 'Tue',
+    [ScheduleTriggerDayMapper.WEDNESDAY]: 'Wed',
   }
 
   protected readonly _systemdExecQuoteTriggerCharacters = new Set([
@@ -74,7 +76,7 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
     return OS.LINUX
   }
 
-  async inspectRegistration(params: { triggerId: string }): Promise<ISchedulingInspection> {
+  async inspectRegistration(params: { triggerId: string }): Promise<SchedulingInspection> {
     const isTimerUnitFilePresent = await this._resolveIsTimerUnitFilePresent({ triggerId: params.triggerId })
     const isTimerActive = await this._resolveIsTimerActive({ triggerId: params.triggerId })
 
@@ -100,7 +102,7 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
     await this._reloadDaemon()
   }
 
-  async upsertRegistration(params: ISchedulingRegistrationParams): Promise<void> {
+  async upsertRegistration(params: SchedulingRegistrationParams): Promise<void> {
     this._assertRegistrationParams(params)
     await this._writeUnitFiles(params)
     await this._reloadDaemon()
@@ -122,7 +124,7 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
     }
   }
 
-  protected _assertRegistrationParams(params: ISchedulingRegistrationParams): void {
+  protected _assertRegistrationParams(params: SchedulingRegistrationParams): void {
     if (!/^[A-Za-z0-9_-]+$/.test(params.triggerId)) {
       throw new Error(
         `Invalid trigger id '${params.triggerId}': only alphanumerics, underscores and hyphens are allowed`,
@@ -166,10 +168,11 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
     })
   }
 
-  protected _buildOnCalendarValues(params: { days: TriggerDay[]; times: string[] }): string[] {
-    const daysValue = TRIGGER_DAYS.filter((day) => {
-      return params.days.includes(day)
-    })
+  protected _buildOnCalendarValues(params: { days: ScheduleTriggerDayMapper[]; times: string[] }): string[] {
+    const daysValue = sharedConstant.scheduleTrigger.days
+      .filter((day) => {
+        return params.days.includes(day)
+      })
       .map((day) => {
         return this._systemdDayByTriggerDay[day]
       })
@@ -180,7 +183,7 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
     })
   }
 
-  protected _buildServiceUnitContent(params: ISchedulingRegistrationParams): string {
+  protected _buildServiceUnitContent(params: SchedulingRegistrationParams): string {
     const execStartValue = [params.executablePath, ...params.executableArgs]
       .map((argument) => {
         return this._formatSystemdExecArg(argument)
@@ -198,7 +201,7 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
     return `${unitLines.join('\n')}\n`
   }
 
-  protected _buildTimerUnitContent(params: ISchedulingRegistrationParams): string {
+  protected _buildTimerUnitContent(params: SchedulingRegistrationParams): string {
     const onCalendarLines = this._buildOnCalendarValues({ days: params.days, times: params.times }).map((value) => {
       return `OnCalendar=${value}`
     })
@@ -383,7 +386,7 @@ export class SchedulingStrategyLinux implements ISchedulingStrategy {
     }
   }
 
-  protected async _writeUnitFiles(params: ISchedulingRegistrationParams): Promise<void> {
+  protected async _writeUnitFiles(params: SchedulingRegistrationParams): Promise<void> {
     await mkdir(this._unitDir, { recursive: true })
     await writeFile(
       this._resolveServiceUnitPath({ triggerId: params.triggerId }),

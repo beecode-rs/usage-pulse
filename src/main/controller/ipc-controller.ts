@@ -9,17 +9,18 @@ import { type UpdateService } from '#src/main/business/service/update-service'
 import { type UsagePollService } from '#src/main/business/service/usage-poll-service'
 import { type SettingsUseCase } from '#src/main/business/use-case/settings-use-case'
 import { objectUtil } from '#src/main/util/object-util'
-import { type OS, osUtil } from '#src/main/util/os-util'
-import { IpcChannelMapper } from '#src/shared/ipc-channel'
-import { type ISessionFocusSupport, type ISessionSnapshot } from '#src/shared/session-model'
-import { type IAppSettings } from '#src/shared/settings-model'
+import { osUtil } from '#src/main/util/os-util'
+import { IpcChannelMapper } from '#src/shared/business/enum/ipc-channel-mapper-enum'
+import { type OS } from '#src/shared/business/enum/os-enum'
 import {
-  type ISchedulingInfo,
-  type ITriggerRegistrationHealth,
-  type ITriggerRunLogEntry,
-} from '#src/shared/trigger-model'
-import { type IUpdateStatus } from '#src/shared/update-model'
-import { type IUsageSnapshot } from '#src/shared/usage-model'
+  type ScheduleTriggerRegistrationHealth,
+  type ScheduleTriggerRunLogEntry,
+  type SchedulingInfo,
+} from '#src/shared/business/model/schedule-trigger-model'
+import { type SessionFocusSupport, type SessionSnapshot } from '#src/shared/business/model/session-model'
+import { type AppSettings } from '#src/shared/business/model/settings-model'
+import { type UpdateStatus } from '#src/shared/business/model/update-model'
+import { type UsageSnapshot } from '#src/shared/business/model/usage-model'
 
 export const ipcController = {
   register: (params: {
@@ -37,13 +38,13 @@ export const ipcController = {
       return osUtil.resolvePlatform()
     })
 
-    ipcMain.handle(IpcChannelMapper.SCHEDULING_GET_INFO, (): ISchedulingInfo => {
+    ipcMain.handle(IpcChannelMapper.SCHEDULING_GET_INFO, (): SchedulingInfo => {
       return params.schedulingService.getSchedulingInfo()
     })
 
     ipcMain.handle(
       IpcChannelMapper.SCHEDULING_SET_ENABLED,
-      async (_event, rawParams: unknown): Promise<IAppSettings> => {
+      async (_event, rawParams: unknown): Promise<AppSettings> => {
         const rawRecord = objectUtil.asRecord(rawParams)
         const isEnabled = rawRecord?.['isEnabled']
 
@@ -67,19 +68,19 @@ export const ipcController = {
       await params.sessionsService.focusSession({ cwd, pid })
     })
 
-    ipcMain.handle(IpcChannelMapper.SESSIONS_GET_FOCUS_SUPPORT, (): Promise<ISessionFocusSupport> => {
+    ipcMain.handle(IpcChannelMapper.SESSIONS_GET_FOCUS_SUPPORT, (): Promise<SessionFocusSupport> => {
       return params.sessionsService.getFocusSupport()
     })
 
-    ipcMain.handle(IpcChannelMapper.SESSIONS_GET_SNAPSHOT, (): ISessionSnapshot | undefined => {
+    ipcMain.handle(IpcChannelMapper.SESSIONS_GET_SNAPSHOT, (): SessionSnapshot | undefined => {
       return params.sessionsPollService.getSnapshot()
     })
 
-    ipcMain.handle(IpcChannelMapper.SESSIONS_INSTALL_FOCUS_TOOL, (): Promise<ISessionFocusSupport> => {
+    ipcMain.handle(IpcChannelMapper.SESSIONS_INSTALL_FOCUS_TOOL, (): Promise<SessionFocusSupport> => {
       return params.sessionsService.installFocusTool()
     })
 
-    ipcMain.handle(IpcChannelMapper.SESSIONS_LIST, async (): Promise<ISessionSnapshot> => {
+    ipcMain.handle(IpcChannelMapper.SESSIONS_LIST, async (): Promise<SessionSnapshot> => {
       return await params.sessionsPollService.refreshNow()
     })
 
@@ -94,11 +95,11 @@ export const ipcController = {
       await params.sshSessionsService.testHost({ url })
     })
 
-    ipcMain.handle(IpcChannelMapper.SETTINGS_GET, async (): Promise<IAppSettings> => {
+    ipcMain.handle(IpcChannelMapper.SETTINGS_GET, async (): Promise<AppSettings> => {
       return await params.settingsUseCase.loadSettings()
     })
 
-    ipcMain.handle(IpcChannelMapper.SETTINGS_SAVE, async (_event, rawSettings: unknown): Promise<IAppSettings> => {
+    ipcMain.handle(IpcChannelMapper.SETTINGS_SAVE, async (_event, rawSettings: unknown): Promise<AppSettings> => {
       return await params.settingsUseCase.saveSettings({ rawSettings })
     })
 
@@ -115,7 +116,7 @@ export const ipcController = {
 
     ipcMain.handle(
       IpcChannelMapper.TRIGGER_GET_RUN_LOGS,
-      async (_event, rawParams: unknown): Promise<ITriggerRunLogEntry[]> => {
+      async (_event, rawParams: unknown): Promise<ScheduleTriggerRunLogEntry[]> => {
         const rawRecord = objectUtil.asRecord(rawParams)
         const triggerId = rawRecord?.['triggerId']
 
@@ -127,13 +128,13 @@ export const ipcController = {
       },
     )
 
-    ipcMain.handle(IpcChannelMapper.TRIGGER_OS_INSPECT, async (): Promise<ITriggerRegistrationHealth[]> => {
+    ipcMain.handle(IpcChannelMapper.TRIGGER_OS_INSPECT, async (): Promise<ScheduleTriggerRegistrationHealth[]> => {
       const settings = await params.settingsUseCase.loadSettings()
 
       return await params.schedulingService.inspectRegistrations({ settings })
     })
 
-    ipcMain.handle(IpcChannelMapper.TRIGGER_SET_ENABLED, async (_event, rawParams: unknown): Promise<IAppSettings> => {
+    ipcMain.handle(IpcChannelMapper.TRIGGER_SET_ENABLED, async (_event, rawParams: unknown): Promise<AppSettings> => {
       const rawRecord = objectUtil.asRecord(rawParams)
       const triggerId = rawRecord?.['triggerId']
       const isEnabled = rawRecord?.['isEnabled']
@@ -145,7 +146,7 @@ export const ipcController = {
       return await params.settingsUseCase.setTriggerEnabled({ isEnabled, triggerId })
     })
 
-    ipcMain.handle(IpcChannelMapper.UPDATE_GET_STATUS, (): IUpdateStatus => {
+    ipcMain.handle(IpcChannelMapper.UPDATE_GET_STATUS, (): UpdateStatus => {
       return params.updateService.getStatus()
     })
 
@@ -159,7 +160,7 @@ export const ipcController = {
       void shell.openExternal(releaseUrl)
     })
 
-    ipcMain.handle(IpcChannelMapper.USAGE_GET_SNAPSHOT, (): IUsageSnapshot => {
+    ipcMain.handle(IpcChannelMapper.USAGE_GET_SNAPSHOT, (): UsageSnapshot => {
       return params.pollService.getSnapshot()
     })
 
@@ -177,7 +178,7 @@ export const ipcController = {
 
     ipcMain.handle(
       IpcChannelMapper.USAGE_SET_TRACKER_PAUSED,
-      async (_event, rawParams: unknown): Promise<IAppSettings> => {
+      async (_event, rawParams: unknown): Promise<AppSettings> => {
         const rawRecord = objectUtil.asRecord(rawParams)
         const trackerId = rawRecord?.['trackerId']
         const isAutoRefreshPaused = rawRecord?.['isAutoRefreshPaused']

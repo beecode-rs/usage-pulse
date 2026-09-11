@@ -1,5 +1,6 @@
 import { objectUtil } from '#src/main/util/object-util'
-import { type ISessionInfo, type SessionStatus } from '#src/shared/session-model'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { type SessionInfo } from '#src/shared/business/model/session-model'
 
 const SESSION_ORIGIN_ORDER = {
   local: 0,
@@ -7,7 +8,7 @@ const SESSION_ORIGIN_ORDER = {
 }
 
 export class SessionsParserService {
-  parseSessionEntries(params: { stdout: string }): ISessionInfo[] {
+  parseSessionEntries(params: { stdout: string }): SessionInfo[] {
     const parsed = this._tryParseSessionsJson({ stdout: params.stdout })
 
     if (!Array.isArray(parsed)) {
@@ -17,7 +18,7 @@ export class SessionsParserService {
     return this._sanitizeSessions({ rawEntries: parsed })
   }
 
-  sortSessions(sessions: ISessionInfo[]): ISessionInfo[] {
+  sortSessions(sessions: SessionInfo[]): SessionInfo[] {
     return [...sessions].sort((left, right) => {
       const originOrderDiff = this._resolveSessionOriginOrder(left) - this._resolveSessionOriginOrder(right)
 
@@ -29,7 +30,7 @@ export class SessionsParserService {
     })
   }
 
-  protected _resolveSessionInfo(params: { rawEntry: unknown }): ISessionInfo | undefined {
+  protected _resolveSessionInfo(params: { rawEntry: unknown }): SessionInfo | undefined {
     const rawRecord = objectUtil.asRecord(params.rawEntry)
 
     if (rawRecord === undefined) {
@@ -65,7 +66,7 @@ export class SessionsParserService {
     }
   }
 
-  protected _resolveSessionOriginOrder(session: ISessionInfo): number {
+  protected _resolveSessionOriginOrder(session: SessionInfo): number {
     if (session.hostId === undefined) {
       return SESSION_ORIGIN_ORDER.local
     }
@@ -73,22 +74,22 @@ export class SessionsParserService {
     return SESSION_ORIGIN_ORDER.ssh
   }
 
-  protected _resolveSessionStatus(value: unknown): SessionStatus {
+  protected _resolveSessionStatus(value: unknown): SessionStatusMapper {
     switch (value) {
       case 'busy': {
-        return 'busy'
+        return SessionStatusMapper.BUSY
       }
 
       case 'idle': {
-        return 'idle'
+        return SessionStatusMapper.IDLE
       }
 
       case 'waiting': {
-        return 'waiting'
+        return SessionStatusMapper.WAITING
       }
 
       default: {
-        return 'unknown'
+        return SessionStatusMapper.UNKNOWN
       }
     }
   }
@@ -101,12 +102,12 @@ export class SessionsParserService {
     return ''
   }
 
-  protected _sanitizeSessions(params: { rawEntries: unknown[] }): ISessionInfo[] {
+  protected _sanitizeSessions(params: { rawEntries: unknown[] }): SessionInfo[] {
     return params.rawEntries
       .map((rawEntry) => {
         return this._resolveSessionInfo({ rawEntry })
       })
-      .filter((session): session is ISessionInfo => {
+      .filter((session): session is SessionInfo => {
         return session !== undefined
       })
   }

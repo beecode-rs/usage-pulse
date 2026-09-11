@@ -6,7 +6,8 @@ import { promisify } from 'node:util'
 
 import { errorUtil } from '#src/main/util/error-util'
 import { objectUtil } from '#src/main/util/object-util'
-import { OS, osUtil } from '#src/main/util/os-util'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
 
 const execFileAsync = promisify(execFile)
 

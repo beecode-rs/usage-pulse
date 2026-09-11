@@ -3,7 +3,7 @@ import { type SchedulingService } from '#src/main/business/service/scheduling-se
 import { type SessionsPollService } from '#src/main/business/service/sessions-poll-service'
 import { type SettingsService } from '#src/main/business/service/settings-service'
 import { type UsagePollService } from '#src/main/business/service/usage-poll-service'
-import { type IAppSettings } from '#src/shared/settings-model'
+import { type AppSettings } from '#src/shared/business/model/settings-model'
 
 export class SettingsUseCase {
   protected readonly _pollService: UsagePollService
@@ -26,7 +26,7 @@ export class SettingsUseCase {
     this._settingsService = params.settingsService
   }
 
-  async loadSettings(): Promise<IAppSettings> {
+  async loadSettings(): Promise<AppSettings> {
     return await this._settingsRepo.load()
   }
 
@@ -34,7 +34,7 @@ export class SettingsUseCase {
     this._settingsRepo.onSave({ listener: params.listener })
   }
 
-  async saveSettings(params: { rawSettings: unknown }): Promise<IAppSettings> {
+  async saveSettings(params: { rawSettings: unknown }): Promise<AppSettings> {
     const settings = this._settingsService.sanitizeSettings({ rawSettings: params.rawSettings })
 
     await this._settingsRepo.save({ settings })
@@ -45,7 +45,7 @@ export class SettingsUseCase {
     return settings
   }
 
-  async setSchedulingEnabled(params: { isEnabled: boolean }): Promise<IAppSettings> {
+  async setSchedulingEnabled(params: { isEnabled: boolean }): Promise<AppSettings> {
     const settings = await this._settingsRepo.load()
     const nextSettings = this._settingsService.setSchedulingEnabled({ isEnabled: params.isEnabled, settings })
 
@@ -55,7 +55,7 @@ export class SettingsUseCase {
     return nextSettings
   }
 
-  async setTrackerPaused(params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<IAppSettings> {
+  async setTrackerPaused(params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<AppSettings> {
     const settings = await this._settingsRepo.load()
     const nextSettings = this._settingsService.setTrackerPaused({
       isAutoRefreshPaused: params.isAutoRefreshPaused,
@@ -72,7 +72,7 @@ export class SettingsUseCase {
     return nextSettings
   }
 
-  async setTriggerEnabled(params: { isEnabled: boolean; triggerId: string }): Promise<IAppSettings> {
+  async setTriggerEnabled(params: { isEnabled: boolean; triggerId: string }): Promise<AppSettings> {
     const settings = await this._settingsRepo.load()
     const nextSettings = this._settingsService.setTriggerEnabled({
       isEnabled: params.isEnabled,

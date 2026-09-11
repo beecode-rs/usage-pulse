@@ -1,5 +1,9 @@
-import type { IAppSettings } from '#src/shared/settings-model'
-import type { ISchedulingInfo, ITriggerRegistrationHealth, ITriggerRunLogEntry } from '#src/shared/trigger-model'
+import type {
+  ScheduleTriggerRegistrationHealth,
+  ScheduleTriggerRunLogEntry,
+  SchedulingInfo,
+} from '#src/shared/business/model/schedule-trigger-model'
+import type { AppSettings } from '#src/shared/business/model/settings-model'
 
 export const schedulingClientService = {
   clearTriggerRunLogs: (params: { triggerId: string }): Promise<void> => {
@@ -7,23 +11,23 @@ export const schedulingClientService = {
       triggerId: params.triggerId,
     })
   },
-  getSchedulingInfo: (): Promise<ISchedulingInfo> => {
+  getSchedulingInfo: (): Promise<SchedulingInfo> => {
     return window.usageApi.getSchedulingInfo()
   },
-  getTriggerRunLogs: (params: { triggerId: string }): Promise<ITriggerRunLogEntry[]> => {
+  getTriggerRunLogs: (params: { triggerId: string }): Promise<ScheduleTriggerRunLogEntry[]> => {
     return window.usageApi.getTriggerRunLogs({
       triggerId: params.triggerId,
     })
   },
-  inspectTriggerRegistrations: (): Promise<ITriggerRegistrationHealth[]> => {
+  inspectTriggerRegistrations: (): Promise<ScheduleTriggerRegistrationHealth[]> => {
     return window.usageApi.inspectTriggerRegistrations()
   },
-  setSchedulingEnabled: (params: { isEnabled: boolean }): Promise<IAppSettings> => {
+  setSchedulingEnabled: (params: { isEnabled: boolean }): Promise<AppSettings> => {
     return window.usageApi.setSchedulingEnabled({
       isEnabled: params.isEnabled,
     })
   },
-  setTriggerEnabled: (params: { isEnabled: boolean; triggerId: string }): Promise<IAppSettings> => {
+  setTriggerEnabled: (params: { isEnabled: boolean; triggerId: string }): Promise<AppSettings> => {
     return window.usageApi.setTriggerEnabled({
       isEnabled: params.isEnabled,
       triggerId: params.triggerId,

@@ -1,50 +1,51 @@
 import type { ReactElement } from 'react'
 
-import { minutesTimeUtil } from '#src/renderer/src/util/minutes-time-util'
-import { MAX_WINDOW_TRIGGER_PRESET } from '#src/shared/trigger-model'
-import { formatDayMinutes } from '#src/shared/trigger-planner-model'
-import { FIVE_HOUR_WINDOW_MS } from '#src/shared/usage-model'
+import { TriggerPlannerService } from '#src/renderer/src/business/service/trigger-planner-service'
+import { dayTimeMsUtil } from '#src/renderer/src/util/day-time-ms-util'
+import { constant } from '#src/shared/util/constant'
 
-interface ITimeRange {
-  endMinutes: number
-  startMinutes: number
+const triggerPlannerService = new TriggerPlannerService()
+
+interface TimeRange {
+  endMs: number
+  startMs: number
 }
 
-interface IWindowSegment extends ITimeRange {
+interface WindowSegment extends TimeRange {
   startTime: string
 }
 
-const DIAGRAM_DOMAIN_MINUTES: ITimeRange = { endMinutes: 23 * 60, startMinutes: 6 * 60 }
+const DIAGRAM_DOMAIN_MS: TimeRange = { endMs: 82_800_000, startMs: 21_600_000 }
 
 const DIAGRAM_TICKS: string[] = ['07:00', '12:00', '17:00', '22:00']
 
-const WORK_RANGE: ITimeRange = { endMinutes: 18 * 60, startMinutes: 10 * 60 }
+const WORK_RANGE: TimeRange = { endMs: 64_800_000, startMs: 36_000_000 }
 
 const WORK_RANGE_LABEL = 'Work 10:00–18:00'
 
-const WINDOW_MINUTES = FIVE_HOUR_WINDOW_MS / 60_000
+const WINDOW_MS = constant.fiveHourWindowMs
 
-const resolvePositionPercent = (params: { minutes: number }): number => {
-  const domainMinutes = DIAGRAM_DOMAIN_MINUTES.endMinutes - DIAGRAM_DOMAIN_MINUTES.startMinutes
-  const offsetMinutes = params.minutes - DIAGRAM_DOMAIN_MINUTES.startMinutes
+const resolvePositionPercent = (params: { dayMs: number }): number => {
+  const domainMs = DIAGRAM_DOMAIN_MS.endMs - DIAGRAM_DOMAIN_MS.startMs
+  const offsetMs = params.dayMs - DIAGRAM_DOMAIN_MS.startMs
 
-  return (offsetMinutes / domainMinutes) * 100
+  return (offsetMs / domainMs) * 100
 }
 
-const resolveSegmentLayout = (params: { range: ITimeRange }): { leftPercent: number; widthPercent: number } => {
-  const leftPercent = resolvePositionPercent({ minutes: params.range.startMinutes })
-  const rightPercent = resolvePositionPercent({ minutes: params.range.endMinutes })
+const resolveSegmentLayout = (params: { range: TimeRange }): { leftPercent: number; widthPercent: number } => {
+  const leftPercent = resolvePositionPercent({ dayMs: params.range.startMs })
+  const rightPercent = resolvePositionPercent({ dayMs: params.range.endMs })
 
   return { leftPercent, widthPercent: rightPercent - leftPercent }
 }
 
-const resolveWindowSegments = (): IWindowSegment[] => {
-  return MAX_WINDOW_TRIGGER_PRESET.times.map((startTime) => {
-    const startMinutes = minutesTimeUtil.resolveMinutes(startTime)
+const resolveWindowSegments = (): WindowSegment[] => {
+  return constant.maxWindowScheduleTriggerPreset.times.map((startTime) => {
+    const startMs = dayTimeMsUtil.resolveDayMs(startTime)
 
     return {
-      endMinutes: startMinutes + WINDOW_MINUTES,
-      startMinutes,
+      endMs: startMs + WINDOW_MS,
+      startMs,
       startTime,
     }
   })
@@ -53,7 +54,7 @@ const resolveWindowSegments = (): IWindowSegment[] => {
 const resolveWindowSentence = (): string => {
   return resolveWindowSegments()
     .map((segment) => {
-      const endTime = formatDayMinutes(segment.endMinutes)
+      const endTime = triggerPlannerService.formatDayMs({ dayMs: segment.endMs })
 
       return `${segment.startTime} → ${endTime}`
     })
@@ -125,7 +126,7 @@ export const TriggerWindowExplainer = (): ReactElement => {
           </div>
           <div className="trigger-window-diagram-ticks">
             {DIAGRAM_TICKS.map((tick) => {
-              const leftPercent = resolvePositionPercent({ minutes: minutesTimeUtil.resolveMinutes(tick) })
+              const leftPercent = resolvePositionPercent({ dayMs: dayTimeMsUtil.resolveDayMs(tick) })
 
               return (
                 <span className="trigger-window-diagram-tick" key={tick} style={{ left: `${String(leftPercent)}%` }}>

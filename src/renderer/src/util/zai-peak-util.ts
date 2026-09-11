@@ -1,5 +1,5 @@
 import { dateUtil } from '#src/renderer/src/util/date-util'
-import type { ProviderId } from '#src/shared/usage-model'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 
 const PEAK_END_MINUTE_OF_DAY = 18 * 60
 const PEAK_START_MINUTE_OF_DAY = 14 * 60
@@ -7,14 +7,14 @@ const WEEKDAY_FIRST = 1
 const WEEKDAY_LAST = 5
 const ZAI_UTC_OFFSET_MINUTES = 8 * 60
 
-interface IZaiPeakInfo {
+type ZaiPeakInfo = {
   isPeakHour: boolean
   peakWindowText: string
 }
 
 export class ZaiPeakUtil {
-  resolvePeakInfo(params: { nowMs: number; providerId: ProviderId }): IZaiPeakInfo | undefined {
-    if (params.providerId !== 'zai') {
+  resolvePeakInfo(params: { nowMs: number; providerId: ProviderIdMapper }): ZaiPeakInfo | undefined {
+    if (params.providerId !== ProviderIdMapper.ZAI) {
       return undefined
     }
 
@@ -30,8 +30,8 @@ export class ZaiPeakUtil {
     }
   }
 
-  resolvePeakRemainingPercent(params: { nowMs: number; providerId: ProviderId }): number | undefined {
-    if (params.providerId !== 'zai') {
+  resolvePeakRemainingPercent(params: { nowMs: number; providerId: ProviderIdMapper }): number | undefined {
+    if (params.providerId !== ProviderIdMapper.ZAI) {
       return undefined
     }
 
@@ -40,8 +40,8 @@ export class ZaiPeakUtil {
     return this._resolveWindowRemainingPercent({ nowMs: params.nowMs, peakEndMs, peakStartMs })
   }
 
-  resolvePeakRemainingText(params: { nowMs: number; providerId: ProviderId }): string | undefined {
-    if (params.providerId !== 'zai') {
+  resolvePeakRemainingText(params: { nowMs: number; providerId: ProviderIdMapper }): string | undefined {
+    if (params.providerId !== ProviderIdMapper.ZAI) {
       return undefined
     }
 

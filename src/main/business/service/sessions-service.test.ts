@@ -23,7 +23,11 @@ import { delimiter, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { SessionsServiceContractHarness } from '#src/main/business/service/_sessions-service-contract-harness'
-import { OS, osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { SessionFocusSupportStatusMapper } from '#src/shared/business/enum/session-focus-support-status-mapper-enum'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus-outcome-mapper-enum'
+import { osUtil } from '#src/main/util/os-util'
 
 const fakeXdotoolScript = `#!/bin/sh
 if [ -n "$USAGE_PULSE_XDOTOOL_ARGS_LOG" ]; then
@@ -420,7 +424,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService [contr
       focusPlatform: OS.MACOS,
       macOsBundlePath: '/Applications/Ghostty.app',
     })
-    service.macOsGhosttyTabFocusOutcome = 'missing'
+    service.macOsGhosttyTabFocusOutcome = GhosttyFocusOutcomeMapper.MISSING
     await service.focusSession({ cwd: '/Users/user/project', pid: 4242 })
 
     expect(service.macOsTabFocusCalls).toEqual([{ cwd: '/Users/user/project', matchRank: 0 }])
@@ -440,7 +444,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService [contr
       })
       service.macOsGhosttyTtySupport = true
       service.isMacOsGhosttySessionTtyStubbed = false
-      service.macOsGhosttyTtyFocusOutcome = 'focused'
+      service.macOsGhosttyTtyFocusOutcome = GhosttyFocusOutcomeMapper.FOCUSED
       await service.focusSession({ cwd: '/Users/user/project', pid: 4242 })
 
       expect(service.macOsTtyFocusCalls).toEqual([{ sessionTty: '/dev/ttys011' }])
@@ -474,7 +478,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService [contr
     })
     service.macOsGhosttyTtySupport = true
     service.macOsGhosttySessionTty = '/dev/ttys011'
-    service.macOsGhosttyTtyFocusOutcome = 'hidden'
+    service.macOsGhosttyTtyFocusOutcome = GhosttyFocusOutcomeMapper.HIDDEN
 
     await expect(service.focusSession({ cwd: '/Users/user/project', pid: 4242 })).rejects.toThrow(
       'the terminal is on another desktop or minimized',
@@ -488,7 +492,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService [contr
       focusPlatform: OS.MACOS,
       macOsBundlePath: '/Applications/Ghostty.app',
     })
-    service.macOsGhosttyTabFocusOutcome = 'hidden'
+    service.macOsGhosttyTabFocusOutcome = GhosttyFocusOutcomeMapper.HIDDEN
 
     await expect(service.focusSession({ cwd: '/Users/user/project', pid: 4242 })).rejects.toThrow(
       'the terminal is on another desktop or minimized',
@@ -536,7 +540,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService [contr
           pid: 4242,
           sessionId: 'session-a',
           startedAt: 1,
-          status: 'idle',
+          status: SessionStatusMapper.IDLE,
         },
         {
           cwd: '/Users/user/project',
@@ -545,7 +549,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService [contr
           pid: 7777,
           sessionId: 'session-b',
           startedAt: 2,
-          status: 'busy',
+          status: SessionStatusMapper.BUSY,
         },
         {
           cwd: '/Users/user/project',
@@ -554,7 +558,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService [contr
           pid: 8888,
           sessionId: 'session-c',
           startedAt: 3,
-          status: 'idle',
+          status: SessionStatusMapper.IDLE,
         },
       ])
       await service.focusSession({ cwd: '/Users/user/project', pid: 7777 })
@@ -674,7 +678,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService focus 
   it('reports ready focus support off linux without touching the install path', async () => {
     const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
 
-    await expect(service.getFocusSupport()).resolves.toEqual({ status: 'ready' })
+    await expect(service.getFocusSupport()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.READY })
     expect(service.linuxFocusToolInstallAttemptCount).toBe(0)
   })
 
@@ -683,8 +687,8 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService focus 
 
     try {
       const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
-      await expect(service.getFocusSupport()).resolves.toEqual({ status: 'ready' })
-      await expect(service.getFocusSupport()).resolves.toEqual({ status: 'ready' })
+      await expect(service.getFocusSupport()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.READY })
+      await expect(service.getFocusSupport()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.READY })
       const invocations = await readXdotoolInvocations({ argsLogPath: shim.argsLogPath })
 
       expect(invocations).toEqual(['version'])
@@ -699,7 +703,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService focus 
     try {
       const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
 
-      await expect(service.getFocusSupport()).resolves.toEqual({ status: 'missing-tool' })
+      await expect(service.getFocusSupport()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.MISSING_TOOL })
     } finally {
       await pathOverride.restoreEnvironment()
     }
@@ -709,11 +713,11 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService focus 
     const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
     service.isLinuxFocusToolInstalled = false
 
-    await expect(service.getFocusSupport()).resolves.toEqual({ status: 'missing-tool' })
+    await expect(service.getFocusSupport()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.MISSING_TOOL })
 
     service.isLinuxFocusToolInstalled = true
 
-    await expect(service.installFocusTool()).resolves.toEqual({ status: 'ready' })
+    await expect(service.installFocusTool()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.READY })
     expect(service.linuxFocusToolInstallAttemptCount).toBe(1)
   })
 

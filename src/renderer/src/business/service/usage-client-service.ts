@@ -1,11 +1,11 @@
-import type { IAppSettings } from '#src/shared/settings-model'
-import type { IUsageSnapshot, SettingsUpdateListener, UsageUpdateListener } from '#src/shared/usage-model'
+import type { AppSettings } from '#src/shared/business/model/settings-model'
+import type { SettingsUpdateListener, UsageSnapshot, UsageUpdateListener } from '#src/shared/business/model/usage-model'
 
 export const usageClientService = {
-  getSettings: (): Promise<IAppSettings> => {
+  getSettings: (): Promise<AppSettings> => {
     return window.usageApi.getSettings()
   },
-  getSnapshot: (): Promise<IUsageSnapshot> => {
+  getSnapshot: (): Promise<UsageSnapshot> => {
     return window.usageApi.getSnapshot()
   },
   refreshNow: (): Promise<void> => {
@@ -14,10 +14,10 @@ export const usageClientService = {
   refreshTracker: (params: { trackerId: string }): Promise<void> => {
     return window.usageApi.refreshTracker({ trackerId: params.trackerId })
   },
-  saveSettings: (params: { settings: IAppSettings }): Promise<IAppSettings> => {
+  saveSettings: (params: { settings: AppSettings }): Promise<AppSettings> => {
     return window.usageApi.saveSettings(params.settings)
   },
-  setTrackerPaused: (params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<IAppSettings> => {
+  setTrackerPaused: (params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<AppSettings> => {
     return window.usageApi.setTrackerPaused({
       isAutoRefreshPaused: params.isAutoRefreshPaused,
       trackerId: params.trackerId,

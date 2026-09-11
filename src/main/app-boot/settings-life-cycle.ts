@@ -2,12 +2,12 @@ import { LifeCycle } from '@beecode/msh-app-boot'
 
 import { type SettingsRepo } from '#src/main/business/repo/settings-repo'
 import { type SchedulingService } from '#src/main/business/service/scheduling-service'
-import { type IAppSettings } from '#src/shared/settings-model'
+import { type AppSettings } from '#src/shared/business/model/settings-model'
 
 export class SettingsLifeCycle extends LifeCycle<void> {
   protected readonly _schedulingService: SchedulingService
   protected readonly _settingsRepo: SettingsRepo
-  protected _settings?: IAppSettings
+  protected _settings?: AppSettings
 
   constructor(params: { schedulingService: SchedulingService; settingsRepo: SettingsRepo }) {
     super({ name: 'settings' })
@@ -15,7 +15,7 @@ export class SettingsLifeCycle extends LifeCycle<void> {
     this._settingsRepo = params.settingsRepo
   }
 
-  getSettings(): IAppSettings {
+  getSettings(): AppSettings {
     if (this._settings === undefined) {
       throw new Error('settings are not initialized')
     }

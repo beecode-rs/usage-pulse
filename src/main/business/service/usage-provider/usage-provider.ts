@@ -1,6 +1,7 @@
-import type { IUsageWindow, ProviderId } from '#src/shared/usage-model'
+import type { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import type { UsageWindow } from '#src/shared/business/model/usage-model'
 
-export interface IUsageProvider {
-  fetchUsage: (params: { accessToken: string }) => Promise<IUsageWindow[]>
-  getProviderId: () => ProviderId
+export interface UsageProvider {
+  fetchUsage: (params: { accessToken: string }) => Promise<UsageWindow[]>
+  getProviderId: () => ProviderIdMapper
 }

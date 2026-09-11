@@ -5,14 +5,18 @@
 # migrates when the new key is absent or invalid, and the success default applies
 # when neither resolves.
 #
-# Pulse: sessionFinishedPulseSeconds is how long the finished card keeps pulsing its
-# border. Only a finite number survives; anything else (absent, string, NaN, null)
-# falls back to the 10 second default. Valid numbers clamp into [0, 60] and round to
-# whole seconds, so 0 (indicator off) and 60 are kept as-is while 90 saturates.
+# Pulse: sessionFinishedPulseMs is how long (in milliseconds) the finished card keeps
+# pulsing its border. Only a finite number survives; anything else (absent, string,
+# NaN, null) falls back to the 10 second default. Valid numbers clamp into
+# [0, 60000] ms and round to whole milliseconds, so 0 (indicator off) and 60000 are
+# kept as-is while 90000 saturates. The legacy sessionFinishedPulseSeconds key
+# migrates by multiplying by 1000 when the ms key is absent, and a present ms key
+# always wins. sessionsRefreshIntervalMs follows the same legacy
+# sessionsRefreshIntervalSeconds migration.
 #
 # The runner matches results with a full deep equal (no
 # partial matching), so every term pins the complete sanitized settings object the
-# empty raw record deterministically produces — every other absent field falls back
+# empty raw record deterministically produces: every other absent field falls back
 # to its default, and trackers/triggers/sshHosts come back empty because the record
 # carries no legacy token fields either.
 subject: SettingsService
@@ -35,9 +39,9 @@ methods:
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 10
+          sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: ding
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []
@@ -51,9 +55,9 @@ methods:
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 10
+          sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: fanfare
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []
@@ -66,9 +70,9 @@ methods:
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 10
+          sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []
@@ -83,9 +87,9 @@ methods:
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 10
+          sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: ping
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []
@@ -100,9 +104,9 @@ methods:
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 10
+          sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []
@@ -117,25 +121,25 @@ methods:
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 10
+          sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: none
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []
           triggers: []
           waitingSoundId: chime
-      # A whole number inside the range is kept as the pulse duration.
+      # A whole number of milliseconds inside the range is kept as the pulse duration.
       - constructorParams: []
         params:
           - rawSettings:
-              sessionFinishedPulseSeconds: 25
+              sessionFinishedPulseMs: 25000
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 25
+          sessionFinishedPulseMs: 25000
           sessionFinishedSoundId: success
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []
@@ -145,13 +149,13 @@ methods:
       - constructorParams: []
         params:
           - rawSettings:
-              sessionFinishedPulseSeconds: 0
+              sessionFinishedPulseMs: 0
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 0
+          sessionFinishedPulseMs: 0
           sessionFinishedSoundId: success
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []
@@ -161,13 +165,13 @@ methods:
       - constructorParams: []
         params:
           - rawSettings:
-              sessionFinishedPulseSeconds: -5
+              sessionFinishedPulseMs: -5000
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 0
+          sessionFinishedPulseMs: 0
           sessionFinishedSoundId: success
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []
@@ -177,29 +181,29 @@ methods:
       - constructorParams: []
         params:
           - rawSettings:
-              sessionFinishedPulseSeconds: 90
+              sessionFinishedPulseMs: 90000
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 60
+          sessionFinishedPulseMs: 60000
           sessionFinishedSoundId: success
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []
           triggers: []
           waitingSoundId: chime
-      # A fractional duration rounds to whole seconds.
+      # A fractional millisecond count rounds to a whole number.
       - constructorParams: []
         params:
           - rawSettings:
-              sessionFinishedPulseSeconds: 7.6
+              sessionFinishedPulseMs: 7600.6
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 8
+          sessionFinishedPulseMs: 7601
           sessionFinishedSoundId: success
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []
@@ -209,13 +213,79 @@ methods:
       - constructorParams: []
         params:
           - rawSettings:
-              sessionFinishedPulseSeconds: '20'
+              sessionFinishedPulseMs: '20000'
         result:
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseSeconds: 10
+          sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
-          sessionsRefreshIntervalSeconds: 5
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Only the legacy seconds key present: 25 seconds migrates to 25000 ms.
+      - constructorParams: []
+        params:
+          - rawSettings:
+              sessionFinishedPulseSeconds: 25
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 25000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # The ms key wins when both the ms and the legacy seconds key are present.
+      - constructorParams: []
+        params:
+          - rawSettings:
+              sessionFinishedPulseMs: 30000
+              sessionFinishedPulseSeconds: 45
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 30000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # The legacy sessions refresh seconds key migrates to ms too: 12 s becomes 12000 ms.
+      - constructorParams: []
+        params:
+          - rawSettings:
+              sessionsRefreshIntervalSeconds: 12
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 12000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # The sessions refresh ms key clamps like the pulse does: 1000 ms clamps up to the
+      # 2 second minimum.
+      - constructorParams: []
+        params:
+          - rawSettings:
+              sessionsRefreshIntervalMs: 1000
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 2000
           soundVolumePercent: 40
           sshHosts: []
           trackers: []

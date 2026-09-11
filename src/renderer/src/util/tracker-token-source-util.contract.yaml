@@ -18,7 +18,7 @@ methods:
               isAutoRefreshPaused: false
               name: Claude
               providerId: claude
-              refreshIntervalSeconds: 300
+              refreshIntervalMs: 300000
               tokenSource: SYSTEM
             osPlatform: WINDOWS
         result:
@@ -27,7 +27,7 @@ methods:
           isAutoRefreshPaused: false
           name: Claude
           providerId: claude
-          refreshIntervalSeconds: 300
+          refreshIntervalMs: 300000
           tokenSource: MANUAL
       # On linux the stored system source is kept as-is.
       - params:
@@ -37,7 +37,7 @@ methods:
               isAutoRefreshPaused: false
               name: Claude
               providerId: claude
-              refreshIntervalSeconds: 300
+              refreshIntervalMs: 300000
               tokenSource: SYSTEM
             osPlatform: LINUX
         result:
@@ -46,7 +46,7 @@ methods:
           isAutoRefreshPaused: false
           name: Claude
           providerId: claude
-          refreshIntervalSeconds: 300
+          refreshIntervalMs: 300000
           tokenSource: SYSTEM
       # A claude tracker already on manual stays manual on windows.
       - params:
@@ -56,7 +56,7 @@ methods:
               isAutoRefreshPaused: false
               name: Claude
               providerId: claude
-              refreshIntervalSeconds: 300
+              refreshIntervalMs: 300000
               tokenSource: MANUAL
             osPlatform: WINDOWS
         result:
@@ -65,7 +65,7 @@ methods:
           isAutoRefreshPaused: false
           name: Claude
           providerId: claude
-          refreshIntervalSeconds: 300
+          refreshIntervalMs: 300000
           tokenSource: MANUAL
       # Non-claude trackers pass through untouched.
       - params:
@@ -76,7 +76,7 @@ methods:
               isAutoRefreshPaused: false
               name: Dummy
               providerId: dummy
-              refreshIntervalSeconds: 300
+              refreshIntervalMs: 300000
               times: ['09:00']
             osPlatform: WINDOWS
         result:
@@ -86,7 +86,7 @@ methods:
           isAutoRefreshPaused: false
           name: Dummy
           providerId: dummy
-          refreshIntervalSeconds: 300
+          refreshIntervalMs: 300000
           times: ['09:00']
   resolveSelection:
     terms:
@@ -98,7 +98,7 @@ methods:
               isAutoRefreshPaused: false
               name: Claude
               providerId: claude
-              refreshIntervalSeconds: 300
+              refreshIntervalMs: 300000
               tokenSource: SYSTEM
             osPlatform: LINUX
         result:
@@ -114,7 +114,7 @@ methods:
               isAutoRefreshPaused: false
               name: Claude
               providerId: claude
-              refreshIntervalSeconds: 300
+              refreshIntervalMs: 300000
               tokenSource: MANUAL
             osPlatform: MACOS
         result:
@@ -132,7 +132,7 @@ methods:
               isAutoRefreshPaused: false
               name: Claude
               providerId: claude
-              refreshIntervalSeconds: 300
+              refreshIntervalMs: 300000
               tokenSource: SYSTEM
             osPlatform: WINDOWS
         result:
@@ -146,7 +146,7 @@ methods:
               isAutoRefreshPaused: false
               name: Dummy
               providerId: dummy
-              refreshIntervalSeconds: 300
+              refreshIntervalMs: 300000
               times: ['09:00']
             osPlatform: LINUX
         result:

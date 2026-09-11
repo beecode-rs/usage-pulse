@@ -1,5 +1,7 @@
 import { type ReactElement, useEffect, useRef, useState } from 'react'
 
+import { AppViewIdMapper } from '#src/renderer/src/business/model/app-view-id-mapper-enum'
+import { MenuStatusDotMapper } from '#src/renderer/src/business/model/menu-status-dot-mapper-enum'
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { AboutPage } from '#src/renderer/src/ui-component/about/about-page'
@@ -9,41 +11,35 @@ import { DashboardPage } from '#src/renderer/src/ui-component/dashboard/dashboar
 import { DevelopmentPage } from '#src/renderer/src/ui-component/development/development-page'
 import { SchedulingPage } from '#src/renderer/src/ui-component/scheduling/scheduling-page'
 import { SessionsPage } from '#src/renderer/src/ui-component/sessions/sessions-page'
-import { type ISideMenuItem, SideMenu } from '#src/renderer/src/ui-component/side-menu/side-menu'
+import { SideMenu, type SideMenuItem } from '#src/renderer/src/ui-component/side-menu/side-menu'
 import { UsageDashboard } from '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard'
 import { developmentPrefsUtil } from '#src/renderer/src/util/development-prefs-util'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { type MenuStatusDot, MenuStatusUtil } from '#src/renderer/src/util/menu-status-util'
+import { MenuStatusUtil } from '#src/renderer/src/util/menu-status-util'
 import { sessionFinishedPulseUtil } from '#src/renderer/src/util/session-finished-pulse-util'
 import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
 import { sideMenuPrefsUtil } from '#src/renderer/src/util/side-menu-prefs-util'
-import type { ISessionInfo, ISessionSnapshot } from '#src/shared/session-model'
-import {
-  DEFAULT_SESSION_FINISHED_PULSE_SECONDS,
-  DEFAULT_SESSION_FINISHED_SOUND_ID,
-  DEFAULT_SOUND_VOLUME_PERCENT,
-  DEFAULT_WAITING_SOUND_ID,
-  type IAppSettings,
-} from '#src/shared/settings-model'
-import type { IUsageSnapshot } from '#src/shared/usage-model'
-
-type AppViewId = 'about' | 'dashboard' | 'development' | 'scheduling' | 'sessions' | 'usage'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import type { SessionInfo, SessionSnapshot } from '#src/shared/business/model/session-model'
+import type { AppSettings } from '#src/shared/business/model/settings-model'
+import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
+import { constant } from '#src/shared/util/constant'
 
 const DEFAULT_ELAPSED_MINUTES = 60
 const DEFAULT_USED_PERCENT = 45
 const NOW_TICK_INTERVAL_MS = 30_000
 const PEAK_STATUS_DOT_TITLE = 'z.ai peak hours: premium models bill at 3× credits (weekdays 14:00–18:00 UTC+8)'
 
-const resolveStatusDotTitle = (params: { statusDot?: MenuStatusDot }): string | undefined => {
-  if (params.statusDot === 'peak') {
+const resolveStatusDotTitle = (params: { statusDot?: MenuStatusDotMapper }): string | undefined => {
+  if (params.statusDot === MenuStatusDotMapper.PEAK) {
     return PEAK_STATUS_DOT_TITLE
   }
 
   return undefined
 }
 
-const MENU_ICONS: Record<AppViewId, ReactElement> = {
-  about: (
+const MENU_ICONS: Record<AppViewIdMapper, ReactElement> = {
+  [AppViewIdMapper.ABOUT]: (
     <svg
       fill="none"
       stroke="currentColor"
@@ -57,7 +53,7 @@ const MENU_ICONS: Record<AppViewId, ReactElement> = {
       <line x1="12" x2="12.01" y1="8" y2="8" />
     </svg>
   ),
-  dashboard: (
+  [AppViewIdMapper.DASHBOARD]: (
     <svg
       fill="none"
       stroke="currentColor"
@@ -72,7 +68,7 @@ const MENU_ICONS: Record<AppViewId, ReactElement> = {
       <rect height="7" rx="1" width="7" x="3" y="14" />
     </svg>
   ),
-  development: (
+  [AppViewIdMapper.DEVELOPMENT]: (
     <svg
       fill="none"
       stroke="currentColor"
@@ -85,7 +81,7 @@ const MENU_ICONS: Record<AppViewId, ReactElement> = {
       <line x1="12" x2="20" y1="19" y2="19" />
     </svg>
   ),
-  scheduling: (
+  [AppViewIdMapper.SCHEDULING]: (
     <svg
       fill="none"
       stroke="currentColor"
@@ -98,7 +94,7 @@ const MENU_ICONS: Record<AppViewId, ReactElement> = {
       <polyline points="12 6 12 12 16 14" />
     </svg>
   ),
-  sessions: (
+  [AppViewIdMapper.SESSIONS]: (
     <svg
       fill="none"
       stroke="currentColor"
@@ -112,7 +108,7 @@ const MENU_ICONS: Record<AppViewId, ReactElement> = {
       <line x1="12" x2="12" y1="16" y2="21" />
     </svg>
   ),
-  usage: (
+  [AppViewIdMapper.USAGE]: (
     <svg
       fill="none"
       stroke="currentColor"
@@ -127,45 +123,52 @@ const MENU_ICONS: Record<AppViewId, ReactElement> = {
 }
 
 const resolveMenuItems = (params: {
-  dashboardStatusDot: MenuStatusDot | undefined
+  dashboardStatusDot: MenuStatusDotMapper | undefined
   isSchedulingLive: boolean
   isSessionsLive: boolean
   isUsageLive: boolean
-  sessionsStatusDot: MenuStatusDot | undefined
-  usageStatusDot: MenuStatusDot | undefined
-}): ISideMenuItem<AppViewId>[] => {
+  sessionsStatusDot: MenuStatusDotMapper | undefined
+  usageStatusDot: MenuStatusDotMapper | undefined
+}): SideMenuItem<AppViewIdMapper>[] => {
   return [
     {
-      icon: MENU_ICONS.dashboard,
-      id: 'dashboard',
+      icon: MENU_ICONS[AppViewIdMapper.DASHBOARD],
+      id: AppViewIdMapper.DASHBOARD,
       label: 'Dashboard',
       statusDot: params.dashboardStatusDot,
       statusDotTitle: resolveStatusDotTitle({ statusDot: params.dashboardStatusDot }),
     },
     {
-      icon: MENU_ICONS.sessions,
-      id: 'sessions',
+      icon: MENU_ICONS[AppViewIdMapper.SESSIONS],
+      id: AppViewIdMapper.SESSIONS,
       isLive: params.isSessionsLive,
       label: 'Sessions',
       statusDot: params.sessionsStatusDot,
     },
     {
-      icon: MENU_ICONS.usage,
-      id: 'usage',
+      icon: MENU_ICONS[AppViewIdMapper.USAGE],
+      id: AppViewIdMapper.USAGE,
       isLive: params.isUsageLive,
       label: 'Usage',
       statusDot: params.usageStatusDot,
       statusDotTitle: resolveStatusDotTitle({ statusDot: params.usageStatusDot }),
     },
-    { icon: MENU_ICONS.scheduling, id: 'scheduling', isLive: params.isSchedulingLive, label: 'Scheduling' },
+    {
+      icon: MENU_ICONS[AppViewIdMapper.SCHEDULING],
+      id: AppViewIdMapper.SCHEDULING,
+      isLive: params.isSchedulingLive,
+      label: 'Scheduling',
+    },
   ]
 }
 
 const resolveFooterMenuItems = (params: {
-  developmentStatusDot: MenuStatusDot | undefined
+  developmentStatusDot: MenuStatusDotMapper | undefined
   isDevelopmentUnlocked: boolean
-}): ISideMenuItem<AppViewId>[] => {
-  const footerMenuItems: ISideMenuItem<AppViewId>[] = [{ icon: MENU_ICONS.about, id: 'about', label: 'About' }]
+}): SideMenuItem<AppViewIdMapper>[] => {
+  const footerMenuItems: SideMenuItem<AppViewIdMapper>[] = [
+    { icon: MENU_ICONS[AppViewIdMapper.ABOUT], id: AppViewIdMapper.ABOUT, label: 'About' },
+  ]
 
   if (!params.isDevelopmentUnlocked) {
     return footerMenuItems
@@ -173,11 +176,16 @@ const resolveFooterMenuItems = (params: {
 
   return [
     ...footerMenuItems,
-    { icon: MENU_ICONS.development, id: 'development', label: 'Development', statusDot: params.developmentStatusDot },
+    {
+      icon: MENU_ICONS[AppViewIdMapper.DEVELOPMENT],
+      id: AppViewIdMapper.DEVELOPMENT,
+      label: 'Development',
+      statusDot: params.developmentStatusDot,
+    },
   ]
 }
 
-const resolveIsUsageLive = (params: { settings?: IAppSettings }): boolean => {
+const resolveIsUsageLive = (params: { settings?: AppSettings }): boolean => {
   const trackers = params.settings?.trackers ?? []
 
   return trackers.some((tracker) => {
@@ -185,16 +193,16 @@ const resolveIsUsageLive = (params: { settings?: IAppSettings }): boolean => {
   })
 }
 
-const resolveIsSchedulingLive = (params: { settings?: IAppSettings }): boolean => {
+const resolveIsSchedulingLive = (params: { settings?: AppSettings }): boolean => {
   return params.settings?.isSchedulingEnabled === true
 }
 
-const resolveIsSessionsLive = (params: { settings?: IAppSettings }): boolean => {
+const resolveIsSessionsLive = (params: { settings?: AppSettings }): boolean => {
   return params.settings?.isSessionsAutoRefreshPaused === false
 }
 
 export const AppShell = (): ReactElement => {
-  const [activeViewId, setActiveViewId] = useState<AppViewId>('dashboard')
+  const [activeViewId, setActiveViewId] = useState<AppViewIdMapper>(AppViewIdMapper.DASHBOARD)
   const [elapsedMinutes, setElapsedMinutes] = useState<number>(DEFAULT_ELAPSED_MINUTES)
   const [finishedAtBySessionId, setFinishedAtBySessionId] = useState<Record<string, number>>({})
   const [isCollapsed, setIsCollapsed] = useState<boolean>(sideMenuPrefsUtil.loadIsCollapsed)
@@ -202,13 +210,13 @@ export const AppShell = (): ReactElement => {
   const [nowMs, setNowMs] = useState<number>((): number => {
     return Date.now()
   })
-  const [sessionSnapshot, setSessionSnapshot] = useState<ISessionSnapshot | undefined>(undefined)
+  const [sessionSnapshot, setSessionSnapshot] = useState<SessionSnapshot | undefined>(undefined)
   const [sessionsErrorMessage, setSessionsErrorMessage] = useState('')
-  const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
-  const [usageSnapshot, setUsageSnapshot] = useState<IUsageSnapshot | undefined>(undefined)
+  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [usageSnapshot, setUsageSnapshot] = useState<UsageSnapshot | undefined>(undefined)
   const [usedPercent, setUsedPercent] = useState<number>(DEFAULT_USED_PERCENT)
-  const previousSessionsRef = useRef<ISessionInfo[] | undefined>(undefined)
-  const settingsRef = useRef<IAppSettings | undefined>(undefined)
+  const previousSessionsRef = useRef<SessionInfo[] | undefined>(undefined)
+  const settingsRef = useRef<AppSettings | undefined>(undefined)
 
   useEffect(() => {
     const loadSettings = async (): Promise<void> => {
@@ -251,39 +259,39 @@ export const AppShell = (): ReactElement => {
   }, [])
 
   useEffect(() => {
-    const playSessionSounds = (params: { nextSnapshot: ISessionSnapshot; previousSessions?: ISessionInfo[] }): void => {
+    const playSessionSounds = (params: { nextSnapshot: SessionSnapshot; previousSessions?: SessionInfo[] }): void => {
       const sessionSoundUtil = new SessionSoundUtil()
       const newlyFinishedSessionIds = sessionSoundUtil.resolveStatusTransitionSessionIds({
         currentSessions: params.nextSnapshot.sessions,
-        fromStatus: 'busy',
+        fromStatus: SessionStatusMapper.BUSY,
         previousSessions: params.previousSessions,
-        toStatus: 'idle',
+        toStatus: SessionStatusMapper.IDLE,
       })
       const newlyWaitingSessionIds = sessionSoundUtil.resolveNewlyStatusSessionIds({
         currentSessions: params.nextSnapshot.sessions,
         previousSessions: params.previousSessions,
-        status: 'waiting',
+        status: SessionStatusMapper.WAITING,
       })
-      const soundVolumePercent = settingsRef.current?.soundVolumePercent ?? DEFAULT_SOUND_VOLUME_PERCENT
+      const soundVolumePercent = settingsRef.current?.soundVolumePercent ?? constant.soundVolume.defaultPercent
 
       if (newlyWaitingSessionIds.length > 0) {
         sessionSoundUtil.playSessionSound({
-          soundId: settingsRef.current?.waitingSoundId ?? DEFAULT_WAITING_SOUND_ID,
+          soundId: settingsRef.current?.waitingSoundId ?? constant.waitingSound.defaultId,
           volumePercent: soundVolumePercent,
         })
       }
 
       if (newlyFinishedSessionIds.length > 0) {
         sessionSoundUtil.playSessionSound({
-          soundId: settingsRef.current?.sessionFinishedSoundId ?? DEFAULT_SESSION_FINISHED_SOUND_ID,
+          soundId: settingsRef.current?.sessionFinishedSoundId ?? constant.sessionFinishedSound.defaultId,
           volumePercent: soundVolumePercent,
         })
       }
     }
 
     const trackFinishedSessions = (params: {
-      nextSnapshot: ISessionSnapshot
-      previousSessions?: ISessionInfo[]
+      nextSnapshot: SessionSnapshot
+      previousSessions?: SessionInfo[]
     }): void => {
       setFinishedAtBySessionId((currentFinishedAtBySessionId) => {
         return sessionFinishedPulseUtil.resolveFinishedAtBySessionId({
@@ -295,7 +303,7 @@ export const AppShell = (): ReactElement => {
       })
     }
 
-    const handleSessionsSnapshot = (nextSnapshot: ISessionSnapshot): void => {
+    const handleSessionsSnapshot = (nextSnapshot: SessionSnapshot): void => {
       setSessionSnapshot(nextSnapshot)
       setSessionsErrorMessage('')
 
@@ -335,7 +343,7 @@ export const AppShell = (): ReactElement => {
     }
   }, [])
 
-  const finishedPulseSeconds = settings?.sessionFinishedPulseSeconds ?? DEFAULT_SESSION_FINISHED_PULSE_SECONDS
+  const finishedPulseMs = settings?.sessionFinishedPulseMs ?? constant.sessionFinishedPulse.defaultMs
   const menuStatusUtil = new MenuStatusUtil()
   const peakStatusDot = menuStatusUtil.resolvePeakStatusDot({ now: nowMs, snapshot: usageSnapshot })
   const sessionsStatusDot = menuStatusUtil.resolveSessionsStatusDot({
@@ -367,7 +375,7 @@ export const AppShell = (): ReactElement => {
     }),
   })
 
-  const handleSelectItem = (viewId: AppViewId): void => {
+  const handleSelectItem = (viewId: AppViewIdMapper): void => {
     setActiveViewId(viewId)
   }
 
@@ -387,21 +395,21 @@ export const AppShell = (): ReactElement => {
 
   const renderActiveView = (): ReactElement => {
     switch (activeViewId) {
-      case 'about': {
+      case AppViewIdMapper.ABOUT: {
         return <AboutPage onToggleDevelopmentUnlock={handleToggleDevelopmentUnlock} />
       }
 
-      case 'dashboard': {
+      case AppViewIdMapper.DASHBOARD: {
         return (
           <DashboardPage
             finishedAtBySessionId={finishedAtBySessionId}
             onNavigate={handleSelectItem}
-            pulseSeconds={finishedPulseSeconds}
+            pulseMs={finishedPulseMs}
           />
         )
       }
 
-      case 'development': {
+      case AppViewIdMapper.DEVELOPMENT: {
         return (
           <DevelopmentPage
             elapsedMinutes={elapsedMinutes}
@@ -412,15 +420,15 @@ export const AppShell = (): ReactElement => {
         )
       }
 
-      case 'scheduling': {
+      case AppViewIdMapper.SCHEDULING: {
         return <SchedulingPage />
       }
 
-      case 'sessions': {
-        return <SessionsPage finishedAtBySessionId={finishedAtBySessionId} pulseSeconds={finishedPulseSeconds} />
+      case AppViewIdMapper.SESSIONS: {
+        return <SessionsPage finishedAtBySessionId={finishedAtBySessionId} pulseMs={finishedPulseMs} />
       }
 
-      case 'usage': {
+      case AppViewIdMapper.USAGE: {
         return <UsageDashboard />
       }
 

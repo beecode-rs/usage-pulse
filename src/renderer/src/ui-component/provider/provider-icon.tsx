@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react'
 
 import '#src/renderer/src/ui-component/provider/provider-icon.css'
-import { type ProviderId } from '#src/shared/usage-model'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 
 const DEFAULT_ICON_SIZE = 18
 
@@ -13,17 +13,17 @@ const ZAI_ICON_PATH =
 
 const DUMMY_ICON_PATH = 'M13 2 3 14 12 14 11 22 21 10 12 10Z'
 
-const resolveIconPath = (providerId: ProviderId): string => {
+const resolveIconPath = (providerId: ProviderIdMapper): string => {
   switch (providerId) {
-    case 'claude': {
+    case ProviderIdMapper.CLAUDE: {
       return CLAUDE_ICON_PATH
     }
 
-    case 'dummy': {
+    case ProviderIdMapper.DUMMY: {
       return DUMMY_ICON_PATH
     }
 
-    case 'zai': {
+    case ProviderIdMapper.ZAI: {
       return ZAI_ICON_PATH
     }
 
@@ -33,7 +33,7 @@ const resolveIconPath = (providerId: ProviderId): string => {
   }
 }
 
-export const ProviderIcon = (props: { providerId: ProviderId; size?: number }): ReactElement => {
+export const ProviderIcon = (props: { providerId: ProviderIdMapper; size?: number }): ReactElement => {
   const { providerId, size } = props
   const resolvedSize = size ?? DEFAULT_ICON_SIZE
 

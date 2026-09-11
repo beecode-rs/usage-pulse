@@ -2,12 +2,13 @@ import { spawn } from 'node:child_process'
 import { homedir } from 'node:os'
 
 import { errorUtil } from '#src/main/util/error-util'
-import { OS, osUtil } from '#src/main/util/os-util'
-import { TRIGGER_RUN_EXIT_CODE_TIMED_OUT, TRIGGER_RUN_LOG_SNIPPET_MAX_LENGTH } from '#src/shared/trigger-model'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+import { constant } from '#src/shared/util/constant'
 
 const DEFAULT_GRACE_PERIOD_MS = 5000
 
-export interface ITriggerCommandResult {
+export type TriggerCommandResult = {
   durationMs: number
   exitCode: number
   isTimedOut: boolean
@@ -21,12 +22,12 @@ export class TriggerCommandService {
 
   constructor(params: { gracePeriodMs?: number; maxOutputLength?: number; spawnImpl?: typeof spawn } = {}) {
     this._gracePeriodMs = params.gracePeriodMs ?? DEFAULT_GRACE_PERIOD_MS
-    this._maxOutputLength = params.maxOutputLength ?? TRIGGER_RUN_LOG_SNIPPET_MAX_LENGTH
+    this._maxOutputLength = params.maxOutputLength ?? constant.scheduleTrigger.run.log.snippetMaxLength
     this._spawnImpl = params.spawnImpl ?? spawn
   }
 
-  run(params: { command: string; timeoutMs: number }): Promise<ITriggerCommandResult> {
-    return new Promise<ITriggerCommandResult>((resolve) => {
+  run(params: { command: string; timeoutMs: number }): Promise<TriggerCommandResult> {
+    return new Promise<TriggerCommandResult>((resolve) => {
       const startedAt = Date.now()
       const stdoutChunks: string[] = []
       const stderrChunks: string[] = []
@@ -109,7 +110,7 @@ export class TriggerCommandService {
 
   protected _resolveExitCode(params: { code: number | null; isTimedOut: boolean }): number {
     if (params.isTimedOut) {
-      return TRIGGER_RUN_EXIT_CODE_TIMED_OUT
+      return constant.scheduleTrigger.run.exitCodeTimedOut
     }
 
     if (params.code !== null) {

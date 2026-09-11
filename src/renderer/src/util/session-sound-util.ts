@@ -1,11 +1,13 @@
-import { type ISessionInfo, type SessionStatus } from '#src/shared/session-model'
-import { MAX_SOUND_VOLUME_PERCENT, MIN_SOUND_VOLUME_PERCENT, SessionSoundId } from '#src/shared/settings-model'
+import { type SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
+import { SoundNameMapper } from '#src/shared/business/enum/sound-name-mapper-enum'
+import { type SessionInfo } from '#src/shared/business/model/session-model'
+import { constant } from '#src/shared/util/constant'
 
 const TONE_ATTACK_SECONDS = 0.01
 const TONE_MAX_GAIN = 0.4
 const TONE_SILENCE_GAIN = 0.0001
 
-interface ISessionSoundTone {
+type SessionSoundTone = {
   durationSeconds: number
   frequencyHz: number
   gainMultiplier: number
@@ -13,20 +15,20 @@ interface ISessionSoundTone {
   waveType: OscillatorType
 }
 
-const SESSION_SOUND_TONES: Record<SessionSoundId, ISessionSoundTone[]> = {
-  [SessionSoundId.BEEP]: [
+const SESSION_SOUND_TONES: Record<SoundNameMapper, SessionSoundTone[]> = {
+  [SoundNameMapper.BEEP]: [
     { durationSeconds: 0.2, frequencyHz: 830, gainMultiplier: 1, offsetSeconds: 0, waveType: 'sine' },
   ],
-  [SessionSoundId.CHIME]: [
+  [SoundNameMapper.CHIME]: [
     { durationSeconds: 0.18, frequencyHz: 523.25, gainMultiplier: 1, offsetSeconds: 0, waveType: 'sine' },
     { durationSeconds: 0.3, frequencyHz: 783.99, gainMultiplier: 1, offsetSeconds: 0.16, waveType: 'sine' },
   ],
-  [SessionSoundId.DING]: [
+  [SoundNameMapper.DING]: [
     { durationSeconds: 0.9, frequencyHz: 1318.51, gainMultiplier: 1, offsetSeconds: 0, waveType: 'sine' },
     { durationSeconds: 0.5, frequencyHz: 2637.02, gainMultiplier: 0.4, offsetSeconds: 0, waveType: 'sine' },
     { durationSeconds: 0.25, frequencyHz: 3559.98, gainMultiplier: 0.18, offsetSeconds: 0, waveType: 'sine' },
   ],
-  [SessionSoundId.FANFARE]: [
+  [SoundNameMapper.FANFARE]: [
     { durationSeconds: 0.16, frequencyHz: 392, gainMultiplier: 0.6, offsetSeconds: 0, waveType: 'triangle' },
     { durationSeconds: 0.16, frequencyHz: 587.33, gainMultiplier: 0.6, offsetSeconds: 0, waveType: 'triangle' },
     { durationSeconds: 0.16, frequencyHz: 783.99, gainMultiplier: 0.7, offsetSeconds: 0, waveType: 'triangle' },
@@ -34,11 +36,11 @@ const SESSION_SOUND_TONES: Record<SessionSoundId, ISessionSoundTone[]> = {
     { durationSeconds: 0.45, frequencyHz: 659.25, gainMultiplier: 0.7, offsetSeconds: 0.16, waveType: 'triangle' },
     { durationSeconds: 0.45, frequencyHz: 1046.5, gainMultiplier: 0.9, offsetSeconds: 0.16, waveType: 'triangle' },
   ],
-  [SessionSoundId.NONE]: [],
-  [SessionSoundId.PING]: [
+  [SoundNameMapper.NONE]: [],
+  [SoundNameMapper.PING]: [
     { durationSeconds: 0.12, frequencyHz: 1174.66, gainMultiplier: 1, offsetSeconds: 0, waveType: 'triangle' },
   ],
-  [SessionSoundId.SUCCESS]: [
+  [SoundNameMapper.SUCCESS]: [
     { durationSeconds: 0.16, frequencyHz: 523.25, gainMultiplier: 0.7, offsetSeconds: 0, waveType: 'triangle' },
     { durationSeconds: 0.16, frequencyHz: 659.25, gainMultiplier: 0.8, offsetSeconds: 0.1, waveType: 'triangle' },
     { durationSeconds: 0.16, frequencyHz: 783.99, gainMultiplier: 0.9, offsetSeconds: 0.2, waveType: 'triangle' },
@@ -49,8 +51,8 @@ const SESSION_SOUND_TONES: Record<SessionSoundId, ISessionSoundTone[]> = {
 const audioContextCache: { context?: AudioContext } = {}
 
 export class SessionSoundUtil {
-  playSessionSound(params: { soundId: SessionSoundId; volumePercent: number }): void {
-    if (params.soundId === SessionSoundId.NONE) {
+  playSessionSound(params: { soundId: SoundNameMapper; volumePercent: number }): void {
+    if (params.soundId === SoundNameMapper.NONE) {
       return
     }
 
@@ -68,9 +70,9 @@ export class SessionSoundUtil {
   }
 
   resolveNewlyStatusSessionIds(params: {
-    currentSessions: ISessionInfo[]
-    previousSessions?: ISessionInfo[]
-    status: SessionStatus
+    currentSessions: SessionInfo[]
+    previousSessions?: SessionInfo[]
+    status: SessionStatusMapper
   }): string[] {
     if (params.previousSessions === undefined) {
       return []
@@ -97,18 +99,18 @@ export class SessionSoundUtil {
 
   resolveSoundGain(params: { volumePercent: number }): number {
     const clampedVolumePercent = Math.min(
-      Math.max(params.volumePercent, MIN_SOUND_VOLUME_PERCENT),
-      MAX_SOUND_VOLUME_PERCENT,
+      Math.max(params.volumePercent, constant.soundVolume.minPercent),
+      constant.soundVolume.maxPercent,
     )
 
-    return (clampedVolumePercent / MAX_SOUND_VOLUME_PERCENT) * TONE_MAX_GAIN
+    return (clampedVolumePercent / constant.soundVolume.maxPercent) * TONE_MAX_GAIN
   }
 
   resolveStatusTransitionSessionIds(params: {
-    currentSessions: ISessionInfo[]
-    fromStatus: SessionStatus
-    previousSessions?: ISessionInfo[]
-    toStatus: SessionStatus
+    currentSessions: SessionInfo[]
+    fromStatus: SessionStatusMapper
+    previousSessions?: SessionInfo[]
+    toStatus: SessionStatusMapper
   }): string[] {
     if (params.previousSessions === undefined) {
       return []
@@ -133,7 +135,7 @@ export class SessionSoundUtil {
       })
   }
 
-  protected _playTone(params: { audioContext: AudioContext; gain: number; tone: ISessionSoundTone }): void {
+  protected _playTone(params: { audioContext: AudioContext; gain: number; tone: SessionSoundTone }): void {
     const gainNode = params.audioContext.createGain()
     const oscillator = params.audioContext.createOscillator()
     const startAtSeconds = params.audioContext.currentTime + params.tone.offsetSeconds

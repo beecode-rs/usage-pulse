@@ -4,8 +4,8 @@ import { usageClientService } from '#src/renderer/src/business/service/usage-cli
 import { TriggerConfigFields } from '#src/renderer/src/ui-component/scheduling/trigger-config-fields'
 import { errorUtil } from '#src/renderer/src/util/error-util'
 import { triggerValidationUtil } from '#src/renderer/src/util/trigger-validation-util'
-import { type IAppSettings } from '#src/shared/settings-model'
-import { type ITriggerConfig } from '#src/shared/trigger-model'
+import { type ScheduleTriggerConfig } from '#src/shared/business/model/schedule-trigger-model'
+import { type AppSettings } from '#src/shared/business/model/settings-model'
 
 export const TriggerSettingsDialog = (props: {
   onClose: () => void
@@ -13,11 +13,11 @@ export const TriggerSettingsDialog = (props: {
   triggerId: string
 }): ReactElement => {
   const { onClose, onSaved, triggerId } = props
-  const [editedTrigger, setEditedTrigger] = useState<ITriggerConfig | undefined>(undefined)
+  const [editedTrigger, setEditedTrigger] = useState<ScheduleTriggerConfig | undefined>(undefined)
   const [isConfirmingRemove, setIsConfirmingRemove] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isTriggerMissing, setIsTriggerMissing] = useState(false)
-  const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {

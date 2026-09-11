@@ -2,7 +2,8 @@ import { BrowserWindow, app, shell } from 'electron'
 import { join } from 'node:path'
 
 import { config } from '#src/main/util/config'
-import { OS, osUtil } from '#src/main/util/os-util'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
 
 export type WindowVisibilityChangeListener = (params: { isVisible: boolean }) => void
 

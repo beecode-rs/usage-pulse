@@ -1,10 +1,10 @@
 import { ClaudeTranscriptParserRecordApplier } from '#src/main/lib/claude-transcript-parser/_record-applier'
-import { type ITranscriptParseState, claudeTranscriptParserState } from '#src/main/lib/claude-transcript-parser/_state'
+import { type TranscriptParseState, claudeTranscriptParserState } from '#src/main/lib/claude-transcript-parser/_state'
 import { objectUtil } from '#src/main/util/object-util'
-import { type ISessionTranscriptStats } from '#src/shared/session-model'
+import { type SessionTranscriptStats } from '#src/shared/business/model/session-model'
 
 export class ClaudeTranscriptParserService {
-  hasSignal(params: ISessionTranscriptStats): boolean {
+  hasSignal(params: SessionTranscriptStats): boolean {
     const hasTokenUsage =
       params.cacheCreationTokens > 0 ||
       params.cacheReadTokens > 0 ||
@@ -19,15 +19,15 @@ export class ClaudeTranscriptParserService {
     return params.aiTitle !== '' || params.gitBranch !== '' || params.lastPrompt !== '' || params.model !== ''
   }
 
-  parseStats(params: { content: string }): ISessionTranscriptStats {
-    const state = params.content.split('\n').reduce<ITranscriptParseState>((state, line) => {
+  parseStats(params: { content: string }): SessionTranscriptStats {
+    const state = params.content.split('\n').reduce<TranscriptParseState>((state, line) => {
       return this._reduceLineToState(state, line)
     }, claudeTranscriptParserState.create())
 
     return claudeTranscriptParserState.resolveStats({ state })
   }
 
-  protected _reduceLineToState(state: ITranscriptParseState, line: string): ITranscriptParseState {
+  protected _reduceLineToState(state: TranscriptParseState, line: string): TranscriptParseState {
     const trimmedLine = line.trim()
 
     if (trimmedLine === '') {

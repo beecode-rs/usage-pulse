@@ -3,23 +3,13 @@ import { type ReactElement, useEffect, useState } from 'react'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { SessionSoundField } from '#src/renderer/src/ui-component/sessions/session-sound-field'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import {
-  DEFAULT_SESSIONS_REFRESH_INTERVAL_SECONDS,
-  DEFAULT_SESSION_FINISHED_PULSE_SECONDS,
-  DEFAULT_SESSION_FINISHED_SOUND_ID,
-  DEFAULT_SOUND_VOLUME_PERCENT,
-  DEFAULT_WAITING_SOUND_ID,
-  type IAppSettings,
-  MAX_SESSIONS_REFRESH_INTERVAL_SECONDS,
-  MAX_SESSION_FINISHED_PULSE_SECONDS,
-  MAX_SOUND_VOLUME_PERCENT,
-  MIN_SESSIONS_REFRESH_INTERVAL_SECONDS,
-  MIN_SESSION_FINISHED_PULSE_SECONDS,
-  MIN_SOUND_VOLUME_PERCENT,
-} from '#src/shared/settings-model'
+import type { AppSettings } from '#src/shared/business/model/settings-model'
+import { constant } from '#src/shared/util/constant'
 
-const resolveClampedSeconds = (params: { maxSeconds: number; minSeconds: number; seconds: number }): number => {
-  return Math.min(Math.max(params.seconds, params.minSeconds), params.maxSeconds)
+const resolveClampedSecondsAsMs = (params: { maxMs: number; minMs: number; seconds: number }): number => {
+  const secondsAsMs = params.seconds * 1000
+
+  return Math.min(Math.max(secondsAsMs, params.minMs), params.maxMs)
 }
 
 const renderCloseIcon = (): ReactElement => {
@@ -42,14 +32,12 @@ const renderCloseIcon = (): ReactElement => {
 
 export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: () => void }): ReactElement => {
   const { onClose, onSaved } = props
-  const [settings, setSettings] = useState<IAppSettings | undefined>(undefined)
-  const [refreshIntervalSeconds, setRefreshIntervalSeconds] = useState(DEFAULT_SESSIONS_REFRESH_INTERVAL_SECONDS)
-  const [sessionFinishedPulseSeconds, setSessionFinishedPulseSeconds] = useState<number>(
-    DEFAULT_SESSION_FINISHED_PULSE_SECONDS,
-  )
-  const [sessionFinishedSoundId, setSessionFinishedSoundId] = useState(DEFAULT_SESSION_FINISHED_SOUND_ID)
-  const [waitingSoundId, setWaitingSoundId] = useState(DEFAULT_WAITING_SOUND_ID)
-  const [soundVolumePercent, setSoundVolumePercent] = useState<number>(DEFAULT_SOUND_VOLUME_PERCENT)
+  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [refreshIntervalMs, setRefreshIntervalMs] = useState(constant.sessionsRefreshInterval.defaultMs)
+  const [sessionFinishedPulseMs, setSessionFinishedPulseMs] = useState<number>(constant.sessionFinishedPulse.defaultMs)
+  const [sessionFinishedSoundId, setSessionFinishedSoundId] = useState(constant.sessionFinishedSound.defaultId)
+  const [waitingSoundId, setWaitingSoundId] = useState(constant.waitingSound.defaultId)
+  const [soundVolumePercent, setSoundVolumePercent] = useState<number>(constant.soundVolume.defaultPercent)
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -58,8 +46,8 @@ export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: ()
       const loadedSettings = await usageClientService.getSettings()
 
       setSettings(loadedSettings)
-      setRefreshIntervalSeconds(loadedSettings.sessionsRefreshIntervalSeconds)
-      setSessionFinishedPulseSeconds(loadedSettings.sessionFinishedPulseSeconds)
+      setRefreshIntervalMs(loadedSettings.sessionsRefreshIntervalMs)
+      setSessionFinishedPulseMs(loadedSettings.sessionFinishedPulseMs)
       setSessionFinishedSoundId(loadedSettings.sessionFinishedSoundId)
       setWaitingSoundId(loadedSettings.waitingSoundId)
       setSoundVolumePercent(loadedSettings.soundVolumePercent)
@@ -80,9 +68,9 @@ export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: ()
       await usageClientService.saveSettings({
         settings: {
           ...settings,
-          sessionFinishedPulseSeconds,
+          sessionFinishedPulseMs,
           sessionFinishedSoundId,
-          sessionsRefreshIntervalSeconds: refreshIntervalSeconds,
+          sessionsRefreshIntervalMs: refreshIntervalMs,
           soundVolumePercent,
           waitingSoundId,
         },
@@ -122,8 +110,8 @@ export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: ()
           <span className="settings-field-label">Auto-refresh interval (seconds)</span>
           <input
             className="settings-field-input"
-            max={MAX_SESSIONS_REFRESH_INTERVAL_SECONDS}
-            min={MIN_SESSIONS_REFRESH_INTERVAL_SECONDS}
+            max={constant.sessionsRefreshInterval.maxMs / 1000}
+            min={constant.sessionsRefreshInterval.minMs / 1000}
             onChange={(event) => {
               const seconds = Number.parseInt(event.target.value, 10)
 
@@ -131,28 +119,29 @@ export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: ()
                 return
               }
 
-              setRefreshIntervalSeconds(
-                resolveClampedSeconds({
-                  maxSeconds: MAX_SESSIONS_REFRESH_INTERVAL_SECONDS,
-                  minSeconds: MIN_SESSIONS_REFRESH_INTERVAL_SECONDS,
+              setRefreshIntervalMs(
+                resolveClampedSecondsAsMs({
+                  maxMs: constant.sessionsRefreshInterval.maxMs,
+                  minMs: constant.sessionsRefreshInterval.minMs,
                   seconds,
                 }),
               )
             }}
             type="number"
-            value={refreshIntervalSeconds}
+            value={refreshIntervalMs / 1000}
           />
           <span className="settings-hint">
-            How often the sessions list refreshes automatically, between {String(MIN_SESSIONS_REFRESH_INTERVAL_SECONDS)}{' '}
-            and {String(MAX_SESSIONS_REFRESH_INTERVAL_SECONDS)} seconds.
+            How often the sessions list refreshes automatically, between{' '}
+            {String(constant.sessionsRefreshInterval.minMs / 1000)} and{' '}
+            {String(constant.sessionsRefreshInterval.maxMs / 1000)} seconds.
           </span>
         </label>
         <label className="settings-field">
           <span className="settings-field-label">Session finished indicator (seconds)</span>
           <input
             className="settings-field-input"
-            max={MAX_SESSION_FINISHED_PULSE_SECONDS}
-            min={MIN_SESSION_FINISHED_PULSE_SECONDS}
+            max={constant.sessionFinishedPulse.maxMs / 1000}
+            min={constant.sessionFinishedPulse.minMs / 1000}
             onChange={(event) => {
               const seconds = Number.parseInt(event.target.value, 10)
 
@@ -160,21 +149,22 @@ export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: ()
                 return
               }
 
-              setSessionFinishedPulseSeconds(
-                resolveClampedSeconds({
-                  maxSeconds: MAX_SESSION_FINISHED_PULSE_SECONDS,
-                  minSeconds: MIN_SESSION_FINISHED_PULSE_SECONDS,
+              setSessionFinishedPulseMs(
+                resolveClampedSecondsAsMs({
+                  maxMs: constant.sessionFinishedPulse.maxMs,
+                  minMs: constant.sessionFinishedPulse.minMs,
                   seconds,
                 }),
               )
             }}
             type="number"
-            value={sessionFinishedPulseSeconds}
+            value={sessionFinishedPulseMs / 1000}
           />
           <span className="settings-hint">
             How long a finished session card pulses its border from grey to white, fading out over the same rhythm.
-            Between {String(MIN_SESSION_FINISHED_PULSE_SECONDS)} and {String(MAX_SESSION_FINISHED_PULSE_SECONDS)}{' '}
-            seconds, where {String(MIN_SESSION_FINISHED_PULSE_SECONDS)} turns the indicator off.
+            Between {String(constant.sessionFinishedPulse.minMs / 1000)} and{' '}
+            {String(constant.sessionFinishedPulse.maxMs / 1000)} seconds, where{' '}
+            {String(constant.sessionFinishedPulse.minMs / 1000)} turns the indicator off.
           </span>
         </label>
         <fieldset className="settings-group">
@@ -199,8 +189,8 @@ export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: ()
             <span className="settings-field-label">Volume (%)</span>
             <input
               className="sessions-settings-range"
-              max={MAX_SOUND_VOLUME_PERCENT}
-              min={MIN_SOUND_VOLUME_PERCENT}
+              max={constant.soundVolume.maxPercent}
+              min={constant.soundVolume.minPercent}
               onChange={(event) => {
                 const volumePercent = Number.parseInt(event.target.value, 10)
 
@@ -214,8 +204,8 @@ export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: ()
               value={soundVolumePercent}
             />
             <span className="settings-hint">
-              Loudness of both sounds, between {String(MIN_SOUND_VOLUME_PERCENT)} and {String(MAX_SOUND_VOLUME_PERCENT)}{' '}
-              percent. Use the play buttons to preview each sound.
+              Loudness of both sounds, between {String(constant.soundVolume.minPercent)} and{' '}
+              {String(constant.soundVolume.maxPercent)} percent. Use the play buttons to preview each sound.
             </span>
           </div>
         </fieldset>

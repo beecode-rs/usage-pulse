@@ -1,9 +1,14 @@
-import type { ISchedulingStrategy } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
-import type { IAppSettings, IDummyTrackerConfig } from '#src/shared/settings-model'
-import type { ISchedulingInfo, ITriggerRegistrationHealth, TriggerDay } from '#src/shared/trigger-model'
+import type { SchedulingStrategy } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
+import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import type { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
+import type {
+  ScheduleTriggerRegistrationHealth,
+  SchedulingInfo,
+} from '#src/shared/business/model/schedule-trigger-model'
+import type { AppSettings, DummyTrackerConfig } from '#src/shared/business/model/settings-model'
 
-interface ISchedulableRegistration {
-  days: TriggerDay[]
+type SchedulableRegistration = {
+  days: ScheduleTriggerDayMapper[]
   id: string
   times: string[]
 }
@@ -12,29 +17,29 @@ export class SchedulingService {
   protected readonly _executablePrefixArgs: string[]
   protected readonly _executablePath: string
   protected readonly _fingerprintsByRegistrationId = new Map<string, string>()
-  protected readonly _strategy: ISchedulingStrategy
+  protected readonly _strategy: SchedulingStrategy
 
-  constructor(params: { executablePrefixArgs?: string[]; executablePath?: string; strategy: ISchedulingStrategy }) {
+  constructor(params: { executablePrefixArgs?: string[]; executablePath?: string; strategy: SchedulingStrategy }) {
     this._executablePrefixArgs = params.executablePrefixArgs ?? []
     this._executablePath = params.executablePath ?? process.execPath
     this._strategy = params.strategy
   }
 
-  getSchedulingInfo(): ISchedulingInfo {
+  getSchedulingInfo(): SchedulingInfo {
     return {
       isSupported: this._strategy.isSupported,
       platform: this._strategy.getSchedulingPlatform(),
     }
   }
 
-  async inspectRegistrations(params: { settings: IAppSettings }): Promise<ITriggerRegistrationHealth[]> {
+  async inspectRegistrations(params: { settings: AppSettings }): Promise<ScheduleTriggerRegistrationHealth[]> {
     if (!this._strategy.isSupported) {
       return params.settings.triggers.map((trigger) => {
         return { isRegistered: false, triggerId: trigger.id }
       })
     }
 
-    return params.settings.triggers.reduce<Promise<ITriggerRegistrationHealth[]>>((chain, trigger) => {
+    return params.settings.triggers.reduce<Promise<ScheduleTriggerRegistrationHealth[]>>((chain, trigger) => {
       return chain.then(async (inspections) => {
         const inspection = await this._strategy.inspectRegistration({ triggerId: trigger.id })
 
@@ -43,7 +48,7 @@ export class SchedulingService {
     }, Promise.resolve([]))
   }
 
-  async syncRegistrations(params: { settings: IAppSettings }): Promise<void> {
+  async syncRegistrations(params: { settings: AppSettings }): Promise<void> {
     if (!this._strategy.isSupported) {
       return
     }
@@ -70,7 +75,7 @@ export class SchedulingService {
     await this._syncSchedulableRegistrations({ registeredIds, schedulables })
   }
 
-  protected _resolveSchedulables(params: { settings: IAppSettings }): ISchedulableRegistration[] {
+  protected _resolveSchedulables(params: { settings: AppSettings }): SchedulableRegistration[] {
     const enabledTriggers = params.settings.triggers
       .filter((trigger) => {
         return trigger.isEnabled
@@ -79,8 +84,8 @@ export class SchedulingService {
         return { days: trigger.days, id: trigger.id, times: trigger.times }
       })
     const activeDummyTrackers = params.settings.trackers
-      .filter((tracker): tracker is IDummyTrackerConfig => {
-        return tracker.providerId === 'dummy' && !tracker.isAutoRefreshPaused
+      .filter((tracker): tracker is DummyTrackerConfig => {
+        return tracker.providerId === ProviderIdMapper.DUMMY && !tracker.isAutoRefreshPaused
       })
       .map((tracker) => {
         return { days: tracker.days, id: tracker.id, times: tracker.times }
@@ -100,7 +105,7 @@ export class SchedulingService {
 
   protected async _syncSchedulableRegistrations(params: {
     registeredIds: Set<string>
-    schedulables: ISchedulableRegistration[]
+    schedulables: SchedulableRegistration[]
   }): Promise<void> {
     await params.schedulables.reduce<Promise<void>>((chain, schedulable) => {
       return chain.then(async () => {
@@ -111,7 +116,7 @@ export class SchedulingService {
 
   protected async _syncSchedulableRegistration(params: {
     registeredIds: Set<string>
-    schedulable: ISchedulableRegistration
+    schedulable: SchedulableRegistration
   }): Promise<void> {
     const executableArgs = this._resolveExecutableArgs({ triggerId: params.schedulable.id })
     const fingerprint = this._resolveRegistrationFingerprint({ executableArgs, schedulable: params.schedulable })
@@ -138,7 +143,7 @@ export class SchedulingService {
 
   protected _resolveRegistrationFingerprint(params: {
     executableArgs: string[]
-    schedulable: ISchedulableRegistration
+    schedulable: SchedulableRegistration
   }): string {
     return JSON.stringify({
       days: [...params.schedulable.days].sort(),

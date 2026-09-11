@@ -1,13 +1,13 @@
-import { type ITranscriptParseState } from '#src/main/lib/claude-transcript-parser/_state'
+import { type TranscriptParseState } from '#src/main/lib/claude-transcript-parser/_state'
 import { objectUtil } from '#src/main/util/object-util'
 
 export class ClaudeTranscriptParserRecordApplier {
-  applyEntry(params: { record: Record<string, unknown>; state: ITranscriptParseState }): void {
+  applyEntry(params: { record: Record<string, unknown>; state: TranscriptParseState }): void {
     this._applyByType({ record: params.record, state: params.state })
     this._applySharedEntryFields({ record: params.record, state: params.state })
   }
 
-  protected _applyAssistantRecord(params: { record: Record<string, unknown>; state: ITranscriptParseState }): void {
+  protected _applyAssistantRecord(params: { record: Record<string, unknown>; state: TranscriptParseState }): void {
     const message = objectUtil.asRecord(params.record['message'])
 
     if (message === undefined) {
@@ -33,7 +33,7 @@ export class ClaudeTranscriptParserRecordApplier {
     }
   }
 
-  protected _applyAssistantUsage(params: { message: Record<string, unknown>; state: ITranscriptParseState }): void {
+  protected _applyAssistantUsage(params: { message: Record<string, unknown>; state: TranscriptParseState }): void {
     const usage = objectUtil.asRecord(params.message['usage'])
 
     if (usage === undefined) {
@@ -62,7 +62,7 @@ export class ClaudeTranscriptParserRecordApplier {
     params.state.thinkingTokens = params.state.thinkingTokens + thinkingTokens
   }
 
-  protected _applyByType(params: { record: Record<string, unknown>; state: ITranscriptParseState }): void {
+  protected _applyByType(params: { record: Record<string, unknown>; state: TranscriptParseState }): void {
     switch (params.record['type']) {
       case 'ai-title': {
         const aiTitle = this._resolveNonEmptyString(params.record['aiTitle'])
@@ -104,7 +104,7 @@ export class ClaudeTranscriptParserRecordApplier {
     }
   }
 
-  protected _applySharedEntryFields(params: { record: Record<string, unknown>; state: ITranscriptParseState }): void {
+  protected _applySharedEntryFields(params: { record: Record<string, unknown>; state: TranscriptParseState }): void {
     if (params.state.gitBranch === '') {
       params.state.gitBranch = this._resolveNonEmptyString(params.record['gitBranch'])
     }

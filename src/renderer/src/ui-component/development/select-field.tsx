@@ -2,7 +2,7 @@ import { type ChangeEvent, type ReactElement } from 'react'
 
 import '#src/renderer/src/ui-component/development/select-field.css'
 
-export interface ISelectFieldOption {
+export type SelectFieldOption = {
   label: string
   value: string
 }
@@ -10,7 +10,7 @@ export interface ISelectFieldOption {
 export const SelectField = (props: {
   label: string
   onChange: (value: string) => void
-  options: ISelectFieldOption[]
+  options: SelectFieldOption[]
   value: string
 }): ReactElement => {
   const { label, onChange, options, value } = props

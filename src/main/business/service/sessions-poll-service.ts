@@ -2,15 +2,15 @@ import { SessionTranscriptService } from '#src/main/business/service/session-tra
 import { SessionsService } from '#src/main/business/service/sessions-service'
 import { SshSessionsService } from '#src/main/business/service/ssh-sessions-service'
 import { errorUtil } from '#src/main/util/error-util'
-import { type ISessionSnapshot, type SessionsUpdateListener } from '#src/shared/session-model'
-import { type IAppSettings } from '#src/shared/settings-model'
+import { type SessionSnapshot, type SessionsUpdateListener } from '#src/shared/business/model/session-model'
+import { type AppSettings } from '#src/shared/business/model/settings-model'
 
 export class SessionsPollService {
   protected _isWindowVisible = false
   protected _listeners: SessionsUpdateListener[] = []
-  protected _refreshInFlight: Promise<ISessionSnapshot> | undefined
-  protected _settings: IAppSettings | undefined
-  protected _snapshot: ISessionSnapshot | undefined
+  protected _refreshInFlight: Promise<SessionSnapshot> | undefined
+  protected _settings: AppSettings | undefined
+  protected _snapshot: SessionSnapshot | undefined
   protected _timer: NodeJS.Timeout | undefined
   protected readonly _sessionTranscriptService: SessionTranscriptService
   protected readonly _sessionsService: SessionsService
@@ -32,7 +32,7 @@ export class SessionsPollService {
     this._sshSessionsService = sshSessionsService
   }
 
-  async start(params: { settings: IAppSettings }): Promise<void> {
+  async start(params: { settings: AppSettings }): Promise<void> {
     this._settings = params.settings
 
     if (!this._isWindowVisible) {
@@ -42,7 +42,7 @@ export class SessionsPollService {
     await this._resumeAutoRefresh()
   }
 
-  async restart(params: { settings: IAppSettings }): Promise<void> {
+  async restart(params: { settings: AppSettings }): Promise<void> {
     this.stop()
     this._settings = params.settings
     await this.refreshNow()
@@ -73,7 +73,7 @@ export class SessionsPollService {
     void this._resumeAutoRefresh()
   }
 
-  async refreshNow(): Promise<ISessionSnapshot> {
+  async refreshNow(): Promise<SessionSnapshot> {
     const inFlightRefresh = this._refreshInFlight
 
     if (inFlightRefresh !== undefined) {
@@ -92,7 +92,7 @@ export class SessionsPollService {
     return snapshot
   }
 
-  getSnapshot(): ISessionSnapshot | undefined {
+  getSnapshot(): SessionSnapshot | undefined {
     return this._snapshot
   }
 
@@ -113,7 +113,7 @@ export class SessionsPollService {
       return
     }
 
-    const resumeDelayMs = this._calcResumeDelayMs({ intervalSeconds: settings.sessionsRefreshIntervalSeconds })
+    const resumeDelayMs = this._calcResumeDelayMs({ intervalMs: settings.sessionsRefreshIntervalMs })
 
     if (resumeDelayMs > 0) {
       this._scheduleNextRefresh({ delayMs: resumeDelayMs })
@@ -124,14 +124,14 @@ export class SessionsPollService {
     await this.refreshNow()
   }
 
-  protected _calcResumeDelayMs(params: { intervalSeconds: number }): number {
+  protected _calcResumeDelayMs(params: { intervalMs: number }): number {
     const snapshot = this._snapshot
 
     if (snapshot === undefined) {
       return 0
     }
 
-    const nextRefreshAt = snapshot.fetchedAt + params.intervalSeconds * 1000
+    const nextRefreshAt = snapshot.fetchedAt + params.intervalMs
     const resumeDelayMs = nextRefreshAt - Date.now()
 
     if (resumeDelayMs <= 0) {
@@ -141,7 +141,7 @@ export class SessionsPollService {
     return resumeDelayMs
   }
 
-  protected async _refreshSnapshot(): Promise<ISessionSnapshot> {
+  protected async _refreshSnapshot(): Promise<SessionSnapshot> {
     const settings = this._settings
 
     if (settings === undefined) {
@@ -165,7 +165,7 @@ export class SessionsPollService {
     }
   }
 
-  protected async _fetchSnapshot(params: { settings: IAppSettings }): Promise<ISessionSnapshot> {
+  protected async _fetchSnapshot(params: { settings: AppSettings }): Promise<SessionSnapshot> {
     const [localSnapshot, remoteResults] = await Promise.all([
       this._sessionsService.listSessions(),
       this._sshSessionsService.listRemoteSessions({ hosts: params.settings.sshHosts }),
@@ -180,7 +180,7 @@ export class SessionsPollService {
     return { ...mergedSnapshot, sessions }
   }
 
-  protected _buildErrorSnapshot(params: { errorMessage: string }): ISessionSnapshot {
+  protected _buildErrorSnapshot(params: { errorMessage: string }): SessionSnapshot {
     return {
       errorMessage: params.errorMessage,
       fetchedAt: Date.now(),
@@ -200,7 +200,7 @@ export class SessionsPollService {
       return
     }
 
-    this._scheduleNextRefresh({ delayMs: settings.sessionsRefreshIntervalSeconds * 1000 })
+    this._scheduleNextRefresh({ delayMs: settings.sessionsRefreshIntervalMs })
   }
 
   protected _scheduleNextRefresh(params: { delayMs: number }): void {
@@ -215,7 +215,7 @@ export class SessionsPollService {
     await this.refreshNow()
   }
 
-  protected _notifyListeners(params: { snapshot: ISessionSnapshot }): void {
+  protected _notifyListeners(params: { snapshot: SessionSnapshot }): void {
     this._listeners.forEach((listener) => {
       listener(params.snapshot)
     })
