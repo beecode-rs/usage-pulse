@@ -3,7 +3,7 @@ import { dirname } from 'node:path'
 
 import { objectUtil } from '#src/main/util/object-util'
 import type { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
-import { UsageStatus } from '#src/shared/business/enum/usage-status-enum'
+import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot, type UsageWindow } from '#src/shared/business/model/usage-model'
 import { constant } from '#src/shared/util/constant'
 
@@ -11,7 +11,8 @@ export class UsageSnapshotRepo {
   protected readonly _snapshotFilePath: string
 
   constructor(params: { snapshotFilePath: string }) {
-    this._snapshotFilePath = params.snapshotFilePath
+    const { snapshotFilePath } = params
+    this._snapshotFilePath = snapshotFilePath
   }
 
   async load(): Promise<Record<string, ProviderSnapshot>> {
@@ -25,8 +26,9 @@ export class UsageSnapshotRepo {
   }
 
   async save(params: { snapshotsByTrackerId: Record<string, ProviderSnapshot> }): Promise<void> {
+    const { snapshotsByTrackerId } = params
     await mkdir(dirname(this._snapshotFilePath), { recursive: true })
-    await writeFile(this._snapshotFilePath, `${JSON.stringify(params.snapshotsByTrackerId, null, 2)}\n`, 'utf8')
+    await writeFile(this._snapshotFilePath, `${JSON.stringify(snapshotsByTrackerId, null, 2)}\n`, 'utf8')
   }
 
   protected async _readFileContent(): Promise<string | undefined> {
@@ -48,15 +50,17 @@ export class UsageSnapshotRepo {
   }
 
   protected _parseJsonContent(params: { content: string }): unknown {
+    const { content } = params
     try {
-      return JSON.parse(params.content)
+      return JSON.parse(content)
     } catch {
       return undefined
     }
   }
 
   protected _sanitizeSnapshots(params: { rawSnapshots: unknown }): Record<string, ProviderSnapshot> {
-    const rawRecord = objectUtil.asRecord(params.rawSnapshots)
+    const { rawSnapshots } = params
+    const rawRecord = objectUtil.asRecord(rawSnapshots)
 
     if (rawRecord === undefined) {
       return {}
@@ -74,7 +78,8 @@ export class UsageSnapshotRepo {
   }
 
   protected _sanitizeSnapshot(params: { rawSnapshot: unknown }): ProviderSnapshot | undefined {
-    const rawRecord = objectUtil.asRecord(params.rawSnapshot)
+    const { rawSnapshot } = params
+    const rawRecord = objectUtil.asRecord(rawSnapshot)
 
     if (rawRecord === undefined) {
       return undefined
@@ -107,7 +112,7 @@ export class UsageSnapshotRepo {
     return {
       fetchedAt,
       providerId,
-      status: UsageStatus.OK,
+      status: UsageActivityStatus.OK,
       trackerId,
       trackerName: this._sanitizeTrackerName({ providerId, value: rawRecord['trackerName'] }),
       usage,
@@ -115,8 +120,9 @@ export class UsageSnapshotRepo {
   }
 
   protected _sanitizeProviderId(params: { value: unknown }): ProviderIdMapper | undefined {
+    const { value } = params
     const catalogEntry = constant.providerCatalog.find((entry) => {
-      return entry.id === params.value
+      return entry.id === value
     })
 
     if (catalogEntry === undefined) {
@@ -127,27 +133,29 @@ export class UsageSnapshotRepo {
   }
 
   protected _sanitizeTrackerName(params: { providerId: ProviderIdMapper; value: unknown }): string {
-    if (typeof params.value === 'string' && params.value !== '') {
-      return params.value
+    const { providerId, value } = params
+    if (typeof value === 'string' && value !== '') {
+      return value
     }
 
     const catalogEntry = constant.providerCatalog.find((entry) => {
-      return entry.id === params.providerId
+      return entry.id === providerId
     })
 
     if (catalogEntry === undefined) {
-      return params.providerId
+      return providerId
     }
 
     return catalogEntry.name
   }
 
   protected _sanitizeUsageWindows(params: { rawUsage: unknown }): UsageWindow[] {
-    if (!Array.isArray(params.rawUsage)) {
+    const { rawUsage } = params
+    if (!Array.isArray(rawUsage)) {
       return []
     }
 
-    return params.rawUsage
+    return rawUsage
       .map((rawWindow) => {
         return this._sanitizeUsageWindow({ rawWindow })
       })
@@ -157,7 +165,8 @@ export class UsageSnapshotRepo {
   }
 
   protected _sanitizeUsageWindow(params: { rawWindow: unknown }): UsageWindow | undefined {
-    const rawRecord = objectUtil.asRecord(params.rawWindow)
+    const { rawWindow } = params
+    const rawRecord = objectUtil.asRecord(rawWindow)
 
     if (rawRecord === undefined) {
       return undefined
@@ -186,10 +195,11 @@ export class UsageSnapshotRepo {
   }
 
   protected _sanitizeOptionalNumber(params: { value: unknown }): number | undefined {
-    if (typeof params.value !== 'number' || !Number.isFinite(params.value)) {
+    const { value } = params
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
       return undefined
     }
 
-    return params.value
+    return value
   }
 }

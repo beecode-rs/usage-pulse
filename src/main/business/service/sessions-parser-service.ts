@@ -9,7 +9,8 @@ const SESSION_ORIGIN_ORDER = {
 
 export class SessionsParserService {
   parseSessionEntries(params: { stdout: string }): SessionInfo[] {
-    const parsed = this._tryParseSessionsJson({ stdout: params.stdout })
+    const { stdout } = params
+    const parsed = this._tryParseSessionsJson({ stdout })
 
     if (!Array.isArray(parsed)) {
       throw new Error("'claude agents --json' printed unexpected output: expected a JSON array of sessions")
@@ -31,7 +32,8 @@ export class SessionsParserService {
   }
 
   protected _resolveSessionInfo(params: { rawEntry: unknown }): SessionInfo | undefined {
-    const rawRecord = objectUtil.asRecord(params.rawEntry)
+    const { rawEntry } = params
+    const rawRecord = objectUtil.asRecord(rawEntry)
 
     if (rawRecord === undefined) {
       return undefined
@@ -103,7 +105,9 @@ export class SessionsParserService {
   }
 
   protected _sanitizeSessions(params: { rawEntries: unknown[] }): SessionInfo[] {
-    return params.rawEntries
+    const { rawEntries } = params
+
+    return rawEntries
       .map((rawEntry) => {
         return this._resolveSessionInfo({ rawEntry })
       })
@@ -113,23 +117,25 @@ export class SessionsParserService {
   }
 
   protected _tryParseSessionsJson(params: { stdout: string }): unknown {
+    const { stdout } = params
     try {
-      return JSON.parse(params.stdout)
+      return JSON.parse(stdout)
     } catch {
-      return this._tryParseSessionsJsonSlice({ stdout: params.stdout })
+      return this._tryParseSessionsJsonSlice({ stdout })
     }
   }
 
   protected _tryParseSessionsJsonSlice(params: { stdout: string }): unknown {
-    const startIndex = params.stdout.indexOf('[')
-    const endIndex = params.stdout.lastIndexOf(']')
+    const { stdout } = params
+    const startIndex = stdout.indexOf('[')
+    const endIndex = stdout.lastIndexOf(']')
 
     if (startIndex < 0 || endIndex <= startIndex) {
       throw new Error("'claude agents --json' printed output that is not valid JSON")
     }
 
     try {
-      return JSON.parse(params.stdout.slice(startIndex, endIndex + 1))
+      return JSON.parse(stdout.slice(startIndex, endIndex + 1))
     } catch {
       throw new Error("'claude agents --json' printed output that is not valid JSON")
     }

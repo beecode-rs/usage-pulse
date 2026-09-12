@@ -109,6 +109,8 @@ export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void
   }, [])
 
   const persistSshHosts = async (params: { sshHosts: SshHostConfig[] }): Promise<boolean> => {
+    const { sshHosts } = params
+
     if (settings === undefined) {
       return false
     }
@@ -118,7 +120,7 @@ export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void
 
     try {
       const nextSettings = await usageClientService.saveSettings({
-        settings: { ...settings, sshHosts: params.sshHosts },
+        settings: { ...settings, sshHosts },
       })
 
       setSettings(nextSettings)
@@ -183,12 +185,14 @@ export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void
   }
 
   const handleToggleEnabled = async (params: { host: SshHostConfig }): Promise<void> => {
+    const { host } = params
+
     if (settings === undefined) {
       return
     }
 
     const nextSshHosts = settings.sshHosts.map((sshHost) => {
-      if (sshHost.id !== params.host.id) {
+      if (sshHost.id !== host.id) {
         return sshHost
       }
 
@@ -199,18 +203,20 @@ export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void
   }
 
   const handleRemove = async (params: { host: SshHostConfig }): Promise<void> => {
+    const { host } = params
+
     if (settings === undefined) {
       return
     }
 
-    if (confirmingRemoveId !== params.host.id) {
-      setConfirmingRemoveId(params.host.id)
+    if (confirmingRemoveId !== host.id) {
+      setConfirmingRemoveId(host.id)
 
       return
     }
 
     const nextSshHosts = settings.sshHosts.filter((sshHost) => {
-      return sshHost.id !== params.host.id
+      return sshHost.id !== host.id
     })
 
     await persistSshHosts({ sshHosts: nextSshHosts })

@@ -18,20 +18,18 @@ export const AddTriggerDialog = (props: {
   onClose: () => void
   onSaved: () => void
 }): ReactElement => {
-  const { initialPreset, onClose, onSaved } = props
+  const { initialPreset = constant.maxWindowScheduleTriggerPreset, onClose, onSaved } = props
   const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
   const [newTrigger, setNewTrigger] = useState<ScheduleTriggerConfig>((): ScheduleTriggerConfig => {
-    const preset = initialPreset ?? constant.maxWindowScheduleTriggerPreset
-
     return {
       command: DEFAULT_TRIGGER_COMMAND,
       createdAt: Date.now(),
-      days: [...preset.days],
+      days: [...initialPreset.days],
       id: crypto.randomUUID(),
       isEnabled: true,
       name: '',
       timeoutMs: constant.scheduleTrigger.timeout.defaultMs,
-      times: [...preset.times],
+      times: [...initialPreset.times],
     }
   })
   const [isSaving, setIsSaving] = useState(false)

@@ -5,6 +5,7 @@ export const sideMenuPrefsUtil = {
     return window.localStorage.getItem(STORAGE_KEY) === 'true'
   },
   saveIsCollapsed: (params: { isCollapsed: boolean }): void => {
-    window.localStorage.setItem(STORAGE_KEY, String(params.isCollapsed))
+    const { isCollapsed } = params
+    window.localStorage.setItem(STORAGE_KEY, String(isCollapsed))
   },
 }

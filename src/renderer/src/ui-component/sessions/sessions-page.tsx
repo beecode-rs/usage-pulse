@@ -49,20 +49,23 @@ const resolveRefreshProgressPercent = (params: {
   intervalMs: number
   nowMs: number
 }): number => {
-  const elapsedMs = Math.min(params.intervalMs, Math.max(0, params.nowMs - params.cycleStartedAtMs))
+  const { cycleStartedAtMs, intervalMs, nowMs } = params
+  const elapsedMs = Math.min(intervalMs, Math.max(0, nowMs - cycleStartedAtMs))
 
-  return (elapsedMs / params.intervalMs) * 100
+  return (elapsedMs / intervalMs) * 100
 }
 
 const resolveDisplayedErrorMessage = (params: {
   fetchErrorMessage: string
   snapshot: SessionSnapshot | undefined
 }): string => {
-  if (params.fetchErrorMessage !== '') {
-    return params.fetchErrorMessage
+  const { fetchErrorMessage, snapshot } = params
+
+  if (fetchErrorMessage !== '') {
+    return fetchErrorMessage
   }
 
-  return params.snapshot?.errorMessage ?? ''
+  return snapshot?.errorMessage ?? ''
 }
 
 const resolveSummaryLabel = (sessions: SessionInfo[]): string => {
@@ -170,24 +173,28 @@ export const SessionsPage = (props: {
   }
 
   const focusSession = async (params: { cwd: string; pid: number }): Promise<void> => {
+    const { cwd, pid } = params
+
     try {
-      await sessionsClientService.focusSession({ cwd: params.cwd, pid: params.pid })
+      await sessionsClientService.focusSession({ cwd, pid })
     } catch (error) {
       setErrorMessage(errorUtil.resolveMessage(error))
     }
   }
 
   const handleToggleSession = (params: { key: string }): void => {
+    const { key } = params
+
     setExpandedSessionKeys((previous) => {
-      if (previous.has(params.key)) {
+      if (previous.has(key)) {
         return new Set(
           [...previous].filter((candidateKey) => {
-            return candidateKey !== params.key
+            return candidateKey !== key
           }),
         )
       }
 
-      return new Set([...previous, params.key])
+      return new Set([...previous, key])
     })
   }
 

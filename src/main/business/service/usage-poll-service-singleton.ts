@@ -1,13 +1,17 @@
-import { type UsageSnapshotRepo } from '#src/main/business/repo/usage-snapshot-repo'
-import { ClaudeSystemTokenService } from '#src/main/business/service/claude-system-token-service'
+import { singletonPattern } from '@beecode/msh-util'
+import { app } from 'electron'
+import { join } from 'node:path'
+
+import { UsageSnapshotRepo } from '#src/main/business/repo/usage-snapshot-repo'
+import { ClaudeSystemAccessTokenService } from '#src/main/business/service/claude-system-access-token-service'
 import { UsageProviderClaude } from '#src/main/business/service/usage-provider/claude'
 import { UsageProviderDummy } from '#src/main/business/service/usage-provider/dummy'
 import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
 import { UsageProviderZai } from '#src/main/business/service/usage-provider/zai'
 import { errorUtil } from '#src/main/util/error-util'
-import { ClaudeTokenSource } from '#src/shared/business/enum/claude-token-source-enum'
+import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
-import { UsageStatus } from '#src/shared/business/enum/usage-status-enum'
+import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type AppSettings, type TrackerConfig } from '#src/shared/business/model/settings-model'
 import {
   type ProviderSnapshot,
@@ -15,7 +19,7 @@ import {
   type UsageUpdateListener,
 } from '#src/shared/business/model/usage-model'
 
-export class UsagePollService {
+export class _UsagePollService {
   protected _generationByTrackerId = new Map<string, number>()
   protected _isWindowVisible = false
   protected _listeners: UsageUpdateListener[] = []
@@ -23,28 +27,29 @@ export class UsagePollService {
   protected _settings: AppSettings | undefined
   protected _snapshotByTrackerId = new Map<string, ProviderSnapshot>()
   protected _timerByTrackerId = new Map<string, NodeJS.Timeout>()
-  protected readonly _claudeSystemTokenService: ClaudeSystemTokenService
+  protected readonly _claudeSystemAccessTokenService: ClaudeSystemAccessTokenService
   protected readonly _providers: Record<ProviderIdMapper, UsageProvider>
   protected readonly _snapshotRepo?: UsageSnapshotRepo
 
   constructor(params?: {
-    claudeSystemTokenService?: ClaudeSystemTokenService
+    claudeSystemAccessTokenService?: ClaudeSystemAccessTokenService
     providers?: Record<ProviderIdMapper, UsageProvider>
     snapshotRepo?: UsageSnapshotRepo
   }) {
     const {
-      claudeSystemTokenService = new ClaudeSystemTokenService(),
+      claudeSystemAccessTokenService = new ClaudeSystemAccessTokenService(),
       providers = this._createDefaultProviders(),
       snapshotRepo,
     } = params ?? {}
 
-    this._claudeSystemTokenService = claudeSystemTokenService
+    this._claudeSystemAccessTokenService = claudeSystemAccessTokenService
     this._providers = providers
     this._snapshotRepo = snapshotRepo
   }
 
   async start(params: { settings: AppSettings }): Promise<void> {
-    this._settings = params.settings
+    const { settings } = params
+    this._settings = settings
 
     await this._hydratePersistedSnapshots()
 
@@ -56,8 +61,9 @@ export class UsagePollService {
   }
 
   async restart(params: { settings: AppSettings }): Promise<void> {
+    const { settings } = params
     this.stop()
-    this._settings = params.settings
+    this._settings = settings
     await this.refreshNow()
   }
 
@@ -69,13 +75,14 @@ export class UsagePollService {
   }
 
   setWindowVisibility(params: { isVisible: boolean }): void {
-    if (params.isVisible === this._isWindowVisible) {
+    const { isVisible } = params
+    if (isVisible === this._isWindowVisible) {
       return
     }
 
-    this._isWindowVisible = params.isVisible
+    this._isWindowVisible = isVisible
 
-    if (!params.isVisible) {
+    if (!isVisible) {
       this.stop()
 
       return
@@ -103,7 +110,8 @@ export class UsagePollService {
   }
 
   async refreshTracker(params: { trackerId: string }): Promise<void> {
-    const tracker = this._resolveTracker({ trackerId: params.trackerId })
+    const { trackerId } = params
+    const tracker = this._resolveTracker({ trackerId })
 
     if (tracker === undefined) {
       return
@@ -117,9 +125,10 @@ export class UsagePollService {
   }
 
   async applyTrackerAutoRefresh(params: { settings: AppSettings; trackerId: string }): Promise<void> {
-    this._settings = params.settings
+    const { settings, trackerId } = params
+    this._settings = settings
 
-    const tracker = this._resolveTracker({ trackerId: params.trackerId })
+    const tracker = this._resolveTracker({ trackerId })
 
     if (tracker === undefined) {
       return
@@ -140,11 +149,12 @@ export class UsagePollService {
   }
 
   onUpdate(params: { listener: UsageUpdateListener }): () => void {
-    this._listeners.push(params.listener)
+    const { listener } = params
+    this._listeners.push(listener)
 
     return () => {
-      this._listeners = this._listeners.filter((listener) => {
-        return listener !== params.listener
+      this._listeners = this._listeners.filter((currentListener) => {
+        return currentListener !== listener
       })
     }
   }
@@ -158,6 +168,7 @@ export class UsagePollService {
   }
 
   protected _resolveTracker(params: { trackerId: string }): TrackerConfig | undefined {
+    const { trackerId } = params
     const settings = this._settings
 
     if (settings === undefined) {
@@ -165,21 +176,22 @@ export class UsagePollService {
     }
 
     return settings.trackers.find((tracker) => {
-      return tracker.id === params.trackerId
+      return tracker.id === trackerId
     })
   }
 
   protected async _pollTrackerOnce(params: { tracker: TrackerConfig }): Promise<boolean> {
-    const generation = this._beginTrackerPoll({ trackerId: params.tracker.id })
+    const { tracker } = params
+    const generation = this._beginTrackerPoll({ trackerId: tracker.id })
     this._notifyListeners({ snapshot: this._buildSnapshot() })
 
-    const providerSnapshot = await this._pollTracker({ tracker: params.tracker })
+    const providerSnapshot = await this._pollTracker({ tracker })
 
-    if (generation !== this._generationByTrackerId.get(params.tracker.id)) {
+    if (generation !== this._generationByTrackerId.get(tracker.id)) {
       return false
     }
 
-    this._snapshotByTrackerId.set(params.tracker.id, providerSnapshot)
+    this._snapshotByTrackerId.set(tracker.id, providerSnapshot)
     this._persistSnapshots()
     this._notifyListeners({ snapshot: this._buildSnapshot() })
 
@@ -187,8 +199,9 @@ export class UsagePollService {
   }
 
   protected _beginTrackerPoll(params: { trackerId: string }): number {
-    const nextGeneration = (this._generationByTrackerId.get(params.trackerId) ?? 0) + 1
-    this._generationByTrackerId.set(params.trackerId, nextGeneration)
+    const { trackerId } = params
+    const nextGeneration = (this._generationByTrackerId.get(trackerId) ?? 0) + 1
+    this._generationByTrackerId.set(trackerId, nextGeneration)
 
     return nextGeneration
   }
@@ -204,11 +217,11 @@ export class UsagePollService {
       const snapshot = this._snapshotByTrackerId.get(tracker.id)
       const isPersistable = tracker.providerId !== ProviderIdMapper.DUMMY
 
-      if (isPersistable && snapshot?.status === UsageStatus.OK) {
+      if (isPersistable && snapshot?.status === UsageActivityStatus.OK) {
         snapshotsByTrackerId[tracker.id] = {
           fetchedAt: snapshot.fetchedAt,
           providerId: snapshot.providerId,
-          status: UsageStatus.OK,
+          status: UsageActivityStatus.OK,
           trackerId: snapshot.trackerId,
           trackerName: snapshot.trackerName,
           usage: snapshot.usage,
@@ -257,29 +270,31 @@ export class UsagePollService {
   }
 
   protected async _resumeTracker(params: { tracker: TrackerConfig }): Promise<void> {
-    if (params.tracker.isAutoRefreshPaused) {
+    const { tracker } = params
+    if (tracker.isAutoRefreshPaused) {
       return
     }
 
-    const resumeDelayMs = this._calcResumeDelayMs({ tracker: params.tracker })
+    const resumeDelayMs = this._calcResumeDelayMs({ tracker })
 
     if (resumeDelayMs > 0) {
-      this._scheduleTracker({ delayMs: resumeDelayMs, tracker: params.tracker })
+      this._scheduleTracker({ delayMs: resumeDelayMs, tracker })
 
       return
     }
 
-    await this.refreshTracker({ trackerId: params.tracker.id })
+    await this.refreshTracker({ trackerId: tracker.id })
   }
 
   protected _calcResumeDelayMs(params: { tracker: TrackerConfig }): number {
-    const snapshot = this._snapshotByTrackerId.get(params.tracker.id)
+    const { tracker } = params
+    const snapshot = this._snapshotByTrackerId.get(tracker.id)
 
     if (snapshot?.fetchedAt === undefined) {
       return 0
     }
 
-    const nextPollAt = snapshot.fetchedAt + params.tracker.refreshIntervalMs
+    const nextPollAt = snapshot.fetchedAt + tracker.refreshIntervalMs
     const resumeDelayMs = nextPollAt - Date.now()
 
     if (resumeDelayMs <= 0) {
@@ -316,8 +331,9 @@ export class UsagePollService {
   }
 
   protected _resolveTrackerSnapshot(params: { tracker: TrackerConfig }): ProviderSnapshot {
-    const nextRefreshAt = this._resolveTrackerNextRefreshAt({ tracker: params.tracker })
-    const existingSnapshot = this._snapshotByTrackerId.get(params.tracker.id)
+    const { tracker } = params
+    const nextRefreshAt = this._resolveTrackerNextRefreshAt({ tracker })
+    const existingSnapshot = this._snapshotByTrackerId.get(tracker.id)
 
     if (existingSnapshot !== undefined) {
       return {
@@ -328,23 +344,24 @@ export class UsagePollService {
 
     return {
       nextRefreshAt,
-      providerId: params.tracker.providerId,
-      status: UsageStatus.PENDING,
-      trackerId: params.tracker.id,
-      trackerName: params.tracker.name,
+      providerId: tracker.providerId,
+      status: UsageActivityStatus.PENDING,
+      trackerId: tracker.id,
+      trackerName: tracker.name,
     }
   }
 
   protected _resolveTrackerNextRefreshAt(params: { tracker: TrackerConfig }): number | undefined {
-    if (params.tracker.isAutoRefreshPaused) {
+    const { tracker } = params
+    if (tracker.isAutoRefreshPaused) {
       return undefined
     }
 
-    return this._nextPollAtByTrackerId.get(params.tracker.id)
+    return this._nextPollAtByTrackerId.get(tracker.id)
   }
 
   protected async _pollTracker(params: { tracker: TrackerConfig }): Promise<ProviderSnapshot> {
-    const tracker = params.tracker
+    const { tracker } = params
     const provider = this._providers[tracker.providerId]
 
     try {
@@ -354,7 +371,7 @@ export class UsagePollService {
       if (isAccessTokenRequired && accessToken === '') {
         return {
           providerId: tracker.providerId,
-          status: UsageStatus.UNCONFIGURED,
+          status: UsageActivityStatus.UNCONFIGURED,
           trackerId: tracker.id,
           trackerName: tracker.name,
         }
@@ -365,7 +382,7 @@ export class UsagePollService {
       return {
         fetchedAt: Date.now(),
         providerId: tracker.providerId,
-        status: UsageStatus.OK,
+        status: UsageActivityStatus.OK,
         trackerId: tracker.id,
         trackerName: tracker.name,
         usage,
@@ -374,7 +391,7 @@ export class UsagePollService {
       return {
         errorMessage: errorUtil.resolveMessage(error),
         providerId: tracker.providerId,
-        status: UsageStatus.ERROR,
+        status: UsageActivityStatus.ERROR,
         trackerId: tracker.id,
         trackerName: tracker.name,
       }
@@ -382,18 +399,20 @@ export class UsagePollService {
   }
 
   protected async _resolveAccessToken(params: { tracker: TrackerConfig }): Promise<string> {
+    const { tracker } = params
     if (
-      params.tracker.providerId === ProviderIdMapper.CLAUDE &&
-      params.tracker.tokenSource === ClaudeTokenSource.SYSTEM
+      tracker.providerId === ProviderIdMapper.CLAUDE &&
+      tracker.accessTokenSource === ClaudeAccessTokenSource.SYSTEM
     ) {
-      return await this._claudeSystemTokenService.resolveAccessToken()
+      return await this._claudeSystemAccessTokenService.resolveAccessToken()
     }
 
-    return params.tracker.accessToken
+    return tracker.accessToken
   }
 
   protected _rescheduleTrackerAfterPoll(params: { isPollApplied: boolean; trackerId: string }): void {
-    if (!params.isPollApplied) {
+    const { isPollApplied, trackerId } = params
+    if (!isPollApplied) {
       return
     }
 
@@ -401,7 +420,7 @@ export class UsagePollService {
       return
     }
 
-    const tracker = this._resolveTracker({ trackerId: params.trackerId })
+    const tracker = this._resolveTracker({ trackerId })
 
     if (tracker === undefined || tracker.isAutoRefreshPaused) {
       return
@@ -411,38 +430,50 @@ export class UsagePollService {
   }
 
   protected _scheduleTracker(params: { delayMs: number; tracker: TrackerConfig }): void {
-    this._cancelTrackerTimer({ trackerId: params.tracker.id })
+    const { delayMs, tracker } = params
+    this._cancelTrackerTimer({ trackerId: tracker.id })
 
-    const nextPollAt = Date.now() + params.delayMs
-    this._nextPollAtByTrackerId.set(params.tracker.id, nextPollAt)
+    const nextPollAt = Date.now() + delayMs
+    this._nextPollAtByTrackerId.set(tracker.id, nextPollAt)
 
     const timer = setTimeout(() => {
-      void this._onTrackerTimer({ tracker: params.tracker })
-    }, params.delayMs)
+      void this._onTrackerTimer({ tracker })
+    }, delayMs)
 
-    this._timerByTrackerId.set(params.tracker.id, timer)
+    this._timerByTrackerId.set(tracker.id, timer)
   }
 
   protected async _onTrackerTimer(params: { tracker: TrackerConfig }): Promise<void> {
-    const isPollApplied = await this._pollTrackerOnce({ tracker: params.tracker })
+    const { tracker } = params
+    const isPollApplied = await this._pollTrackerOnce({ tracker })
 
-    this._rescheduleTrackerAfterPoll({ isPollApplied, trackerId: params.tracker.id })
+    this._rescheduleTrackerAfterPoll({ isPollApplied, trackerId: tracker.id })
   }
 
   protected _cancelTrackerTimer(params: { trackerId: string }): void {
-    const timer = this._timerByTrackerId.get(params.trackerId)
+    const { trackerId } = params
+    const timer = this._timerByTrackerId.get(trackerId)
 
     if (timer === undefined) {
       return
     }
 
     clearTimeout(timer)
-    this._timerByTrackerId.delete(params.trackerId)
+    this._timerByTrackerId.delete(trackerId)
   }
 
   protected _notifyListeners(params: { snapshot: UsageSnapshot }): void {
+    const { snapshot } = params
     this._listeners.forEach((listener) => {
-      listener(params.snapshot)
+      listener(snapshot)
     })
   }
 }
+
+export const usagePollServiceSingleton = singletonPattern(() => {
+  return new _UsagePollService({
+    snapshotRepo: new UsageSnapshotRepo({
+      snapshotFilePath: join(app.getPath('userData'), 'usage-pulse-snapshots.json'),
+    }),
+  })
+})

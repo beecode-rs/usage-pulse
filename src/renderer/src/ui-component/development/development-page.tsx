@@ -8,7 +8,7 @@ import { dateUtil } from '#src/renderer/src/util/date-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { usageSeverityUtil } from '#src/renderer/src/util/usage-severity-util'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
-import { UsageStatus } from '#src/shared/business/enum/usage-status-enum'
+import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
 import { constant } from '#src/shared/util/constant'
 
@@ -105,7 +105,7 @@ export const DevelopmentPage = (props: {
       fetchedAt: previewNowMs - fetchedElapsedMinutes * 60_000,
       nextRefreshAt: previewNowMs + PREVIEW_NEXT_REFRESH_OFFSET_MS,
       providerId: ProviderIdMapper.ZAI,
-      status: UsageStatus.OK,
+      status: UsageActivityStatus.OK,
       trackerId: 'development-zai',
       trackerName: 'z.ai',
       usage: [

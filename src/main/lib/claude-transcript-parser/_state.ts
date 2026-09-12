@@ -38,20 +38,22 @@ export const claudeTranscriptParserState = {
   },
 
   resolveStats: (params: { state: TranscriptParseState }): SessionTranscriptStats => {
+    const { state } = params
+
     return {
-      aiTitle: params.state.aiTitle,
-      cacheCreationTokens: params.state.cacheCreationTokens,
-      cacheReadTokens: params.state.cacheReadTokens,
-      contextSizeTokens: params.state.contextSizeTokens,
-      gitBranch: params.state.gitBranch,
-      inputTokens: params.state.inputTokens,
-      lastActivityAt: params.state.lastActivityAt,
-      lastPrompt: params.state.lastPrompt,
-      model: params.state.model,
-      outputTokens: params.state.outputTokens,
-      thinkingTokens: params.state.thinkingTokens,
-      userTurnsCount: params.state.userTurnsCount,
-      version: params.state.version,
+      aiTitle: state.aiTitle,
+      cacheCreationTokens: state.cacheCreationTokens,
+      cacheReadTokens: state.cacheReadTokens,
+      contextSizeTokens: state.contextSizeTokens,
+      gitBranch: state.gitBranch,
+      inputTokens: state.inputTokens,
+      lastActivityAt: state.lastActivityAt,
+      lastPrompt: state.lastPrompt,
+      model: state.model,
+      outputTokens: state.outputTokens,
+      thinkingTokens: state.thinkingTokens,
+      userTurnsCount: state.userTurnsCount,
+      version: state.version,
     }
   },
 }

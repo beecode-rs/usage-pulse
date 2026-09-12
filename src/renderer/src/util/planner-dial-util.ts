@@ -2,7 +2,8 @@ import { constant } from '#src/renderer/src/util/constant'
 
 export class PlannerDialUtil {
   resolveDialDeltaDegrees(params: { angleDegrees: number }): number {
-    const deltaDegrees = (((params.angleDegrees - constant.plannerDialStartAngleDegrees) % 360) + 360) % 360
+    const { angleDegrees } = params
+    const deltaDegrees = (((angleDegrees - constant.plannerDialStartAngleDegrees) % 360) + 360) % 360
 
     if (deltaDegrees <= constant.plannerDialAngleRangeDegrees) {
       return deltaDegrees
@@ -16,62 +17,68 @@ export class PlannerDialUtil {
   }
 
   resolveKeyboardValue(params: { key: string; max: number; min: number; step: number; value: number }): number {
-    switch (params.key) {
+    const { key, max, min, step, value } = params
+    switch (key) {
       case 'ArrowDown':
       case 'ArrowLeft': {
         return this._resolveClampedValue({
-          max: params.max,
-          min: params.min,
-          value: params.value - params.step,
+          max,
+          min,
+          value: value - step,
         })
       }
 
       case 'ArrowRight':
       case 'ArrowUp': {
         return this._resolveClampedValue({
-          max: params.max,
-          min: params.min,
-          value: params.value + params.step,
+          max,
+          min,
+          value: value + step,
         })
       }
 
       case 'End': {
-        return params.max
+        return max
       }
 
       case 'Home': {
-        return params.min
+        return min
       }
 
       default: {
-        return params.value
+        return value
       }
     }
   }
 
   resolvePointerValue(params: { dx: number; dy: number; max: number; min: number; step: number }): number {
-    const pointerAngleDegrees = (Math.atan2(params.dy, params.dx) * 180) / Math.PI
+    const { dx, dy, max, min, step } = params
+    const pointerAngleDegrees = (Math.atan2(dy, dx) * 180) / Math.PI
     const deltaDegrees = this.resolveDialDeltaDegrees({ angleDegrees: pointerAngleDegrees })
     const valueFraction = deltaDegrees / constant.plannerDialAngleRangeDegrees
-    const rawValue = params.min + valueFraction * (params.max - params.min)
+    const rawValue = min + valueFraction * (max - min)
 
-    return this.resolveSteppedValue({ max: params.max, min: params.min, rawValue, step: params.step })
+    return this.resolveSteppedValue({ max, min, rawValue, step })
   }
 
   resolveSteppedValue(params: { max: number; min: number; rawValue: number; step: number }): number {
-    const stepCount = Math.round((params.rawValue - params.min) / params.step)
-    const steppedValue = params.min + stepCount * params.step
+    const { max, min, rawValue, step } = params
+    const stepCount = Math.round((rawValue - min) / step)
+    const steppedValue = min + stepCount * step
 
-    return this._resolveClampedValue({ max: params.max, min: params.min, value: steppedValue })
+    return this._resolveClampedValue({ max, min, value: steppedValue })
   }
 
   resolveValueAngleDegrees(params: { max: number; min: number; value: number }): number {
-    const valueFraction = (params.value - params.min) / (params.max - params.min)
+    const { max, min, value } = params
+    const valueFraction = (value - min) / (max - min)
 
     return constant.plannerDialStartAngleDegrees + valueFraction * constant.plannerDialAngleRangeDegrees
   }
 
   protected _resolveClampedValue(params: { max: number; min: number; value: number }): number {
-    return Math.min(Math.max(params.value, params.min), params.max)
+    const { max, min, value } = params
+
+    return Math.min(Math.max(value, min), max)
   }
 }

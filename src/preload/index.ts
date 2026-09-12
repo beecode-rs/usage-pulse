@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
+import type { UsageApiClient } from '#src/renderer/src/business/service/usage-api-client'
 import { IpcChannelMapper } from '#src/shared/business/enum/ipc-channel-mapper-enum'
 import type { OS } from '#src/shared/business/enum/os-enum'
 import {
@@ -7,16 +8,11 @@ import {
   type ScheduleTriggerRunLogEntry,
   type SchedulingInfo,
 } from '#src/shared/business/model/schedule-trigger-model'
-import {
-  type SessionFocusSupport,
-  type SessionSnapshot,
-  type SessionsUpdateListener,
-} from '#src/shared/business/model/session-model'
+import { type SessionSnapshot, type SessionsUpdateListener } from '#src/shared/business/model/session-model'
 import { type AppSettings } from '#src/shared/business/model/settings-model'
 import { type UpdateStatus, type UpdateStatusListener } from '#src/shared/business/model/update-model'
 import {
   type SettingsUpdateListener,
-  type UsageApiClient,
   type UsageSnapshot,
   type UsageUpdateListener,
 } from '#src/shared/business/model/usage-model'
@@ -33,9 +29,6 @@ const usageApi: UsageApiClient = {
   },
   getSchedulingInfo: (): Promise<SchedulingInfo> => {
     return ipcRenderer.invoke(IpcChannelMapper.SCHEDULING_GET_INFO)
-  },
-  getSessionFocusSupport: (): Promise<SessionFocusSupport> => {
-    return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_GET_FOCUS_SUPPORT)
   },
   getSessionsSnapshot: (): Promise<SessionSnapshot | undefined> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_GET_SNAPSHOT)
@@ -55,8 +48,11 @@ const usageApi: UsageApiClient = {
   inspectTriggerRegistrations: (): Promise<ScheduleTriggerRegistrationHealth[]> => {
     return ipcRenderer.invoke(IpcChannelMapper.TRIGGER_OS_INSPECT)
   },
-  installSessionFocusTool: (): Promise<SessionFocusSupport> => {
+  installSessionFocusTool: (): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_INSTALL_FOCUS_TOOL)
+  },
+  isSessionFocusSupported: (): Promise<boolean> => {
+    return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_GET_FOCUS_SUPPORT)
   },
   listSessions: (): Promise<SessionSnapshot> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_LIST)
@@ -112,7 +108,9 @@ const usageApi: UsageApiClient = {
     return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH)
   },
   refreshTracker: (params: { trackerId: string }): Promise<void> => {
-    return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH_TRACKER, params.trackerId)
+    const { trackerId } = params
+
+    return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH_TRACKER, trackerId)
   },
   saveSettings: (settings: AppSettings): Promise<AppSettings> => {
     return ipcRenderer.invoke(IpcChannelMapper.SETTINGS_SAVE, settings)

@@ -67,3 +67,58 @@
 - we still have minutes in planner under constants (@src/shared/util/constant.ts), use ms here as well
 ---
 - @src/shared/business/model/trigger-planner-model.ts has some business logic, split the model definition from business locig, move the business logic to the service layer and leave the model here
+---
+- usage model in shared folder (@src/shared/business/model/usage-model.ts) has model and usage api client definition split them and leve the model here and move the api info to business layer service layer
+---
+- session focuse support status (@src/shared/business/enum/session-focus-support-status-mapper-enum.ts) has only two options, convert it into boolean flag and remove the enum
+---
+- rename claude token surce "enum" (@src/shared/business/enum/claude-token-source-enum.ts) to claude access token source
+- i see that we are callinf it a token source in other places to, replace all to reflect the access token source brcause token means two thinks in our project, one is access token and the other is llm token (@src/renderer/src/util/tracker-token-source-util.ts, @src/main/business/service/claude-system-token-service.ts, tokenSource identifier across src/)
+---
+- rename usage status enum (@src/shared/business/enum/usage-status-enum.ts) to be usage activity ststus. if anyone called to get usage status the new name must be reflected on them as well
+---
+- in model folder (@src/renderer/src/business/model/) we must only have models if you have any type or class that ends with entity rename it to model
+---
+- lets fix the need for the public function in app window lifecicle (src/main/app-boot/app-window-life-cycle.ts) getwindow, use suggestion from @resource/doc/life-cycle-audit.md . if we have some reusable business logic in the lifecycle, extract it to business or lib layer. if this logic needs to be persistant we can always use singleton pattern from msh-util
+---
+- move the ipc controller register code with services into a controller layer (@src/main/controller/ipc-controller.ts) and only call the wrapper register call from lifecycle (@src/main/app-boot/ipc-registration-life-cycle.ts)
+- can we remove the dependency injection in ipc controller and import services needed using node import (@src/main/controller/ipc-controller.ts)
+---
+- we need to merge app window store (@src/main/lib/app-window-store.ts + @src/main/lib/app-window-store-singleton.ts) into one file. the file name must be singleton and the singleton is exported normaly, and the original clasd is exported but we must add the _ as a prefix to class name to make it known to others that it shuld not be used
+---
+- dont use params. in the body of the function. do the destruction in the first line of the function body. check whole src folder. fsn out subagents to do the job one subagent per file and you must find the files that have params. in the body
+- there are still some `params.` in the the code i found one in scheduling strategy folder. cheeck in other places and fix them to use params destructor as first line in function body
+---
+- Finish the params-destructuring task: wait for the last 3 agents (session-finished-pulse.tsx, session-card.tsx, ssh-hosts-dialog.tsx), then run central verification in /home/milos/code/usage-pulse: (1) rg -n '\bparams\.' src --type ts to list any remaining dot-reads and confirm each is an intentional skip (onUpdate listener-collision methods in usage-poll-service/sessions-poll-service/update-service, settings-service _sanitizeTracker/_sanitizeTrigger/_sanitizeSshHost, scheduling-strategy factory resolve); (2) pnpm typecheck; (3) pnpm lint-fix:eslint and pnpm lint-fix:prettier (or targeted eslint --fix / prettier --write on changed files) then pnpm lint to confirm clean - watch for no-shadow complaints in side-menu.tsx resolveBrandDotClassName and trigger-command-service _captureChunk; (4) pnpm test:contract. Fix any real breakage found (type errors, lint errors, test failures) directly, then report the final summary: files touched, total functions destructured, intentional skips with reasons, verification results.
+---
+- i found one more file that has singleton, settings-repo (@src/main/business/repo/settings-repo.ts + @src/main/business/repo/settings-repo-singleton.ts). i  need you to merge them into one file with singleton at the  end. and make the original class, the one used in the  singletin pattern, protected by adding _ in front of the  name. check it there is any other file that has the same pattern
+---
+- wherever we have a switch that uses enum and uses all the enum in the switch casees we must use in the defaukt the exhaustiveError from the msh-util typeUtil. there is one in components in factory.ts, but check other code as well
+---
+- we must move any default value for function args in the arg section and never in the params destruction first line in function body
+- we still need to use params object, but define the defaults using params
+- I actually ment to do it differently
+for SchedulingStrategyFactory it should look like this 
+```ts
+  resolve(params: { platform?: OS } = { platform: osUtil.resolvePlatform()}): SchedulingStrategy {
+```
+
+so the default must be in the args section of the function
+---
+
+- can we move the default to the arg section of the function in this function (src/renderer/src/ui-component/scheduling/add-trigger-dialog.tsx)
+
+export const AddTriggerDialog = (props: {
+  initialPreset?: ScheduleTriggerPreset
+  onClose: () => void
+  onSaved: () => void
+}): ReactElement => {
+  const { initialPreset, onClose, onSaved } = { initialPreset: constant.maxWindowScheduleTriggerPreset, ...props }
+- do the same for props
+
+like this
+  const { size } = { size: DEFAULT_ICON_SIZE, ...props }
+ in tsx files, move the default to args section
+ (targets: src/renderer/src/ui-component/provider/provider-icon.tsx and the 9 icon components under src/renderer/src/ui-component/icon/)
+- so for the tsx we use props instead of params, but we need to have props as an object
+ (targets: src/renderer/src/ui-component/scheduling/add-trigger-dialog.tsx, src/renderer/src/ui-component/provider/provider-icon.tsx and the 9 icon components under src/renderer/src/ui-component/icon/)

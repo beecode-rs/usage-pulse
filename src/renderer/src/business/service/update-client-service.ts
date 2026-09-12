@@ -8,6 +8,8 @@ export const updateClientService = {
     window.usageApi.openRelease()
   },
   subscribeToUpdateStatus: (params: { onUpdate: UpdateStatusListener }): (() => void) => {
-    return window.usageApi.onUpdateStatus(params.onUpdate)
+    const { onUpdate } = params
+
+    return window.usageApi.onUpdateStatus(onUpdate)
   },
 }

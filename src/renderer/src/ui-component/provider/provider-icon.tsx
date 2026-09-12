@@ -1,3 +1,4 @@
+import { typeUtil } from '@beecode/msh-util'
 import type { ReactElement } from 'react'
 
 import '#src/renderer/src/ui-component/provider/provider-icon.css'
@@ -28,23 +29,22 @@ const resolveIconPath = (providerId: ProviderIdMapper): string => {
     }
 
     default: {
-      throw new Error(`unsupported provider: ${String(providerId)}`)
+      throw typeUtil.exhaustiveError('unsupported provider [providerId]', providerId)
     }
   }
 }
 
 export const ProviderIcon = (props: { providerId: ProviderIdMapper; size?: number }): ReactElement => {
-  const { providerId, size } = props
-  const resolvedSize = size ?? DEFAULT_ICON_SIZE
+  const { providerId, size = DEFAULT_ICON_SIZE } = props
 
   return (
     <svg
       aria-hidden="true"
       className={`provider-icon provider-icon-${providerId}`}
       fill="currentColor"
-      height={resolvedSize}
+      height={size}
       viewBox="0 0 24 24"
-      width={resolvedSize}
+      width={size}
     >
       <path d={resolveIconPath(providerId)} />
     </svg>

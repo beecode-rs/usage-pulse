@@ -1,8 +1,8 @@
 import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus-outcome-mapper-enum'
-import { type GhosttyFocusPeer, SessionsService } from '#src/main/business/service/sessions-service'
+import { type GhosttyFocusPeer, _SessionsService } from '#src/main/business/service/sessions-service-singleton'
 import { type OS } from '#src/shared/business/enum/os-enum'
 
-export class SessionsServiceContractHarness extends SessionsService {
+export class SessionsServiceContractHarness extends _SessionsService {
   isLinuxFocusToolInstalled: boolean | undefined
   isMacOsGhosttyPeersStubbed = true
   isMacOsGhosttySessionTtyStubbed = true
@@ -24,9 +24,10 @@ export class SessionsServiceContractHarness extends SessionsService {
   protected readonly _macOsBundlePath: string
 
   constructor(params: { focusPlatform?: OS; isWaylandSession?: boolean; macOsBundlePath?: string } = {}) {
-    super({ isWaylandSession: params.isWaylandSession })
-    this._focusPlatformOverride = params.focusPlatform
-    this._macOsBundlePath = params.macOsBundlePath ?? '/Applications/Ghostty.app'
+    const { focusPlatform, isWaylandSession, macOsBundlePath } = params
+    super({ isWaylandSession })
+    this._focusPlatformOverride = focusPlatform
+    this._macOsBundlePath = macOsBundlePath ?? '/Applications/Ghostty.app'
   }
 
   protected override _resolveFocusPlatform(): OS {
@@ -38,7 +39,8 @@ export class SessionsServiceContractHarness extends SessionsService {
   }
 
   protected override _activateAppBundle(params: { bundlePath: string }): Promise<void> {
-    this.macOsBundleActivateCalls.push({ bundlePath: params.bundlePath })
+    const { bundlePath } = params
+    this.macOsBundleActivateCalls.push({ bundlePath })
 
     return Promise.resolve()
   }
@@ -72,19 +74,22 @@ export class SessionsServiceContractHarness extends SessionsService {
   }
 
   protected override _focusGhosttyTab(params: { cwd: string; matchRank: number }): Promise<GhosttyFocusOutcomeMapper> {
-    this.macOsTabFocusCalls.push({ cwd: params.cwd, matchRank: params.matchRank })
+    const { cwd, matchRank } = params
+    this.macOsTabFocusCalls.push({ cwd, matchRank })
 
     return Promise.resolve(this.macOsGhosttyTabFocusOutcome)
   }
 
   protected override _focusGhosttyTerminalByTty(params: { sessionTty: string }): Promise<GhosttyFocusOutcomeMapper> {
-    this.macOsTtyFocusCalls.push({ sessionTty: params.sessionTty })
+    const { sessionTty } = params
+    this.macOsTtyFocusCalls.push({ sessionTty })
 
     return Promise.resolve(this.macOsGhosttyTtyFocusOutcome)
   }
 
   protected override _focusVsCodeWindow(params: { bundlePath: string; cwd: string }): Promise<void> {
-    this.macOsWindowFocusCalls.push({ bundlePath: params.bundlePath, cwd: params.cwd })
+    const { bundlePath, cwd } = params
+    this.macOsWindowFocusCalls.push({ bundlePath, cwd })
 
     if (!this.isMacOsWindowFocusStubbed) {
       return super._focusVsCodeWindow(params)
@@ -112,7 +117,8 @@ export class SessionsServiceContractHarness extends SessionsService {
   }
 
   protected override _resolveAppBundlePath(params: { hopCount: number; pid: number }): Promise<string> {
-    this.macOsBundleResolveCalls.push({ hopCount: params.hopCount, pid: params.pid })
+    const { hopCount, pid } = params
+    this.macOsBundleResolveCalls.push({ hopCount, pid })
 
     return Promise.resolve(this._macOsBundlePath)
   }

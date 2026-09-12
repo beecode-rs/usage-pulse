@@ -14,9 +14,10 @@ export class UsageProviderZai implements UsageProvider {
   }
 
   async fetchUsage(params: { accessToken: string }): Promise<UsageWindow[]> {
+    const { accessToken } = params
     const headers = Object.fromEntries([
       ['Accept-Language', 'en-US,en'],
-      ['Authorization', params.accessToken],
+      ['Authorization', accessToken],
       ['Content-Type', 'application/json'],
     ])
     const rawQuota = await httpUtil.fetchJson({ headers, url: this._quotaLimitUrl })
@@ -26,7 +27,8 @@ export class UsageProviderZai implements UsageProvider {
   }
 
   protected _extractLimits(params: { raw: unknown }): unknown[] {
-    const dataRecord = this._extractDataRecord({ raw: params.raw })
+    const { raw } = params
+    const dataRecord = this._extractDataRecord({ raw })
 
     if (dataRecord === undefined) {
       throw new Error('z.ai usage response is missing the data object')
@@ -42,7 +44,8 @@ export class UsageProviderZai implements UsageProvider {
   }
 
   protected _extractDataRecord(params: { raw: unknown }): Record<string, unknown> | undefined {
-    const rootRecord = objectUtil.asRecord(params.raw)
+    const { raw } = params
+    const rootRecord = objectUtil.asRecord(raw)
 
     if (rootRecord === undefined) {
       return undefined
@@ -52,18 +55,19 @@ export class UsageProviderZai implements UsageProvider {
   }
 
   protected _buildWindows(params: { limits: unknown[] }): UsageWindow[] {
+    const { limits } = params
     const windows = [
       this._buildWindow({
         expectedLabel: '5-hour window',
         limitRecord: this._findLimitRecord({
           limitNumber: 5,
-          limits: params.limits,
+          limits,
           limitType: 'TOKENS_LIMIT',
           limitUnit: 3,
         }),
         windowMs: constant.fiveHourWindowMs,
       }),
-      this._buildMcpQuotaWindow({ limits: params.limits }),
+      this._buildMcpQuotaWindow({ limits }),
     ].filter((window) => {
       return window !== undefined
     })
@@ -76,7 +80,8 @@ export class UsageProviderZai implements UsageProvider {
   }
 
   protected _buildMcpQuotaWindow(params: { limits: unknown[] }): UsageWindow | undefined {
-    const limitRecord = this._findLimitRecord({ limits: params.limits, limitType: 'TIME_LIMIT' })
+    const { limits } = params
+    const limitRecord = this._findLimitRecord({ limits, limitType: 'TIME_LIMIT' })
 
     return this._stampMcpAmounts({
       limitRecord,
@@ -90,38 +95,41 @@ export class UsageProviderZai implements UsageProvider {
     limitRecord?: Record<string, unknown>
     window?: UsageWindow
   }): UsageWindow | undefined {
-    if (params.window === undefined || params.limitRecord === undefined) {
-      return params.window
+    const { limitRecord, window } = params
+    if (window === undefined || limitRecord === undefined) {
+      return window
     }
 
-    const usedAmount = this._resolveFiniteCount({ value: params.limitRecord['currentValue'] })
-    const totalAmount = this._resolveFiniteCount({ value: params.limitRecord['usage'] })
+    const usedAmount = this._resolveFiniteCount({ value: limitRecord['currentValue'] })
+    const totalAmount = this._resolveFiniteCount({ value: limitRecord['usage'] })
 
     if (usedAmount === undefined || totalAmount === undefined || totalAmount <= 0) {
-      return params.window
+      return window
     }
 
-    return { ...params.window, totalAmount, usedAmount }
+    return { ...window, totalAmount, usedAmount }
   }
 
   protected _resolveFiniteCount(params: { value: unknown }): number | undefined {
-    if (typeof params.value !== 'number' || !Number.isFinite(params.value) || params.value < 0) {
+    const { value } = params
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
       return undefined
     }
 
-    return Math.round(params.value)
+    return Math.round(value)
   }
 
   protected _stampCalendarMonthWindowMs(params: { window?: UsageWindow }): UsageWindow | undefined {
-    if (params.window?.resetAt === undefined) {
-      return params.window
+    const { window } = params
+    if (window?.resetAt === undefined) {
+      return window
     }
 
-    const windowStartDate = new Date(params.window.resetAt)
+    const windowStartDate = new Date(window.resetAt)
 
     windowStartDate.setMonth(windowStartDate.getMonth() - 1)
 
-    return { ...params.window, windowMs: params.window.resetAt - windowStartDate.getTime() }
+    return { ...window, windowMs: window.resetAt - windowStartDate.getTime() }
   }
 
   protected _findLimitRecord(params: {
@@ -130,7 +138,8 @@ export class UsageProviderZai implements UsageProvider {
     limitType: string
     limitUnit?: number
   }): Record<string, unknown> | undefined {
-    const matchingLimit = params.limits.find((limit) => {
+    const { limitNumber, limits, limitType, limitUnit } = params
+    const matchingLimit = limits.find((limit) => {
       const limitRecord = objectUtil.asRecord(limit)
 
       if (limitRecord === undefined) {
@@ -138,9 +147,9 @@ export class UsageProviderZai implements UsageProvider {
       }
 
       return (
-        limitRecord['type'] === params.limitType &&
-        this._matchesOptionalLimitField({ actual: limitRecord['unit'], expected: params.limitUnit }) &&
-        this._matchesOptionalLimitField({ actual: limitRecord['number'], expected: params.limitNumber })
+        limitRecord['type'] === limitType &&
+        this._matchesOptionalLimitField({ actual: limitRecord['unit'], expected: limitUnit }) &&
+        this._matchesOptionalLimitField({ actual: limitRecord['number'], expected: limitNumber })
       )
     })
 
@@ -148,11 +157,12 @@ export class UsageProviderZai implements UsageProvider {
   }
 
   protected _matchesOptionalLimitField(params: { actual: unknown; expected?: number }): boolean {
-    if (params.expected === undefined) {
+    const { actual, expected } = params
+    if (expected === undefined) {
       return true
     }
 
-    return params.actual === params.expected
+    return actual === expected
   }
 
   protected _buildWindow(params: {
@@ -160,35 +170,37 @@ export class UsageProviderZai implements UsageProvider {
     limitRecord?: Record<string, unknown>
     windowMs?: number
   }): UsageWindow | undefined {
-    if (params.limitRecord === undefined) {
+    const { expectedLabel, limitRecord, windowMs } = params
+    if (limitRecord === undefined) {
       return undefined
     }
 
-    const percent = this._resolvePercent({ limitRecord: params.limitRecord })
+    const percent = this._resolvePercent({ limitRecord })
 
     if (percent === undefined) {
       return undefined
     }
 
-    const resetAt = this._resolveResetAt({ limitRecord: params.limitRecord })
+    const resetAt = this._resolveResetAt({ limitRecord })
 
     if (resetAt === undefined) {
-      if (params.windowMs === undefined) {
-        return { label: params.expectedLabel, usedPercent: percent }
+      if (windowMs === undefined) {
+        return { label: expectedLabel, usedPercent: percent }
       }
 
-      return { label: params.expectedLabel, usedPercent: percent, windowMs: params.windowMs }
+      return { label: expectedLabel, usedPercent: percent, windowMs }
     }
 
-    if (params.windowMs === undefined) {
-      return { label: params.expectedLabel, resetAt, usedPercent: percent }
+    if (windowMs === undefined) {
+      return { label: expectedLabel, resetAt, usedPercent: percent }
     }
 
-    return { label: params.expectedLabel, resetAt, usedPercent: percent, windowMs: params.windowMs }
+    return { label: expectedLabel, resetAt, usedPercent: percent, windowMs }
   }
 
   protected _resolvePercent(params: { limitRecord: Record<string, unknown> }): number | undefined {
-    const percent = params.limitRecord['percentage']
+    const { limitRecord } = params
+    const percent = limitRecord['percentage']
 
     if (typeof percent !== 'number' || !Number.isFinite(percent)) {
       return undefined
@@ -198,7 +210,8 @@ export class UsageProviderZai implements UsageProvider {
   }
 
   protected _resolveResetAt(params: { limitRecord: Record<string, unknown> }): number | undefined {
-    const nextResetTime = params.limitRecord['nextResetTime']
+    const { limitRecord } = params
+    const nextResetTime = limitRecord['nextResetTime']
 
     if (typeof nextResetTime !== 'string' && typeof nextResetTime !== 'number') {
       return undefined

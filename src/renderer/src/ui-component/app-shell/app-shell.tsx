@@ -1,7 +1,8 @@
+import { typeUtil } from '@beecode/msh-util'
 import { type ReactElement, useEffect, useRef, useState } from 'react'
 
-import { AppViewIdMapper } from '#src/renderer/src/business/model/app-view-id-mapper-enum'
-import { MenuStatusDotMapper } from '#src/renderer/src/business/model/menu-status-dot-mapper-enum'
+import { AppViewIdMapper } from '#src/renderer/src/business/enum/app-view-id-mapper-enum'
+import { MenuStatusDotMapper } from '#src/renderer/src/business/enum/menu-status-dot-mapper-enum'
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { AboutPage } from '#src/renderer/src/ui-component/about/about-page'
@@ -31,7 +32,8 @@ const NOW_TICK_INTERVAL_MS = 30_000
 const PEAK_STATUS_DOT_TITLE = 'z.ai peak hours: premium models bill at 3× credits (weekdays 14:00–18:00 UTC+8)'
 
 const resolveStatusDotTitle = (params: { statusDot?: MenuStatusDotMapper }): string | undefined => {
-  if (params.statusDot === MenuStatusDotMapper.PEAK) {
+  const { statusDot } = params
+  if (statusDot === MenuStatusDotMapper.PEAK) {
     return PEAK_STATUS_DOT_TITLE
   }
 
@@ -128,35 +130,44 @@ const resolveMenuItems = (params: {
   isSessionsLive: boolean
   isUsageLive: boolean
   sessionsStatusDot: MenuStatusDotMapper | undefined
-  usageStatusDot: MenuStatusDotMapper | undefined
+  usageActivityStatusDot: MenuStatusDotMapper | undefined
 }): SideMenuItem<AppViewIdMapper>[] => {
+  const {
+    dashboardStatusDot,
+    isSchedulingLive,
+    isSessionsLive,
+    isUsageLive,
+    sessionsStatusDot,
+    usageActivityStatusDot,
+  } = params
+
   return [
     {
       icon: MENU_ICONS[AppViewIdMapper.DASHBOARD],
       id: AppViewIdMapper.DASHBOARD,
       label: 'Dashboard',
-      statusDot: params.dashboardStatusDot,
-      statusDotTitle: resolveStatusDotTitle({ statusDot: params.dashboardStatusDot }),
+      statusDot: dashboardStatusDot,
+      statusDotTitle: resolveStatusDotTitle({ statusDot: dashboardStatusDot }),
     },
     {
       icon: MENU_ICONS[AppViewIdMapper.SESSIONS],
       id: AppViewIdMapper.SESSIONS,
-      isLive: params.isSessionsLive,
+      isLive: isSessionsLive,
       label: 'Sessions',
-      statusDot: params.sessionsStatusDot,
+      statusDot: sessionsStatusDot,
     },
     {
       icon: MENU_ICONS[AppViewIdMapper.USAGE],
       id: AppViewIdMapper.USAGE,
-      isLive: params.isUsageLive,
+      isLive: isUsageLive,
       label: 'Usage',
-      statusDot: params.usageStatusDot,
-      statusDotTitle: resolveStatusDotTitle({ statusDot: params.usageStatusDot }),
+      statusDot: usageActivityStatusDot,
+      statusDotTitle: resolveStatusDotTitle({ statusDot: usageActivityStatusDot }),
     },
     {
       icon: MENU_ICONS[AppViewIdMapper.SCHEDULING],
       id: AppViewIdMapper.SCHEDULING,
-      isLive: params.isSchedulingLive,
+      isLive: isSchedulingLive,
       label: 'Scheduling',
     },
   ]
@@ -166,11 +177,12 @@ const resolveFooterMenuItems = (params: {
   developmentStatusDot: MenuStatusDotMapper | undefined
   isDevelopmentUnlocked: boolean
 }): SideMenuItem<AppViewIdMapper>[] => {
+  const { developmentStatusDot, isDevelopmentUnlocked } = params
   const footerMenuItems: SideMenuItem<AppViewIdMapper>[] = [
     { icon: MENU_ICONS[AppViewIdMapper.ABOUT], id: AppViewIdMapper.ABOUT, label: 'About' },
   ]
 
-  if (!params.isDevelopmentUnlocked) {
+  if (!isDevelopmentUnlocked) {
     return footerMenuItems
   }
 
@@ -180,13 +192,14 @@ const resolveFooterMenuItems = (params: {
       icon: MENU_ICONS[AppViewIdMapper.DEVELOPMENT],
       id: AppViewIdMapper.DEVELOPMENT,
       label: 'Development',
-      statusDot: params.developmentStatusDot,
+      statusDot: developmentStatusDot,
     },
   ]
 }
 
 const resolveIsUsageLive = (params: { settings?: AppSettings }): boolean => {
-  const trackers = params.settings?.trackers ?? []
+  const { settings } = params
+  const trackers = settings?.trackers ?? []
 
   return trackers.some((tracker) => {
     return !tracker.isAutoRefreshPaused
@@ -194,11 +207,15 @@ const resolveIsUsageLive = (params: { settings?: AppSettings }): boolean => {
 }
 
 const resolveIsSchedulingLive = (params: { settings?: AppSettings }): boolean => {
-  return params.settings?.isSchedulingEnabled === true
+  const { settings } = params
+
+  return settings?.isSchedulingEnabled === true
 }
 
 const resolveIsSessionsLive = (params: { settings?: AppSettings }): boolean => {
-  return params.settings?.isSessionsAutoRefreshPaused === false
+  const { settings } = params
+
+  return settings?.isSessionsAutoRefreshPaused === false
 }
 
 export const AppShell = (): ReactElement => {
@@ -260,16 +277,17 @@ export const AppShell = (): ReactElement => {
 
   useEffect(() => {
     const playSessionSounds = (params: { nextSnapshot: SessionSnapshot; previousSessions?: SessionInfo[] }): void => {
+      const { nextSnapshot, previousSessions } = params
       const sessionSoundUtil = new SessionSoundUtil()
       const newlyFinishedSessionIds = sessionSoundUtil.resolveStatusTransitionSessionIds({
-        currentSessions: params.nextSnapshot.sessions,
+        currentSessions: nextSnapshot.sessions,
         fromStatus: SessionStatusMapper.BUSY,
-        previousSessions: params.previousSessions,
+        previousSessions,
         toStatus: SessionStatusMapper.IDLE,
       })
       const newlyWaitingSessionIds = sessionSoundUtil.resolveNewlyStatusSessionIds({
-        currentSessions: params.nextSnapshot.sessions,
-        previousSessions: params.previousSessions,
+        currentSessions: nextSnapshot.sessions,
+        previousSessions,
         status: SessionStatusMapper.WAITING,
       })
       const soundVolumePercent = settingsRef.current?.soundVolumePercent ?? constant.soundVolume.defaultPercent
@@ -293,12 +311,13 @@ export const AppShell = (): ReactElement => {
       nextSnapshot: SessionSnapshot
       previousSessions?: SessionInfo[]
     }): void => {
+      const { nextSnapshot, previousSessions } = params
       setFinishedAtBySessionId((currentFinishedAtBySessionId) => {
         return sessionFinishedPulseUtil.resolveFinishedAtBySessionId({
-          currentSessions: params.nextSnapshot.sessions,
+          currentSessions: nextSnapshot.sessions,
           finishedAtBySessionId: currentFinishedAtBySessionId,
           nowMs: Date.now(),
-          previousSessions: params.previousSessions,
+          previousSessions,
         })
       })
     }
@@ -350,11 +369,11 @@ export const AppShell = (): ReactElement => {
     hasLoadError: sessionsErrorMessage !== '',
     snapshot: sessionSnapshot,
   })
-  const usageStatusDot = menuStatusUtil.resolveCombinedStatusDot({
-    dots: [menuStatusUtil.resolveUsageStatusDot({ now: nowMs, snapshot: usageSnapshot }), peakStatusDot],
+  const usageActivityStatusDot = menuStatusUtil.resolveCombinedStatusDot({
+    dots: [menuStatusUtil.resolveUsageActivityStatusDot({ now: nowMs, snapshot: usageSnapshot }), peakStatusDot],
   })
   const dashboardStatusDot = menuStatusUtil.resolveCombinedStatusDot({
-    dots: [usageStatusDot, sessionsStatusDot],
+    dots: [usageActivityStatusDot, sessionsStatusDot],
   })
   const developmentStatusDot = menuStatusUtil.resolveDevelopmentStatusDot({ elapsedMinutes, now: nowMs, usedPercent })
   const menuItems = resolveMenuItems({
@@ -363,7 +382,7 @@ export const AppShell = (): ReactElement => {
     isSessionsLive: resolveIsSessionsLive({ settings }),
     isUsageLive: resolveIsUsageLive({ settings }),
     sessionsStatusDot,
-    usageStatusDot,
+    usageActivityStatusDot,
   })
   const footerMenuItems = resolveFooterMenuItems({
     developmentStatusDot,
@@ -433,7 +452,7 @@ export const AppShell = (): ReactElement => {
       }
 
       default: {
-        throw new Error(`unsupported view: ${String(activeViewId)}`)
+        throw typeUtil.exhaustiveError('unsupported view [activeViewId]', activeViewId)
       }
     }
   }

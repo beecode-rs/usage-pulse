@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react'
 
 const resolveLabel = (params: { isPaused: boolean }): string => {
-  if (params.isPaused) {
+  const { isPaused } = params
+  if (isPaused) {
     return 'Paused'
   }
 
@@ -9,7 +10,8 @@ const resolveLabel = (params: { isPaused: boolean }): string => {
 }
 
 const resolveClassName = (params: { isPaused: boolean }): string => {
-  if (params.isPaused) {
+  const { isPaused } = params
+  if (isPaused) {
     return 'sessions-auto-refresh-status is-paused'
   }
 

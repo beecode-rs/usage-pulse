@@ -1,12 +1,12 @@
-# Contract for ClaudeSystemTokenService.
+# Contract for ClaudeSystemAccessTokenService.
 # Declarative terms cover the synchronous, filesystem-free members of the token resolution
 # path. The contract runner's error strategy asserts synchronous throws only, and its terms
 # cannot stage fixture files, so every async rejection of resolveAccessToken (the Linux
 # missing-file, missing-token and invalid-JSON failures, the windows unsupported-platform
 # dispatch and the macOS Keychain exec) plus the real-file happy path live in
-# claude-system-token-service.test.ts.
-subject: ClaudeSystemTokenService
-module: ./claude-system-token-service.js
+# claude-system-access-token-service.test.ts.
+subject: ClaudeSystemAccessTokenService
+module: ./claude-system-access-token-service.js
 subjectType: class
 constructor:
   # Explicit homeDir and platform params land on the instance fields verbatim; the

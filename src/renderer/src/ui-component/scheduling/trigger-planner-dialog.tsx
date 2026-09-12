@@ -1,6 +1,6 @@
 import { type ReactElement, useState } from 'react'
 
-import { PlannerDialToneMapper } from '#src/renderer/src/business/model/planner-dial-tone-mapper-enum'
+import { PlannerDialToneMapper } from '#src/renderer/src/business/enum/planner-dial-tone-mapper-enum'
 import { TriggerPlannerService } from '#src/renderer/src/business/service/trigger-planner-service'
 import { PlannerDial } from '#src/renderer/src/ui-component/scheduling/planner-dial'
 import { type ScheduleTriggerPreset } from '#src/shared/business/model/schedule-trigger-model'
@@ -41,8 +41,9 @@ const resolveBarLayout = (params: {
   endMs: number
   startMs: number
 }): { leftPercent: number; widthPercent: number } => {
-  const clippedEndMs = Math.min(params.endMs, constant.planner.dayMs)
-  const clippedStartMs = Math.max(params.startMs, 0)
+  const { endMs, startMs } = params
+  const clippedEndMs = Math.min(endMs, constant.planner.dayMs)
+  const clippedStartMs = Math.max(startMs, 0)
 
   return {
     leftPercent: resolvePercent(clippedStartMs),
@@ -51,8 +52,9 @@ const resolveBarLayout = (params: {
 }
 
 const resolveBarHourMarks = (params: { endMs: number; startMs: number }): number[] => {
-  const clippedStartMs = Math.max(params.startMs, 0)
-  const clippedEndMs = Math.min(params.endMs, constant.planner.dayMs)
+  const { endMs, startMs } = params
+  const clippedStartMs = Math.max(startMs, 0)
+  const clippedEndMs = Math.min(endMs, constant.planner.dayMs)
   const spanMs = clippedEndMs - clippedStartMs
 
   if (spanMs <= 3_600_000) {

@@ -4,49 +4,56 @@ import { type SessionInfo } from '#src/shared/business/model/session-model'
 
 export const sessionPresentationUtil = {
   resolveLastActivityLabel: (params: { lastActivityAt: number; nowMs: number }): string => {
-    return `active ${dateUtil.formatDuration(params.nowMs - params.lastActivityAt)} ago`
+    const { lastActivityAt, nowMs } = params
+
+    return `active ${dateUtil.formatDuration(nowMs - lastActivityAt)} ago`
   },
 
   resolveModelLabel: (params: { model: string }): string => {
-    return params.model.replace(/-\d{8}$/, '')
+    const { model } = params
+
+    return model.replace(/-\d{8}$/, '')
   },
 
   resolveProjectLabel: (params: { cwd: string }): string => {
-    const segments = params.cwd.split('/').filter((segment) => {
+    const { cwd } = params
+    const segments = cwd.split('/').filter((segment) => {
       return segment !== ''
     })
     const lastSegment = segments.at(-1)
 
     if (lastSegment === undefined) {
-      return params.cwd
+      return cwd
     }
 
     return lastSegment
   },
 
   resolveSessionTitle: (params: { session: SessionInfo }): string => {
-    if (params.session.name !== '') {
-      return params.session.name
+    const { session } = params
+    if (session.name !== '') {
+      return session.name
     }
 
-    if (params.session.transcript?.aiTitle !== undefined && params.session.transcript.aiTitle !== '') {
-      return params.session.transcript.aiTitle
+    if (session.transcript?.aiTitle !== undefined && session.transcript.aiTitle !== '') {
+      return session.transcript.aiTitle
     }
 
-    if (params.session.cwd !== '') {
-      return sessionPresentationUtil.resolveProjectLabel({ cwd: params.session.cwd })
+    if (session.cwd !== '') {
+      return sessionPresentationUtil.resolveProjectLabel({ cwd: session.cwd })
     }
 
     return 'Unnamed session'
   },
 
   resolveSessionTitleParts: (params: { title: string }): { name: string; suffix: string | undefined } => {
-    const titleMatch = /^(.+)-(.+)$/.exec(params.title)
+    const { title } = params
+    const titleMatch = /^(.+)-(.+)$/.exec(title)
     const name = titleMatch?.[1]
     const suffix = titleMatch?.[2]
 
     if (name === undefined || suffix === undefined) {
-      return { name: params.title, suffix: undefined }
+      return { name: title, suffix: undefined }
     }
 
     return { name, suffix }
@@ -55,7 +62,8 @@ export const sessionPresentationUtil = {
   resolveStatusPresentation: (params: {
     status: SessionStatusMapper
   }): { badgeClassName: string; dotClassName: string; label: string } => {
-    switch (params.status) {
+    const { status } = params
+    switch (status) {
       case SessionStatusMapper.BUSY: {
         return {
           badgeClassName: 'session-status is-busy',
@@ -87,18 +95,19 @@ export const sessionPresentationUtil = {
   },
 
   resolveTokenCountLabel: (params: { count: number }): string => {
-    if (params.count < 1000) {
-      return String(params.count)
+    const { count } = params
+    if (count < 1000) {
+      return String(count)
     }
 
-    if (params.count < 100_000) {
-      return `${String(Math.round(params.count / 100) / 10)}k`
+    if (count < 100_000) {
+      return `${String(Math.round(count / 100) / 10)}k`
     }
 
-    if (params.count < 1_000_000) {
-      return `${String(Math.round(params.count / 1000))}k`
+    if (count < 1_000_000) {
+      return `${String(Math.round(count / 1000))}k`
     }
 
-    return `${String(Math.round(params.count / 100_000) / 10)}M`
+    return `${String(Math.round(count / 100_000) / 10)}M`
   },
 }

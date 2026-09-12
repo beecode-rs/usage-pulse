@@ -25,7 +25,8 @@ export const SessionExpandButton = (props: {
 }
 
 const resolveClassName = (params: { isExpanded: boolean }): string => {
-  if (params.isExpanded) {
+  const { isExpanded } = params
+  if (isExpanded) {
     return 'session-expand-button is-expanded'
   }
 

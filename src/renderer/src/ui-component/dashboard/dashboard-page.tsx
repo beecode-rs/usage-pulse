@@ -1,6 +1,6 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
-import { AppViewIdMapper } from '#src/renderer/src/business/model/app-view-id-mapper-enum'
+import { AppViewIdMapper } from '#src/renderer/src/business/enum/app-view-id-mapper-enum'
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { DashboardEmptyBox } from '#src/renderer/src/ui-component/dashboard/dashboard-empty-box'
@@ -53,8 +53,9 @@ export const DashboardPage = (props: {
   }
 
   const focusSession = async (params: { cwd: string; pid: number }): Promise<void> => {
+    const { cwd, pid } = params
     try {
-      await sessionsClientService.focusSession({ cwd: params.cwd, pid: params.pid })
+      await sessionsClientService.focusSession({ cwd, pid })
 
       setFocusErrorMessage('')
     } catch (error) {

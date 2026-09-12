@@ -51,9 +51,10 @@ export const UsageDashboard = (): ReactElement => {
     isAutoRefreshPaused: boolean
     trackerId: string
   }): Promise<void> => {
+    const { isAutoRefreshPaused, trackerId } = params
     const nextSettings = await usageClientService.setTrackerPaused({
-      isAutoRefreshPaused: !params.isAutoRefreshPaused,
-      trackerId: params.trackerId,
+      isAutoRefreshPaused: !isAutoRefreshPaused,
+      trackerId,
     })
 
     setSettings(nextSettings)

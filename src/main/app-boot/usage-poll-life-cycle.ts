@@ -1,16 +1,17 @@
 import { LifeCycle } from '@beecode/msh-app-boot'
 
 import { type SettingsLifeCycle } from '#src/main/app-boot/settings-life-cycle'
-import { type UsagePollService } from '#src/main/business/service/usage-poll-service'
+import { type _UsagePollService } from '#src/main/business/service/usage-poll-service-singleton'
 
 export class UsagePollLifeCycle extends LifeCycle<void> {
-  protected readonly _pollService: UsagePollService
+  protected readonly _pollService: _UsagePollService
   protected readonly _settingsLifeCycle: SettingsLifeCycle
 
-  constructor(params: { pollService: UsagePollService; settingsLifeCycle: SettingsLifeCycle }) {
+  constructor(params: { pollService: _UsagePollService; settingsLifeCycle: SettingsLifeCycle }) {
+    const { pollService, settingsLifeCycle } = params
     super({ name: 'usage poll' })
-    this._pollService = params.pollService
-    this._settingsLifeCycle = params.settingsLifeCycle
+    this._pollService = pollService
+    this._settingsLifeCycle = settingsLifeCycle
   }
 
   protected async _createFn(): Promise<void> {

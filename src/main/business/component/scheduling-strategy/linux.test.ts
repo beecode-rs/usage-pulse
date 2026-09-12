@@ -61,12 +61,13 @@ const expectedTimerUnitContent = [
 ].join('\n')
 
 const restoreEnvValue = (params: { key: string; value: string | undefined }) => {
-  if (params.value === undefined) {
-    delete process.env[params.key]
+  const { key, value } = params
+  if (value === undefined) {
+    delete process.env[key]
     return
   }
 
-  process.env[params.key] = params.value
+  process.env[key] = value
 }
 
 const installFakeSystemctl = async () => {
@@ -110,7 +111,8 @@ const installSystemctllessPath = async () => {
 }
 
 const readSystemctlInvocations = async (params: { argsLogPath: string }) => {
-  return (await readFile(params.argsLogPath, 'utf8')).trim().split('\n')
+  const { argsLogPath } = params
+  return (await readFile(argsLogPath, 'utf8')).trim().split('\n')
 }
 
 describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SchedulingStrategyLinux [contract supplement]', () => {

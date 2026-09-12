@@ -5,22 +5,31 @@ import { type SessionTranscriptStats } from '#src/shared/business/model/session-
 
 export class ClaudeTranscriptParserService {
   hasSignal(params: SessionTranscriptStats): boolean {
+    const {
+      aiTitle,
+      cacheCreationTokens,
+      cacheReadTokens,
+      gitBranch,
+      inputTokens,
+      lastPrompt,
+      model,
+      outputTokens,
+      thinkingTokens,
+      userTurnsCount,
+    } = params
     const hasTokenUsage =
-      params.cacheCreationTokens > 0 ||
-      params.cacheReadTokens > 0 ||
-      params.inputTokens > 0 ||
-      params.outputTokens > 0 ||
-      params.thinkingTokens > 0
+      cacheCreationTokens > 0 || cacheReadTokens > 0 || inputTokens > 0 || outputTokens > 0 || thinkingTokens > 0
 
-    if (hasTokenUsage || params.userTurnsCount > 0) {
+    if (hasTokenUsage || userTurnsCount > 0) {
       return true
     }
 
-    return params.aiTitle !== '' || params.gitBranch !== '' || params.lastPrompt !== '' || params.model !== ''
+    return aiTitle !== '' || gitBranch !== '' || lastPrompt !== '' || model !== ''
   }
 
   parseStats(params: { content: string }): SessionTranscriptStats {
-    const state = params.content.split('\n').reduce<TranscriptParseState>((state, line) => {
+    const { content } = params
+    const state = content.split('\n').reduce<TranscriptParseState>((state, line) => {
       return this._reduceLineToState(state, line)
     }, claudeTranscriptParserState.create())
 
@@ -46,8 +55,9 @@ export class ClaudeTranscriptParserService {
   }
 
   protected _tryParseEntry(params: { line: string }): Record<string, unknown> | undefined {
+    const { line } = params
     try {
-      return objectUtil.asRecord(JSON.parse(params.line))
+      return objectUtil.asRecord(JSON.parse(line))
     } catch {
       return undefined
     }

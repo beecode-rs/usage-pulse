@@ -1,3 +1,5 @@
+import { typeUtil } from '@beecode/msh-util'
+
 import { SchedulingStrategyLinux } from '#src/main/business/component/scheduling-strategy/linux'
 import { SchedulingStrategyMacLaunchd } from '#src/main/business/component/scheduling-strategy/mac-launchd'
 import { type SchedulingStrategy } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
@@ -6,14 +8,15 @@ import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
 
 export class SchedulingStrategyFactory {
-  resolve(params: { platform?: OS } = {}): SchedulingStrategy {
-    const platform = params.platform ?? osUtil.resolvePlatform()
+  resolve(params: { platform: OS } = { platform: osUtil.resolvePlatform() }): SchedulingStrategy {
+    const { platform } = params
 
     return this._resolveForPlatform({ platform })
   }
 
   protected _resolveForPlatform(params: { platform: OS }): SchedulingStrategy {
-    switch (params.platform) {
+    const { platform } = params
+    switch (platform) {
       case OS.LINUX: {
         return new SchedulingStrategyLinux()
       }
@@ -27,7 +30,7 @@ export class SchedulingStrategyFactory {
       }
 
       default: {
-        throw new Error('Scheduling is not supported on the resolved platform')
+        throw typeUtil.exhaustiveError('unsupported platform [platform]', platform)
       }
     }
   }

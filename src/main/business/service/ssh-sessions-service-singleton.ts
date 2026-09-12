@@ -1,3 +1,4 @@
+import { singletonPattern } from '@beecode/msh-util'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
@@ -38,13 +39,14 @@ type SshHostCacheEntry = {
   result: SshHostFetchResult
 }
 
-export class SshSessionsService {
+export class _SshSessionsService {
   protected readonly _cacheById = new Map<string, SshHostCacheEntry>()
 
   protected readonly _inFlightById = new Map<string, Promise<SshHostFetchResult>>()
 
   async listRemoteSessions(params: { hosts: SshHostConfig[] }): Promise<SshHostFetchResult[]> {
-    const enabledHosts = params.hosts.filter((host) => {
+    const { hosts } = params
+    const enabledHosts = hosts.filter((host) => {
       return host.isEnabled
     })
 
@@ -61,12 +63,13 @@ export class SshSessionsService {
     localSnapshot: SessionSnapshot
     remoteResults: SshHostFetchResult[]
   }): SessionSnapshot {
-    const remoteSessions = params.remoteResults.flatMap((remoteResult) => {
+    const { localSnapshot, remoteResults } = params
+    const remoteSessions = remoteResults.flatMap((remoteResult) => {
       return remoteResult.sessions.map((session) => {
         return { ...session, hostId: remoteResult.host.id, hostLabel: remoteResult.host.url }
       })
     })
-    const unreachableHosts: UnreachableHost[] = params.remoteResults
+    const unreachableHosts: UnreachableHost[] = remoteResults
       .filter((remoteResult) => {
         return remoteResult.errorMessage !== undefined
       })
@@ -80,16 +83,17 @@ export class SshSessionsService {
 
     return {
       fetchedAt: Date.now(),
-      sessions: new SessionsParserService().sortSessions([...params.localSnapshot.sessions, ...remoteSessions]),
+      sessions: new SessionsParserService().sortSessions([...localSnapshot.sessions, ...remoteSessions]),
       unreachableHosts,
     }
   }
 
   async testHost(params: { url: string }): Promise<void> {
-    const target = this._parseHostUrl({ url: params.url })
+    const { url } = params
+    const target = this._parseHostUrl({ url })
 
     if (target === undefined) {
-      throw new Error(`'${params.url}' is not a valid ssh host url`)
+      throw new Error(`'${url}' is not a valid ssh host url`)
     }
 
     try {
@@ -97,14 +101,15 @@ export class SshSessionsService {
         timeout: SSH_TEST_TIMEOUT_MS,
       })
     } catch (error) {
-      throw new Error(`connecting to '${params.url}' failed: ${this._resolveSshErrorMessage(error)}`)
+      throw new Error(`connecting to '${url}' failed: ${this._resolveSshErrorMessage(error)}`)
     }
   }
 
   protected async _resolveHostResult(params: { host: SshHostConfig }): Promise<SshHostFetchResult> {
-    const fingerprint = this._resolveHostFingerprint({ host: params.host })
+    const { host } = params
+    const fingerprint = this._resolveHostFingerprint({ host })
     const cachedResult = this._resolveFreshCacheResult({
-      cacheEntry: this._cacheById.get(params.host.id),
+      cacheEntry: this._cacheById.get(host.id),
       fingerprint,
     })
 
@@ -112,61 +117,64 @@ export class SshSessionsService {
       return cachedResult
     }
 
-    const inFlight = this._inFlightById.get(params.host.id)
+    const inFlight = this._inFlightById.get(host.id)
 
     if (inFlight !== undefined) {
       return inFlight
     }
 
-    return await this._startHostFetch({ fingerprint, host: params.host })
+    return await this._startHostFetch({ fingerprint, host })
   }
 
   protected _resolveFreshCacheResult(params: {
     cacheEntry: SshHostCacheEntry | undefined
     fingerprint: string
   }): SshHostFetchResult | undefined {
-    if (params.cacheEntry === undefined) {
+    const { cacheEntry, fingerprint } = params
+    if (cacheEntry === undefined) {
       return undefined
     }
 
-    if (params.cacheEntry.fingerprint !== params.fingerprint) {
+    if (cacheEntry.fingerprint !== fingerprint) {
       return undefined
     }
 
-    if (Date.now() - params.cacheEntry.fetchedAt >= SSH_HOST_CACHE_TTL_MS) {
+    if (Date.now() - cacheEntry.fetchedAt >= SSH_HOST_CACHE_TTL_MS) {
       return undefined
     }
 
-    return params.cacheEntry.result
+    return cacheEntry.result
   }
 
   protected async _startHostFetch(params: { fingerprint: string; host: SshHostConfig }): Promise<SshHostFetchResult> {
-    const trackedPromise = this._fetchHostResult({ host: params.host })
+    const { fingerprint, host } = params
+    const trackedPromise = this._fetchHostResult({ host })
       .then((result) => {
-        this._cacheById.set(params.host.id, {
+        this._cacheById.set(host.id, {
           fetchedAt: Date.now(),
-          fingerprint: params.fingerprint,
+          fingerprint,
           result,
         })
 
         return result
       })
       .finally(() => {
-        this._inFlightById.delete(params.host.id)
+        this._inFlightById.delete(host.id)
       })
 
-    this._inFlightById.set(params.host.id, trackedPromise)
+    this._inFlightById.set(host.id, trackedPromise)
 
     return await trackedPromise
   }
 
   protected async _fetchHostResult(params: { host: SshHostConfig }): Promise<SshHostFetchResult> {
-    const target = this._parseHostUrl({ url: params.host.url })
+    const { host } = params
+    const target = this._parseHostUrl({ url: host.url })
 
     if (target === undefined) {
       return {
-        errorMessage: `'${params.host.url}' is not a valid ssh host url`,
-        host: params.host,
+        errorMessage: `'${host.url}' is not a valid ssh host url`,
+        host,
         sessions: [],
       }
     }
@@ -177,19 +185,20 @@ export class SshSessionsService {
       })
 
       return {
-        host: params.host,
+        host,
         sessions: new SessionsParserService().parseSessionEntries({ stdout }),
       }
     } catch (error) {
       return {
-        errorMessage: `connecting to '${params.host.url}' failed: ${this._resolveSshErrorMessage(error)}`,
-        host: params.host,
+        errorMessage: `connecting to '${host.url}' failed: ${this._resolveSshErrorMessage(error)}`,
+        host,
         sessions: [],
       }
     }
   }
 
   protected _buildSshArgs(params: { command: string; target: SshTarget }): string[] {
+    const { command, target } = params
     const args = [
       '-o',
       'BatchMode=yes',
@@ -201,21 +210,22 @@ export class SshSessionsService {
       'LogLevel=ERROR',
     ]
 
-    if (params.target.port !== undefined) {
-      args.push('-p', String(params.target.port))
+    if (target.port !== undefined) {
+      args.push('-p', String(target.port))
     }
 
-    if (params.target.user !== undefined) {
-      args.push('-l', params.target.user)
+    if (target.user !== undefined) {
+      args.push('-l', target.user)
     }
 
-    args.push(params.target.destination, params.command)
+    args.push(target.destination, command)
 
     return args
   }
 
   protected _parseHostUrl(params: { url: string }): SshTarget | undefined {
-    const trimmedUrl = params.url.trim()
+    const { url } = params
+    const trimmedUrl = url.trim()
 
     if (trimmedUrl === '') {
       return undefined
@@ -235,56 +245,61 @@ export class SshSessionsService {
   }
 
   protected _parseHostAndPort(params: { hostAndPort: string; user: string | undefined }): SshTarget | undefined {
-    if (params.hostAndPort === '' || params.hostAndPort.includes('/') || params.hostAndPort.startsWith('-')) {
+    const { hostAndPort, user } = params
+    if (hostAndPort === '' || hostAndPort.includes('/') || hostAndPort.startsWith('-')) {
       return undefined
     }
 
-    const lastColonIndex = params.hostAndPort.lastIndexOf(':')
+    const lastColonIndex = hostAndPort.lastIndexOf(':')
 
     if (lastColonIndex < 0) {
-      return { destination: params.hostAndPort, user: params.user }
+      return { destination: hostAndPort, user }
     }
 
-    const destination = params.hostAndPort.slice(0, lastColonIndex)
-    const port = this._resolvePort({ value: params.hostAndPort.slice(lastColonIndex + 1) })
+    const destination = hostAndPort.slice(0, lastColonIndex)
+    const port = this._resolvePort({ value: hostAndPort.slice(lastColonIndex + 1) })
 
     if (destination === '' || port === undefined) {
       return undefined
     }
 
-    return { destination, port, user: params.user }
+    return { destination, port, user }
   }
 
   protected _stripSshScheme(params: { url: string }): string {
-    if (!params.url.startsWith('ssh://')) {
-      return params.url
+    const { url } = params
+    if (!url.startsWith('ssh://')) {
+      return url
     }
 
-    return params.url.slice('ssh://'.length)
+    return url.slice('ssh://'.length)
   }
 
   protected _resolveSliceBefore(params: { index: number; value: string }): string | undefined {
-    if (params.index <= 0) {
+    const { index, value } = params
+    if (index <= 0) {
       return undefined
     }
 
-    return params.value.slice(0, params.index)
+    return value.slice(0, index)
   }
 
   protected _resolveSliceAfter(params: { index: number; value: string }): string {
-    if (params.index < 0) {
-      return params.value
+    const { index, value } = params
+    if (index < 0) {
+      return value
     }
 
-    return params.value.slice(params.index + 1)
+    return value.slice(index + 1)
   }
 
   protected _resolvePort(params: { value: string }): number | undefined {
-    if (!/^\d+$/.test(params.value)) {
+    const { value } = params
+    if (!/^\d+$/.test(value)) {
       return undefined
     }
 
-    const port = Number(params.value)
+    const port = Number(value)
 
     if (port < 1 || port > 65535) {
       return undefined
@@ -294,8 +309,9 @@ export class SshSessionsService {
   }
 
   protected _pruneCache(params: { hosts: SshHostConfig[] }): void {
+    const { hosts } = params
     const hostsById = new Map(
-      params.hosts.map((host) => {
+      hosts.map((host) => {
         return [host.id, host]
       }),
     )
@@ -315,7 +331,9 @@ export class SshSessionsService {
   }
 
   protected _resolveHostFingerprint(params: { host: SshHostConfig }): string {
-    return `${params.host.id}:${params.host.url}`
+    const { host } = params
+
+    return `${host.id}:${host.url}`
   }
 
   protected _resolveSshErrorMessage(error: unknown): string {
@@ -328,3 +346,7 @@ export class SshSessionsService {
     return errorUtil.resolveMessage(error)
   }
 }
+
+export const sshSessionsServiceSingleton = singletonPattern(() => {
+  return new _SshSessionsService()
+})

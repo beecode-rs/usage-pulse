@@ -15,9 +15,10 @@ import { type SessionInfo, type SessionTranscriptStats } from '#src/shared/busin
 const LAST_PROMPT_PREVIEW_MAX_LENGTH = 200
 
 const resolveCardClassName = (params: { isRemote: boolean; status: SessionStatusMapper }): string => {
-  const classNames = ['session-card', `is-${params.status}`]
+  const { isRemote, status } = params
+  const classNames = ['session-card', `is-${status}`]
 
-  if (params.isRemote) {
+  if (isRemote) {
     classNames.push('is-remote')
   }
 
@@ -41,7 +42,9 @@ const resolveKindLabel = (kind: string): string => {
 }
 
 const resolveUptimeLabel = (params: { nowMs: number; startedAt: number }): string => {
-  return `up ${dateUtil.formatDuration(params.nowMs - params.startedAt)}`
+  const { nowMs, startedAt } = params
+
+  return `up ${dateUtil.formatDuration(nowMs - startedAt)}`
 }
 
 const resolveLastPromptPreview = (lastPrompt: string): string => {
@@ -55,19 +58,22 @@ const resolveLastPromptPreview = (lastPrompt: string): string => {
 }
 
 const resolveExpandButtonLabel = (params: { isExpanded: boolean; title: string }): string => {
-  if (params.isExpanded) {
-    return `Collapse details for ${params.title}`
+  const { isExpanded, title } = params
+  if (isExpanded) {
+    return `Collapse details for ${title}`
   }
 
-  return `Expand details for ${params.title}`
+  return `Expand details for ${title}`
 }
 
 const renderTranscriptStat = (params: { label: string; value: string; valueTitle: string }): ReactElement => {
+  const { label, value, valueTitle } = params
+
   return (
     <div className="session-transcript-stat">
-      <span className="session-transcript-stat-label">{params.label}</span>
-      <span className="session-transcript-stat-value" title={params.valueTitle}>
-        {params.value}
+      <span className="session-transcript-stat-label">{label}</span>
+      <span className="session-transcript-stat-value" title={valueTitle}>
+        {value}
       </span>
     </div>
   )

@@ -1,11 +1,16 @@
+import { singletonPattern } from '@beecode/msh-util'
+
 import { SessionTranscriptService } from '#src/main/business/service/session-transcript-service'
-import { SessionsService } from '#src/main/business/service/sessions-service'
-import { SshSessionsService } from '#src/main/business/service/ssh-sessions-service'
+import { _SessionsService, sessionsServiceSingleton } from '#src/main/business/service/sessions-service-singleton'
+import {
+  _SshSessionsService,
+  sshSessionsServiceSingleton,
+} from '#src/main/business/service/ssh-sessions-service-singleton'
 import { errorUtil } from '#src/main/util/error-util'
 import { type SessionSnapshot, type SessionsUpdateListener } from '#src/shared/business/model/session-model'
 import { type AppSettings } from '#src/shared/business/model/settings-model'
 
-export class SessionsPollService {
+export class _SessionsPollService {
   protected _isWindowVisible = false
   protected _listeners: SessionsUpdateListener[] = []
   protected _refreshInFlight: Promise<SessionSnapshot> | undefined
@@ -13,18 +18,18 @@ export class SessionsPollService {
   protected _snapshot: SessionSnapshot | undefined
   protected _timer: NodeJS.Timeout | undefined
   protected readonly _sessionTranscriptService: SessionTranscriptService
-  protected readonly _sessionsService: SessionsService
-  protected readonly _sshSessionsService: SshSessionsService
+  protected readonly _sessionsService: _SessionsService
+  protected readonly _sshSessionsService: _SshSessionsService
 
   constructor(params?: {
     sessionTranscriptService?: SessionTranscriptService
-    sessionsService?: SessionsService
-    sshSessionsService?: SshSessionsService
+    sessionsService?: _SessionsService
+    sshSessionsService?: _SshSessionsService
   }) {
     const {
       sessionTranscriptService = new SessionTranscriptService(),
-      sessionsService = new SessionsService(),
-      sshSessionsService = new SshSessionsService(),
+      sessionsService = new _SessionsService(),
+      sshSessionsService = new _SshSessionsService(),
     } = params ?? {}
 
     this._sessionTranscriptService = sessionTranscriptService
@@ -33,7 +38,9 @@ export class SessionsPollService {
   }
 
   async start(params: { settings: AppSettings }): Promise<void> {
-    this._settings = params.settings
+    const { settings } = params
+
+    this._settings = settings
 
     if (!this._isWindowVisible) {
       return
@@ -43,8 +50,10 @@ export class SessionsPollService {
   }
 
   async restart(params: { settings: AppSettings }): Promise<void> {
+    const { settings } = params
+
     this.stop()
-    this._settings = params.settings
+    this._settings = settings
     await this.refreshNow()
   }
 
@@ -58,13 +67,15 @@ export class SessionsPollService {
   }
 
   setWindowVisibility(params: { isVisible: boolean }): void {
-    if (params.isVisible === this._isWindowVisible) {
+    const { isVisible } = params
+
+    if (isVisible === this._isWindowVisible) {
       return
     }
 
-    this._isWindowVisible = params.isVisible
+    this._isWindowVisible = isVisible
 
-    if (!params.isVisible) {
+    if (!isVisible) {
       this.stop()
 
       return
@@ -97,11 +108,12 @@ export class SessionsPollService {
   }
 
   onUpdate(params: { listener: SessionsUpdateListener }): () => void {
-    this._listeners.push(params.listener)
+    const { listener } = params
+    this._listeners.push(listener)
 
     return () => {
-      this._listeners = this._listeners.filter((listener) => {
-        return listener !== params.listener
+      this._listeners = this._listeners.filter((currentListener) => {
+        return currentListener !== listener
       })
     }
   }
@@ -125,13 +137,14 @@ export class SessionsPollService {
   }
 
   protected _calcResumeDelayMs(params: { intervalMs: number }): number {
+    const { intervalMs } = params
     const snapshot = this._snapshot
 
     if (snapshot === undefined) {
       return 0
     }
 
-    const nextRefreshAt = snapshot.fetchedAt + params.intervalMs
+    const nextRefreshAt = snapshot.fetchedAt + intervalMs
     const resumeDelayMs = nextRefreshAt - Date.now()
 
     if (resumeDelayMs <= 0) {
@@ -166,9 +179,10 @@ export class SessionsPollService {
   }
 
   protected async _fetchSnapshot(params: { settings: AppSettings }): Promise<SessionSnapshot> {
+    const { settings } = params
     const [localSnapshot, remoteResults] = await Promise.all([
       this._sessionsService.listSessions(),
-      this._sshSessionsService.listRemoteSessions({ hosts: params.settings.sshHosts }),
+      this._sshSessionsService.listRemoteSessions({ hosts: settings.sshHosts }),
     ])
     const mergedSnapshot = this._sshSessionsService.mergeSessionSnapshots({ localSnapshot, remoteResults })
     const sessions = await this._sessionTranscriptService
@@ -181,8 +195,10 @@ export class SessionsPollService {
   }
 
   protected _buildErrorSnapshot(params: { errorMessage: string }): SessionSnapshot {
+    const { errorMessage } = params
+
     return {
-      errorMessage: params.errorMessage,
+      errorMessage,
       fetchedAt: Date.now(),
       sessions: this._snapshot?.sessions ?? [],
       unreachableHosts: this._snapshot?.unreachableHosts ?? [],
@@ -204,11 +220,13 @@ export class SessionsPollService {
   }
 
   protected _scheduleNextRefresh(params: { delayMs: number }): void {
+    const { delayMs } = params
+
     this.stop()
 
     this._timer = setTimeout(() => {
       void this._onRefreshTimer()
-    }, params.delayMs)
+    }, delayMs)
   }
 
   protected async _onRefreshTimer(): Promise<void> {
@@ -216,8 +234,18 @@ export class SessionsPollService {
   }
 
   protected _notifyListeners(params: { snapshot: SessionSnapshot }): void {
+    const { snapshot } = params
+
     this._listeners.forEach((listener) => {
-      listener(params.snapshot)
+      listener(snapshot)
     })
   }
 }
+
+export const sessionsPollServiceSingleton = singletonPattern(() => {
+  return new _SessionsPollService({
+    sessionsService: sessionsServiceSingleton(),
+    sessionTranscriptService: new SessionTranscriptService(),
+    sshSessionsService: sshSessionsServiceSingleton(),
+  })
+})

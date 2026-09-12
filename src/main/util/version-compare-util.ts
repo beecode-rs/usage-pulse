@@ -2,8 +2,9 @@ import { constant } from '#src/main/util/constant'
 
 export class VersionCompareUtil {
   isNewerVersion = (params: { candidateVersion: string; currentVersion: string }): boolean => {
-    const candidateSegments = this._resolveCoreSegments({ version: params.candidateVersion })
-    const currentSegments = this._resolveCoreSegments({ version: params.currentVersion })
+    const { candidateVersion, currentVersion } = params
+    const candidateSegments = this._resolveCoreSegments({ version: candidateVersion })
+    const currentSegments = this._resolveCoreSegments({ version: currentVersion })
 
     if (candidateSegments === undefined || currentSegments === undefined) {
       return false
@@ -24,7 +25,8 @@ export class VersionCompareUtil {
   }
 
   protected _resolveCoreSegments = (params: { version: string }): number[] | undefined => {
-    const coreVersion = this._resolveCoreVersion({ version: params.version })
+    const { version } = params
+    const coreVersion = this._resolveCoreVersion({ version })
 
     if (coreVersion === '') {
       return undefined
@@ -46,13 +48,15 @@ export class VersionCompareUtil {
   }
 
   protected _resolveCoreVersion = (params: { version: string }): string => {
-    const strippedVersion = this._stripVersionPrefix({ version: params.version })
+    const { version } = params
+    const strippedVersion = this._stripVersionPrefix({ version })
 
     return strippedVersion.split('-')[0] ?? ''
   }
 
   protected _stripVersionPrefix = (params: { version: string }): string => {
-    const trimmedVersion = params.version.trim()
+    const { version } = params
+    const trimmedVersion = version.trim()
 
     if (trimmedVersion.startsWith('v') || trimmedVersion.startsWith('V')) {
       return trimmedVersion.slice(1)

@@ -14,15 +14,16 @@ type ZaiPeakInfo = {
 
 export class ZaiPeakUtil {
   resolvePeakInfo(params: { nowMs: number; providerId: ProviderIdMapper }): ZaiPeakInfo | undefined {
-    if (params.providerId !== ProviderIdMapper.ZAI) {
+    const { nowMs, providerId } = params
+    if (providerId !== ProviderIdMapper.ZAI) {
       return undefined
     }
 
-    const wallClock = this._resolveUtc8WallClock({ nowMs: params.nowMs })
+    const wallClock = this._resolveUtc8WallClock({ nowMs })
     const isWeekday = wallClock.weekday >= WEEKDAY_FIRST && wallClock.weekday <= WEEKDAY_LAST
     const isWithinPeakHours =
       wallClock.minuteOfDay >= PEAK_START_MINUTE_OF_DAY && wallClock.minuteOfDay < PEAK_END_MINUTE_OF_DAY
-    const { peakEndMs, peakStartMs } = this._resolvePeakBounds({ nowMs: params.nowMs })
+    const { peakEndMs, peakStartMs } = this._resolvePeakBounds({ nowMs })
 
     return {
       isPeakHour: isWeekday && isWithinPeakHours,
@@ -31,27 +32,30 @@ export class ZaiPeakUtil {
   }
 
   resolvePeakRemainingPercent(params: { nowMs: number; providerId: ProviderIdMapper }): number | undefined {
-    if (params.providerId !== ProviderIdMapper.ZAI) {
+    const { nowMs, providerId } = params
+    if (providerId !== ProviderIdMapper.ZAI) {
       return undefined
     }
 
-    const { peakEndMs, peakStartMs } = this._resolvePeakBounds({ nowMs: params.nowMs })
+    const { peakEndMs, peakStartMs } = this._resolvePeakBounds({ nowMs })
 
-    return this._resolveWindowRemainingPercent({ nowMs: params.nowMs, peakEndMs, peakStartMs })
+    return this._resolveWindowRemainingPercent({ nowMs, peakEndMs, peakStartMs })
   }
 
   resolvePeakRemainingText(params: { nowMs: number; providerId: ProviderIdMapper }): string | undefined {
-    if (params.providerId !== ProviderIdMapper.ZAI) {
+    const { nowMs, providerId } = params
+    if (providerId !== ProviderIdMapper.ZAI) {
       return undefined
     }
 
-    const { peakEndMs } = this._resolvePeakBounds({ nowMs: params.nowMs })
+    const { peakEndMs } = this._resolvePeakBounds({ nowMs })
 
-    return dateUtil.formatDuration(peakEndMs - params.nowMs)
+    return dateUtil.formatDuration(peakEndMs - nowMs)
   }
 
   protected _resolvePeakBounds(params: { nowMs: number }): { peakEndMs: number; peakStartMs: number } {
-    const wallClock = this._resolveUtc8WallClock({ nowMs: params.nowMs })
+    const { nowMs } = params
+    const wallClock = this._resolveUtc8WallClock({ nowMs })
 
     return {
       peakEndMs: wallClock.dayStartMs + PEAK_END_MINUTE_OF_DAY * 60_000,
@@ -64,7 +68,8 @@ export class ZaiPeakUtil {
     minuteOfDay: number
     weekday: number
   } {
-    const shiftedDate = new Date(params.nowMs + ZAI_UTC_OFFSET_MINUTES * 60_000)
+    const { nowMs } = params
+    const shiftedDate = new Date(nowMs + ZAI_UTC_OFFSET_MINUTES * 60_000)
     const utc8DayStartMs = Date.UTC(shiftedDate.getUTCFullYear(), shiftedDate.getUTCMonth(), shiftedDate.getUTCDate())
 
     return {
@@ -75,8 +80,9 @@ export class ZaiPeakUtil {
   }
 
   protected _resolveWindowRemainingPercent(params: { nowMs: number; peakEndMs: number; peakStartMs: number }): number {
-    const windowMs = params.peakEndMs - params.peakStartMs
-    const remainingFraction = (params.peakEndMs - params.nowMs) / windowMs
+    const { nowMs, peakEndMs, peakStartMs } = params
+    const windowMs = peakEndMs - peakStartMs
+    const remainingFraction = (peakEndMs - nowMs) / windowMs
 
     return Math.min(Math.max(remainingFraction, 0), 1) * 100
   }

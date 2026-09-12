@@ -11,14 +11,15 @@ import { OS } from '#src/shared/business/enum/os-enum'
 
 const execFileAsync = promisify(execFile)
 
-export class ClaudeSystemTokenService {
+export class ClaudeSystemAccessTokenService {
   protected readonly _homeDir: string
   protected readonly _keychainSourceName = "'Claude Code-credentials' keychain entry"
   protected readonly _platform: OS
 
-  constructor(params: { homeDir?: string; platform?: OS } = {}) {
-    this._homeDir = params.homeDir ?? homedir()
-    this._platform = params.platform ?? osUtil.resolvePlatform()
+  constructor(params: { homeDir: string; platform: OS } = { homeDir: homedir(), platform: osUtil.resolvePlatform() }) {
+    const { homeDir, platform } = params
+    this._homeDir = homeDir
+    this._platform = platform
   }
 
   async resolveAccessToken(): Promise<string> {
@@ -42,9 +43,10 @@ export class ClaudeSystemTokenService {
   }
 
   protected _extractAccessToken(params: { credentialsJson: string; sourceName: string }): string {
+    const { credentialsJson, sourceName } = params
     const credentialsRecord = this._parseCredentialsRecord({
-      credentialsJson: params.credentialsJson,
-      sourceName: params.sourceName,
+      credentialsJson,
+      sourceName,
     })
     const oauthRecord = objectUtil.asRecord(credentialsRecord['claudeAiOauth'])
     const accessToken = oauthRecord?.['accessToken']
@@ -53,28 +55,30 @@ export class ClaudeSystemTokenService {
       return accessToken.trim()
     }
 
-    throw new Error(`${params.sourceName} is missing a usable claudeAiOauth.accessToken`)
+    throw new Error(`${sourceName} is missing a usable claudeAiOauth.accessToken`)
   }
 
   protected _parseCredentialsRecord(params: { credentialsJson: string; sourceName: string }): Record<string, unknown> {
+    const { credentialsJson, sourceName } = params
     const parsedValue = this._parseCredentialsValue({
-      credentialsJson: params.credentialsJson,
-      sourceName: params.sourceName,
+      credentialsJson,
+      sourceName,
     })
     const parsedRecord = objectUtil.asRecord(parsedValue)
 
     if (parsedRecord === undefined) {
-      throw new Error(`${params.sourceName} is not a JSON object`)
+      throw new Error(`${sourceName} is not a JSON object`)
     }
 
     return parsedRecord
   }
 
   protected _parseCredentialsValue(params: { credentialsJson: string; sourceName: string }): unknown {
+    const { credentialsJson, sourceName } = params
     try {
-      return JSON.parse(params.credentialsJson)
+      return JSON.parse(credentialsJson)
     } catch {
-      throw new Error(`${params.sourceName} is not valid JSON`)
+      throw new Error(`${sourceName} is not valid JSON`)
     }
   }
 

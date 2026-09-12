@@ -42,10 +42,11 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
 
   protected readonly _uid: number
 
-  constructor(params: { homeDir?: string; uid?: number } = {}) {
+  constructor(params: { homeDir: string; uid: number } = { homeDir: homedir(), uid: userInfo().uid }) {
+    const { homeDir, uid } = params
     this._assertMacOsPlatform()
-    this._homeDir = params.homeDir ?? homedir()
-    this._uid = params.uid ?? userInfo().uid
+    this._homeDir = homeDir
+    this._uid = uid
   }
 
   getSchedulingPlatform(): OS {
@@ -53,8 +54,9 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
   }
 
   async inspectRegistration(params: { triggerId: string }): Promise<SchedulingInspection> {
-    const isPlistPresent = await this._resolveIsPlistPresent({ triggerId: params.triggerId })
-    const isLabelLoaded = await this._resolveIsLabelLoaded({ triggerId: params.triggerId })
+    const { triggerId } = params
+    const isPlistPresent = await this._resolveIsPlistPresent({ triggerId })
+    const isLabelLoaded = await this._resolveIsLabelLoaded({ triggerId })
 
     return { isRegistered: isPlistPresent && isLabelLoaded }
   }
@@ -72,15 +74,17 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
   }
 
   async removeRegistration(params: { triggerId: string }): Promise<void> {
-    await this._bootoutIfLoaded({ triggerId: params.triggerId })
-    await this._removePlist({ triggerId: params.triggerId })
+    const { triggerId } = params
+    await this._bootoutIfLoaded({ triggerId })
+    await this._removePlist({ triggerId })
   }
 
   async upsertRegistration(params: SchedulingRegistrationParams): Promise<void> {
+    const { triggerId } = params
     this._assertRegistrationParams(params)
-    await this._bootoutIfLoaded({ triggerId: params.triggerId })
+    await this._bootoutIfLoaded({ triggerId })
     await this._writePlist(params)
-    await this._bootstrapLabel({ triggerId: params.triggerId })
+    await this._bootstrapLabel({ triggerId })
   }
 
   protected _assertMacOsPlatform(): void {
@@ -92,21 +96,20 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
   }
 
   protected _assertRegistrationParams(params: SchedulingRegistrationParams): void {
-    if (!/^[A-Za-z0-9_-]+$/.test(params.triggerId)) {
-      throw new Error(
-        `Invalid trigger id '${params.triggerId}': only alphanumerics, underscores and hyphens are allowed`,
-      )
+    const { triggerId, executablePath, executableArgs, days, times } = params
+    if (!/^[A-Za-z0-9_-]+$/.test(triggerId)) {
+      throw new Error(`Invalid trigger id '${triggerId}': only alphanumerics, underscores and hyphens are allowed`)
     }
 
-    if (params.executablePath.trim() === '') {
+    if (executablePath.trim() === '') {
       throw new Error('Trigger registration requires a non-empty executablePath')
     }
 
-    if (params.executableArgs.length === 0) {
+    if (executableArgs.length === 0) {
       throw new Error('Trigger registration requires at least one executable argument')
     }
 
-    const isEmptyArgument = params.executableArgs.some((argument) => {
+    const isEmptyArgument = executableArgs.some((argument) => {
       return argument.trim() === ''
     })
 
@@ -114,11 +117,11 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
       throw new Error('Trigger registration requires non-empty executable arguments')
     }
 
-    if (params.days.length === 0) {
+    if (days.length === 0) {
       throw new Error('Trigger registration requires at least one day')
     }
 
-    const invalidDays = params.days.filter((day) => {
+    const invalidDays = days.filter((day) => {
       return !Object.hasOwn(this._launchdWeekdayByTriggerDay, day)
     })
 
@@ -126,32 +129,35 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
       throw new Error(`Invalid trigger days: ${invalidDays.join(', ')}`)
     }
 
-    if (params.times.length === 0) {
+    if (times.length === 0) {
       throw new Error('Trigger registration requires at least one time')
     }
 
-    params.times.forEach((time) => {
+    times.forEach((time) => {
       this._parseTimeOfDay({ time })
     })
   }
 
   protected async _bootoutIfLoaded(params: { triggerId: string }): Promise<void> {
-    const isLabelLoaded = await this._resolveIsLabelLoaded({ triggerId: params.triggerId })
+    const { triggerId } = params
+    const isLabelLoaded = await this._resolveIsLabelLoaded({ triggerId })
 
     if (!isLabelLoaded) {
       return
     }
 
     await this._execLaunchctl({
-      args: ['bootout', this._resolveDomainTarget(), this._resolvePlistPath({ triggerId: params.triggerId })],
-      errorMessage: `unloading the launchd agent for trigger '${params.triggerId}' failed`,
+      args: ['bootout', this._resolveDomainTarget(), this._resolvePlistPath({ triggerId })],
+      errorMessage: `unloading the launchd agent for trigger '${triggerId}' failed`,
     })
   }
 
   protected _bootstrapLabel(params: { triggerId: string }): Promise<void> {
+    const { triggerId } = params
+
     return this._execLaunchctl({
-      args: ['bootstrap', this._resolveDomainTarget(), this._resolvePlistPath({ triggerId: params.triggerId })],
-      errorMessage: `loading the launchd agent for trigger '${params.triggerId}' failed`,
+      args: ['bootstrap', this._resolveDomainTarget(), this._resolvePlistPath({ triggerId })],
+      errorMessage: `loading the launchd agent for trigger '${triggerId}' failed`,
     })
   }
 
@@ -159,8 +165,10 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
     days: ScheduleTriggerDayMapper[]
     times: string[]
   }): LaunchdCalendarInterval[] {
-    return params.days.flatMap((day) => {
-      return params.times.map((time) => {
+    const { days, times } = params
+
+    return days.flatMap((day) => {
+      return times.map((time) => {
         const timeOfDay = this._parseTimeOfDay({ time })
 
         return {
@@ -173,13 +181,16 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
   }
 
   protected _buildProgramArgumentLines(params: SchedulingRegistrationParams): string[] {
-    return [params.executablePath, ...params.executableArgs].map((argument) => {
+    const { executablePath, executableArgs } = params
+
+    return [executablePath, ...executableArgs].map((argument) => {
       return `\t\t<string>${this._escapeXml(argument)}</string>`
     })
   }
 
   protected _buildPlistXml(params: SchedulingRegistrationParams): string {
-    const calendarIntervals = this._buildCalendarIntervals({ days: params.days, times: params.times })
+    const { days, times, triggerId } = params
+    const calendarIntervals = this._buildCalendarIntervals({ days, times })
     const calendarIntervalLines = calendarIntervals.flatMap((interval) => {
       return [
         '\t\t<dict>',
@@ -198,7 +209,7 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
       '<plist version="1.0">',
       '<dict>',
       '\t<key>Label</key>',
-      `\t<string>${this._escapeXml(this._resolveLabel({ triggerId: params.triggerId }))}</string>`,
+      `\t<string>${this._escapeXml(this._resolveLabel({ triggerId }))}</string>`,
       '\t<key>ProgramArguments</key>',
       '\t<array>',
       ...this._buildProgramArgumentLines(params),
@@ -224,34 +235,37 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
   }
 
   protected async _execLaunchctl(params: { args: string[]; errorMessage: string }): Promise<void> {
+    const { args, errorMessage } = params
     try {
-      await execFileAsync('launchctl', params.args, { timeout: this._launchctlTimeoutMs })
+      await execFileAsync('launchctl', args, { timeout: this._launchctlTimeoutMs })
     } catch (error) {
-      throw new Error(`${params.errorMessage}: ${this._resolveLaunchctlErrorMessage(error)}`)
+      throw new Error(`${errorMessage}: ${this._resolveLaunchctlErrorMessage(error)}`)
     }
   }
 
   protected _parseTimeOfDay(params: { time: string }): { hour: number; minute: number } {
-    const match = constant.twoDigitTimeRegex.exec(params.time)
+    const { time } = params
+    const match = constant.twoDigitTimeRegex.exec(time)
     const hourText = match?.[1]
     const minuteText = match?.[2]
 
     if (hourText === undefined || minuteText === undefined) {
-      throw new Error(`Invalid trigger time '${params.time}': expected the HH:mm format`)
+      throw new Error(`Invalid trigger time '${time}': expected the HH:mm format`)
     }
 
     const hour = Number.parseInt(hourText, 10)
     const minute = Number.parseInt(minuteText, 10)
 
     if (hour > 23 || minute > 59) {
-      throw new Error(`Invalid trigger time '${params.time}': hour must be within 00-23 and minute within 00-59`)
+      throw new Error(`Invalid trigger time '${time}': hour must be within 00-23 and minute within 00-59`)
     }
 
     return { hour, minute }
   }
 
   protected async _removePlist(params: { triggerId: string }): Promise<void> {
-    await rm(this._resolvePlistPath({ triggerId: params.triggerId }), { force: true })
+    const { triggerId } = params
+    await rm(this._resolvePlistPath({ triggerId }), { force: true })
   }
 
   protected _resolveDomainTarget(): string {
@@ -259,8 +273,9 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
   }
 
   protected async _resolveIsLabelLoaded(params: { triggerId: string }): Promise<boolean> {
+    const { triggerId } = params
     try {
-      await execFileAsync('launchctl', ['print', this._resolveServiceTarget({ triggerId: params.triggerId })], {
+      await execFileAsync('launchctl', ['print', this._resolveServiceTarget({ triggerId })], {
         timeout: this._launchctlTimeoutMs,
       })
 
@@ -271,8 +286,9 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
   }
 
   protected async _resolveIsPlistPresent(params: { triggerId: string }): Promise<boolean> {
+    const { triggerId } = params
     try {
-      await stat(this._resolvePlistPath({ triggerId: params.triggerId }))
+      await stat(this._resolvePlistPath({ triggerId }))
 
       return true
     } catch {
@@ -289,7 +305,9 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
   }
 
   protected _resolveLabel(params: { triggerId: string }): string {
-    return `${this._labelPrefix}${params.triggerId}`
+    const { triggerId } = params
+
+    return `${this._labelPrefix}${triggerId}`
   }
 
   protected _resolveLaunchctlErrorMessage(error: unknown): string {
@@ -303,17 +321,21 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
   }
 
   protected _resolvePlistPath(params: { triggerId: string }): string {
-    const plistFileName = `${this._resolveLabel({ triggerId: params.triggerId })}.plist`
+    const { triggerId } = params
+    const plistFileName = `${this._resolveLabel({ triggerId })}.plist`
 
     return join(this._homeDir, 'Library', 'LaunchAgents', plistFileName)
   }
 
   protected _resolveServiceTarget(params: { triggerId: string }): string {
-    return `${this._resolveDomainTarget()}/${this._resolveLabel({ triggerId: params.triggerId })}`
+    const { triggerId } = params
+
+    return `${this._resolveDomainTarget()}/${this._resolveLabel({ triggerId })}`
   }
 
   protected async _writePlist(params: SchedulingRegistrationParams): Promise<void> {
-    const plistPath = this._resolvePlistPath({ triggerId: params.triggerId })
+    const { triggerId } = params
+    const plistPath = this._resolvePlistPath({ triggerId })
 
     await mkdir(dirname(plistPath), { recursive: true })
     await writeFile(plistPath, this._buildPlistXml(params), 'utf8')

@@ -7,9 +7,10 @@ import type { AppSettings } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
 
 const resolveClampedSecondsAsMs = (params: { maxMs: number; minMs: number; seconds: number }): number => {
-  const secondsAsMs = params.seconds * 1000
+  const { maxMs, minMs, seconds } = params
+  const secondsAsMs = seconds * 1000
 
-  return Math.min(Math.max(secondsAsMs, params.minMs), params.maxMs)
+  return Math.min(Math.max(secondsAsMs, minMs), maxMs)
 }
 
 const renderCloseIcon = (): ReactElement => {

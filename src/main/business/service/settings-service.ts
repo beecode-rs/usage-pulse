@@ -1,5 +1,5 @@
 import { objectUtil } from '#src/main/util/object-util'
-import { ClaudeTokenSource } from '#src/shared/business/enum/claude-token-source-enum'
+import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import type { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import { SoundNameMapper } from '#src/shared/business/enum/sound-name-mapper-enum'
@@ -31,7 +31,8 @@ export class SettingsService {
   }
 
   sanitizeSettings(params: { rawSettings: unknown }): AppSettings {
-    const rawRecord = objectUtil.asRecord(params.rawSettings)
+    const { rawSettings } = params
+    const rawRecord = objectUtil.asRecord(rawSettings)
 
     if (rawRecord === undefined) {
       return this.createDefaultSettings()
@@ -57,59 +58,68 @@ export class SettingsService {
   }
 
   setSchedulingEnabled(params: { isEnabled: boolean; settings: AppSettings }): AppSettings {
+    const { isEnabled, settings } = params
+
     return {
-      ...params.settings,
-      isSchedulingEnabled: params.isEnabled,
+      ...settings,
+      isSchedulingEnabled: isEnabled,
     }
   }
 
   setTrackerPaused(params: { isAutoRefreshPaused: boolean; settings: AppSettings; trackerId: string }): AppSettings {
+    const { isAutoRefreshPaused, settings, trackerId } = params
+
     return {
-      ...params.settings,
-      trackers: params.settings.trackers.map((tracker) => {
-        if (tracker.id !== params.trackerId) {
+      ...settings,
+      trackers: settings.trackers.map((tracker) => {
+        if (tracker.id !== trackerId) {
           return tracker
         }
 
-        return { ...tracker, isAutoRefreshPaused: params.isAutoRefreshPaused }
+        return { ...tracker, isAutoRefreshPaused }
       }),
     }
   }
 
   setTriggerEnabled(params: { isEnabled: boolean; settings: AppSettings; triggerId: string }): AppSettings {
+    const { isEnabled, settings, triggerId } = params
+
     return {
-      ...params.settings,
-      triggers: params.settings.triggers.map((trigger) => {
-        if (trigger.id !== params.triggerId) {
+      ...settings,
+      triggers: settings.triggers.map((trigger) => {
+        if (trigger.id !== triggerId) {
           return trigger
         }
 
-        return { ...trigger, isEnabled: params.isEnabled }
+        return { ...trigger, isEnabled }
       }),
     }
   }
 
   protected _resolveIsSchedulingEnabled(params: { value: unknown }): boolean {
-    if (typeof params.value !== 'boolean') {
+    const { value } = params
+    if (typeof value !== 'boolean') {
       return constant.scheduling.defaultIsEnabled
     }
 
-    return params.value
+    return value
   }
 
   protected _resolveIsSessionsAutoRefreshPaused(params: { value: unknown }): boolean {
-    if (typeof params.value !== 'boolean') {
+    const { value } = params
+    if (typeof value !== 'boolean') {
       return constant.sessionsAutoRefresh.defaultIsPaused
     }
 
-    return params.value
+    return value
   }
 
   protected _resolveSessionsRefreshIntervalMs(params: { rawRecord: Record<string, unknown> }): number {
+    const { rawRecord } = params
     const intervalMs = this._resolveOptionalMs({
       legacySecondsKey: 'sessionsRefreshIntervalSeconds',
       msKey: 'sessionsRefreshIntervalMs',
-      rawRecord: params.rawRecord,
+      rawRecord,
     })
 
     if (intervalMs === undefined) {
@@ -125,10 +135,11 @@ export class SettingsService {
   }
 
   protected _resolveSessionFinishedPulseMs(params: { rawRecord: Record<string, unknown> }): number {
+    const { rawRecord } = params
     const pulseMs = this._resolveOptionalMs({
       legacySecondsKey: 'sessionFinishedPulseSeconds',
       msKey: 'sessionFinishedPulseMs',
-      rawRecord: params.rawRecord,
+      rawRecord,
     })
 
     if (pulseMs === undefined) {
@@ -148,13 +159,14 @@ export class SettingsService {
     msKey: string
     rawRecord: Record<string, unknown>
   }): number | undefined {
-    const msValue = params.rawRecord[params.msKey]
+    const { legacySecondsKey, msKey, rawRecord } = params
+    const msValue = rawRecord[msKey]
 
     if (typeof msValue === 'number' && Number.isFinite(msValue)) {
       return msValue
     }
 
-    const legacySecondsValue = params.rawRecord[params.legacySecondsKey]
+    const legacySecondsValue = rawRecord[legacySecondsKey]
 
     if (typeof legacySecondsValue === 'number' && Number.isFinite(legacySecondsValue)) {
       return legacySecondsValue * 1000
@@ -164,13 +176,14 @@ export class SettingsService {
   }
 
   protected _resolveSessionFinishedSoundId(params: { rawRecord: Record<string, unknown> }): SoundNameMapper {
-    const soundId = this._resolveOptionalSoundNameMapper({ value: params.rawRecord['sessionFinishedSoundId'] })
+    const { rawRecord } = params
+    const soundId = this._resolveOptionalSoundNameMapper({ value: rawRecord['sessionFinishedSoundId'] })
 
     if (soundId !== undefined) {
       return soundId
     }
 
-    const legacySoundId = this._resolveOptionalSoundNameMapper({ value: params.rawRecord['idleSoundId'] })
+    const legacySoundId = this._resolveOptionalSoundNameMapper({ value: rawRecord['idleSoundId'] })
 
     if (legacySoundId !== undefined) {
       return legacySoundId
@@ -180,19 +193,22 @@ export class SettingsService {
   }
 
   protected _resolveOptionalSoundNameMapper(params: { value: unknown }): SoundNameMapper | undefined {
+    const { value } = params
+
     return constant.sessionSoundIds.find((candidate) => {
-      return candidate === params.value
+      return candidate === value
     })
   }
 
   protected _resolveWaitingSoundId(params: { rawRecord: Record<string, unknown> }): SoundNameMapper {
-    const soundId = this._resolveOptionalSoundNameMapper({ value: params.rawRecord['waitingSoundId'] })
+    const { rawRecord } = params
+    const soundId = this._resolveOptionalSoundNameMapper({ value: rawRecord['waitingSoundId'] })
 
     if (soundId !== undefined) {
       return soundId
     }
 
-    if (params.rawRecord['isWaitingSoundEnabled'] === false) {
+    if (rawRecord['isWaitingSoundEnabled'] === false) {
       return SoundNameMapper.NONE
     }
 
@@ -200,25 +216,27 @@ export class SettingsService {
   }
 
   protected _resolveSoundVolumePercent(params: { rawRecord: Record<string, unknown> }): number {
-    const volumePercent = this._resolveOptionalSoundVolumePercent({ value: params.rawRecord['soundVolumePercent'] })
+    const { rawRecord } = params
+    const volumePercent = this._resolveOptionalSoundVolumePercent({ value: rawRecord['soundVolumePercent'] })
 
     if (volumePercent !== undefined) {
       return volumePercent
     }
 
     return (
-      this._resolveOptionalSoundVolumePercent({ value: params.rawRecord['waitingSoundVolumePercent'] }) ??
+      this._resolveOptionalSoundVolumePercent({ value: rawRecord['waitingSoundVolumePercent'] }) ??
       constant.soundVolume.defaultPercent
     )
   }
 
   protected _resolveOptionalSoundVolumePercent(params: { value: unknown }): number | undefined {
-    if (typeof params.value !== 'number' || !Number.isFinite(params.value)) {
+    const { value } = params
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
       return undefined
     }
 
     const clampedVolumePercent = Math.min(
-      Math.max(params.value, constant.soundVolume.minPercent),
+      Math.max(value, constant.soundVolume.minPercent),
       constant.soundVolume.maxPercent,
     )
 
@@ -226,11 +244,12 @@ export class SettingsService {
   }
 
   protected _resolveTrackers(params: { rawRecord: Record<string, unknown>; rawTrackers: unknown }): TrackerConfig[] {
-    if (!Array.isArray(params.rawTrackers)) {
-      return this._migrateLegacyTrackers({ rawRecord: params.rawRecord })
+    const { rawRecord, rawTrackers } = params
+    if (!Array.isArray(rawTrackers)) {
+      return this._migrateLegacyTrackers({ rawRecord })
     }
 
-    const trackers = params.rawTrackers
+    const trackers = rawTrackers
       .map((rawTracker) => {
         return this._sanitizeTracker({ rawTracker })
       })
@@ -242,7 +261,8 @@ export class SettingsService {
   }
 
   protected _sanitizeTracker(params: { rawTracker: unknown }): TrackerConfig | undefined {
-    const rawTracker = objectUtil.asRecord(params.rawTracker)
+    const { rawTracker: rawValue } = params
+    const rawTracker = objectUtil.asRecord(rawValue)
 
     if (rawTracker === undefined) {
       return undefined
@@ -255,38 +275,41 @@ export class SettingsService {
     providerId: unknown
     rawTracker: Record<string, unknown>
   }): TrackerConfig | undefined {
-    switch (params.providerId) {
+    const { providerId, rawTracker } = params
+    switch (providerId) {
       case ProviderIdMapper.CLAUDE: {
         return {
-          accessToken: this._resolveStringValue({ fallback: '', value: params.rawTracker['accessToken'] }),
-          id: this._resolveTrackerId({ value: params.rawTracker['id'] }),
-          isAutoRefreshPaused: this._resolveIsAutoRefreshPaused({ value: params.rawTracker['isAutoRefreshPaused'] }),
-          name: this._resolveTrackerName({ providerId: ProviderIdMapper.CLAUDE, value: params.rawTracker['name'] }),
+          accessToken: this._resolveStringValue({ fallback: '', value: rawTracker['accessToken'] }),
+          accessTokenSource: this._resolveAccessTokenSource({
+            value: rawTracker['accessTokenSource'] ?? rawTracker['tokenSource'],
+          }),
+          id: this._resolveTrackerId({ value: rawTracker['id'] }),
+          isAutoRefreshPaused: this._resolveIsAutoRefreshPaused({ value: rawTracker['isAutoRefreshPaused'] }),
+          name: this._resolveTrackerName({ providerId: ProviderIdMapper.CLAUDE, value: rawTracker['name'] }),
           providerId: ProviderIdMapper.CLAUDE,
           refreshIntervalMs: this._resolveRefreshIntervalMs({
             providerId: ProviderIdMapper.CLAUDE,
-            rawTracker: params.rawTracker,
+            rawTracker,
           }),
-          tokenSource: this._resolveTokenSource({ value: params.rawTracker['tokenSource'] }),
         }
       }
 
       case ProviderIdMapper.ZAI: {
         return {
-          accessToken: this._resolveStringValue({ fallback: '', value: params.rawTracker['accessToken'] }),
-          id: this._resolveTrackerId({ value: params.rawTracker['id'] }),
-          isAutoRefreshPaused: this._resolveIsAutoRefreshPaused({ value: params.rawTracker['isAutoRefreshPaused'] }),
-          name: this._resolveTrackerName({ providerId: ProviderIdMapper.ZAI, value: params.rawTracker['name'] }),
+          accessToken: this._resolveStringValue({ fallback: '', value: rawTracker['accessToken'] }),
+          id: this._resolveTrackerId({ value: rawTracker['id'] }),
+          isAutoRefreshPaused: this._resolveIsAutoRefreshPaused({ value: rawTracker['isAutoRefreshPaused'] }),
+          name: this._resolveTrackerName({ providerId: ProviderIdMapper.ZAI, value: rawTracker['name'] }),
           providerId: ProviderIdMapper.ZAI,
           refreshIntervalMs: this._resolveRefreshIntervalMs({
             providerId: ProviderIdMapper.ZAI,
-            rawTracker: params.rawTracker,
+            rawTracker,
           }),
         }
       }
 
       case ProviderIdMapper.DUMMY: {
-        return this._sanitizeDummyTracker({ rawTracker: params.rawTracker })
+        return this._sanitizeDummyTracker({ rawTracker })
       }
 
       default: {
@@ -296,8 +319,9 @@ export class SettingsService {
   }
 
   protected _sanitizeDummyTracker(params: { rawTracker: Record<string, unknown> }): DummyTrackerConfig | undefined {
-    const days = this._resolveTriggerDays({ value: params.rawTracker['days'] })
-    const times = this._resolveTriggerTimes({ value: params.rawTracker['times'] })
+    const { rawTracker } = params
+    const days = this._resolveTriggerDays({ value: rawTracker['days'] })
+    const times = this._resolveTriggerTimes({ value: rawTracker['times'] })
 
     if (days.length === 0 || times.length === 0) {
       return undefined
@@ -306,21 +330,22 @@ export class SettingsService {
     return {
       accessToken: '',
       days,
-      id: this._resolveTrackerId({ value: params.rawTracker['id'] }),
-      isAutoRefreshPaused: this._resolveIsAutoRefreshPaused({ value: params.rawTracker['isAutoRefreshPaused'] }),
-      name: this._resolveTrackerName({ providerId: ProviderIdMapper.DUMMY, value: params.rawTracker['name'] }),
+      id: this._resolveTrackerId({ value: rawTracker['id'] }),
+      isAutoRefreshPaused: this._resolveIsAutoRefreshPaused({ value: rawTracker['isAutoRefreshPaused'] }),
+      name: this._resolveTrackerName({ providerId: ProviderIdMapper.DUMMY, value: rawTracker['name'] }),
       providerId: ProviderIdMapper.DUMMY,
       refreshIntervalMs: this._resolveRefreshIntervalMs({
         providerId: ProviderIdMapper.DUMMY,
-        rawTracker: params.rawTracker,
+        rawTracker,
       }),
       times,
     }
   }
 
   protected _migrateLegacyTrackers(params: { rawRecord: Record<string, unknown> }): TrackerConfig[] {
-    const claudeConfig = this._migrateLegacyClaudeTracker({ rawRecord: params.rawRecord })
-    const zaiConfig = this._migrateLegacyZaiTracker({ rawRecord: params.rawRecord })
+    const { rawRecord } = params
+    const claudeConfig = this._migrateLegacyClaudeTracker({ rawRecord })
+    const zaiConfig = this._migrateLegacyZaiTracker({ rawRecord })
 
     return [claudeConfig, zaiConfig].filter((tracker): tracker is ClaudeTrackerConfig | ZaiTrackerConfig => {
       return tracker !== undefined
@@ -330,26 +355,28 @@ export class SettingsService {
   protected _migrateLegacyClaudeTracker(params: {
     rawRecord: Record<string, unknown>
   }): ClaudeTrackerConfig | undefined {
-    const claudeToken = this._resolveStringValue({ fallback: '', value: params.rawRecord['claudeAccessToken'] })
-    const tokenSource = this._resolveTokenSource({ value: params.rawRecord['claudeTokenSource'] })
+    const { rawRecord } = params
+    const claudeToken = this._resolveStringValue({ fallback: '', value: rawRecord['claudeAccessToken'] })
+    const accessTokenSource = this._resolveAccessTokenSource({ value: rawRecord['claudeTokenSource'] })
 
-    if (claudeToken === '' && tokenSource === ClaudeTokenSource.MANUAL) {
+    if (claudeToken === '' && accessTokenSource === ClaudeAccessTokenSource.MANUAL) {
       return undefined
     }
 
     return {
       accessToken: claudeToken,
+      accessTokenSource,
       id: crypto.randomUUID(),
       isAutoRefreshPaused: false,
       name: 'Claude',
       providerId: ProviderIdMapper.CLAUDE,
       refreshIntervalMs: this._resolveDefaultRefreshIntervalMs({ providerId: ProviderIdMapper.CLAUDE }),
-      tokenSource,
     }
   }
 
   protected _migrateLegacyZaiTracker(params: { rawRecord: Record<string, unknown> }): ZaiTrackerConfig | undefined {
-    const zaiToken = this._resolveStringValue({ fallback: '', value: params.rawRecord['zaiAccessToken'] })
+    const { rawRecord } = params
+    const zaiToken = this._resolveStringValue({ fallback: '', value: rawRecord['zaiAccessToken'] })
 
     if (zaiToken === '') {
       return undefined
@@ -366,9 +393,10 @@ export class SettingsService {
   }
 
   protected _ensureUniqueTrackerIds(params: { trackers: TrackerConfig[] }): TrackerConfig[] {
+    const { trackers } = params
     const seenIds = new Set<string>()
 
-    return params.trackers.map((tracker) => {
+    return trackers.map((tracker) => {
       if (seenIds.has(tracker.id)) {
         return { ...tracker, id: crypto.randomUUID() }
       }
@@ -380,11 +408,12 @@ export class SettingsService {
   }
 
   protected _resolveTriggers(params: { rawTriggers: unknown }): ScheduleTriggerConfig[] {
-    if (!Array.isArray(params.rawTriggers)) {
+    const { rawTriggers } = params
+    if (!Array.isArray(rawTriggers)) {
       return []
     }
 
-    const triggers = params.rawTriggers
+    const triggers = rawTriggers
       .map((rawTrigger) => {
         return this._sanitizeTrigger({ rawTrigger })
       })
@@ -396,7 +425,8 @@ export class SettingsService {
   }
 
   protected _sanitizeTrigger(params: { rawTrigger: unknown }): ScheduleTriggerConfig | undefined {
-    const rawTrigger = objectUtil.asRecord(params.rawTrigger)
+    const { rawTrigger: rawValue } = params
+    const rawTrigger = objectUtil.asRecord(rawValue)
 
     if (rawTrigger === undefined) {
       return undefined
@@ -423,9 +453,10 @@ export class SettingsService {
   }
 
   protected _ensureUniqueTriggerIds(params: { triggers: ScheduleTriggerConfig[] }): ScheduleTriggerConfig[] {
+    const { triggers } = params
     const seenIds = new Set<string>()
 
-    return params.triggers.map((trigger) => {
+    return triggers.map((trigger) => {
       if (seenIds.has(trigger.id)) {
         return { ...trigger, id: crypto.randomUUID() }
       }
@@ -437,11 +468,12 @@ export class SettingsService {
   }
 
   protected _resolveSshHosts(params: { rawSshHosts: unknown }): SshHostConfig[] {
-    if (!Array.isArray(params.rawSshHosts)) {
+    const { rawSshHosts } = params
+    if (!Array.isArray(rawSshHosts)) {
       return []
     }
 
-    const sshHosts = params.rawSshHosts
+    const sshHosts = rawSshHosts
       .map((rawSshHost) => {
         return this._sanitizeSshHost({ rawSshHost })
       })
@@ -453,7 +485,8 @@ export class SettingsService {
   }
 
   protected _sanitizeSshHost(params: { rawSshHost: unknown }): SshHostConfig | undefined {
-    const rawSshHost = objectUtil.asRecord(params.rawSshHost)
+    const { rawSshHost: rawValue } = params
+    const rawSshHost = objectUtil.asRecord(rawValue)
 
     if (rawSshHost === undefined) {
       return undefined
@@ -473,9 +506,10 @@ export class SettingsService {
   }
 
   protected _ensureUniqueSshHostIds(params: { sshHosts: SshHostConfig[] }): SshHostConfig[] {
+    const { sshHosts } = params
     const seenIds = new Set<string>()
 
-    return params.sshHosts.map((sshHost) => {
+    return sshHosts.map((sshHost) => {
       if (seenIds.has(sshHost.id)) {
         return { ...sshHost, id: crypto.randomUUID() }
       }
@@ -487,49 +521,56 @@ export class SettingsService {
   }
 
   protected _resolveSshHostId(params: { value: unknown }): string {
-    if (typeof params.value !== 'string' || params.value === '') {
+    const { value } = params
+    if (typeof value !== 'string' || value === '') {
       return crypto.randomUUID()
     }
 
-    return params.value
+    return value
   }
 
   protected _resolveSshHostUrl(params: { value: unknown }): string | undefined {
-    if (typeof params.value !== 'string' || params.value.trim() === '') {
+    const { value } = params
+    if (typeof value !== 'string' || value.trim() === '') {
       return undefined
     }
 
-    return params.value.trim()
+    return value.trim()
   }
 
   protected _resolveIsSshHostEnabled(params: { value: unknown }): boolean {
-    return params.value === true
+    const { value } = params
+
+    return value === true
   }
 
   protected _resolveTriggerCommand(params: { value: unknown }): string | undefined {
-    if (typeof params.value !== 'string' || params.value.trim() === '') {
+    const { value } = params
+    if (typeof value !== 'string' || value.trim() === '') {
       return undefined
     }
 
-    return params.value.trim()
+    return value.trim()
   }
 
   protected _resolveTriggerCreatedAt(params: { value: unknown }): number {
-    if (typeof params.value !== 'number' || !Number.isFinite(params.value)) {
+    const { value } = params
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
       return Date.now()
     }
 
-    return params.value
+    return value
   }
 
   protected _resolveTriggerDays(params: { value: unknown }): ScheduleTriggerDayMapper[] {
-    if (!Array.isArray(params.value)) {
+    const { value } = params
+    if (!Array.isArray(value)) {
       return []
     }
 
     const knownDays = new Set<string>(constant.scheduleTrigger.days)
     const selectedDays = new Set<ScheduleTriggerDayMapper>(
-      params.value.filter((day): day is ScheduleTriggerDayMapper => {
+      value.filter((day): day is ScheduleTriggerDayMapper => {
         return typeof day === 'string' && knownDays.has(day)
       }),
     )
@@ -540,27 +581,30 @@ export class SettingsService {
   }
 
   protected _resolveTriggerId(params: { value: unknown }): string {
-    if (typeof params.value !== 'string' || params.value === '') {
+    const { value } = params
+    if (typeof value !== 'string' || value === '') {
       return crypto.randomUUID()
     }
 
-    return params.value
+    return value
   }
 
   protected _resolveTriggerName(params: { value: unknown }): string {
-    if (typeof params.value === 'string' && params.value.trim() !== '') {
-      return params.value.trim()
+    const { value } = params
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value.trim()
     }
 
     return 'Trigger'
   }
 
   protected _resolveTriggerTimes(params: { value: unknown }): string[] {
-    if (!Array.isArray(params.value)) {
+    const { value } = params
+    if (!Array.isArray(value)) {
       return []
     }
 
-    const times = params.value.filter((time): time is string => {
+    const times = value.filter((time): time is string => {
       return typeof time === 'string' && constant.twentyFourHourTimeRegex.test(time)
     })
 
@@ -568,12 +612,13 @@ export class SettingsService {
   }
 
   protected _resolveTriggerTimeoutMs(params: { value: unknown }): number {
-    if (typeof params.value !== 'number' || !Number.isFinite(params.value)) {
+    const { value } = params
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
       return constant.scheduleTrigger.timeout.defaultMs
     }
 
     const clampedTimeoutMs = Math.min(
-      Math.max(params.value, constant.scheduleTrigger.timeout.minMs),
+      Math.max(value, constant.scheduleTrigger.timeout.minMs),
       constant.scheduleTrigger.timeout.maxMs,
     )
 
@@ -581,35 +626,40 @@ export class SettingsService {
   }
 
   protected _resolveIsTriggerEnabled(params: { value: unknown }): boolean {
-    return params.value === true
+    const { value } = params
+
+    return value === true
   }
 
   protected _resolveTrackerId(params: { value: unknown }): string {
-    if (typeof params.value !== 'string' || params.value === '') {
+    const { value } = params
+    if (typeof value !== 'string' || value === '') {
       return crypto.randomUUID()
     }
 
-    return params.value
+    return value
   }
 
   protected _resolveTrackerName(params: { providerId: ProviderIdMapper; value: unknown }): string {
-    if (typeof params.value === 'string' && params.value !== '') {
-      return params.value
+    const { providerId, value } = params
+    if (typeof value === 'string' && value !== '') {
+      return value
     }
 
     const catalogEntry = constant.providerCatalog.find((entry) => {
-      return entry.id === params.providerId
+      return entry.id === providerId
     })
 
     if (catalogEntry === undefined) {
-      return params.providerId
+      return providerId
     }
 
     return catalogEntry.name
   }
 
   protected _resolveIsAutoRefreshPaused(params: { value: unknown }): boolean {
-    if (params.value === true) {
+    const { value } = params
+    if (value === true) {
       return true
     }
 
@@ -617,33 +667,36 @@ export class SettingsService {
   }
 
   protected _resolveStringValue(params: { fallback: string; value: unknown }): string {
-    if (typeof params.value !== 'string') {
-      return params.fallback
+    const { fallback, value } = params
+    if (typeof value !== 'string') {
+      return fallback
     }
 
-    return params.value
+    return value
   }
 
-  protected _resolveTokenSource(params: { value: unknown }): ClaudeTokenSource {
-    if (params.value === ClaudeTokenSource.SYSTEM || params.value === constant.legacyClaudeTokenSourceSystem) {
-      return ClaudeTokenSource.SYSTEM
+  protected _resolveAccessTokenSource(params: { value: unknown }): ClaudeAccessTokenSource {
+    const { value } = params
+    if (value === ClaudeAccessTokenSource.SYSTEM || value === constant.legacyClaudeAccessTokenSourceSystem) {
+      return ClaudeAccessTokenSource.SYSTEM
     }
 
-    return ClaudeTokenSource.MANUAL
+    return ClaudeAccessTokenSource.MANUAL
   }
 
   protected _resolveRefreshIntervalMs(params: {
     providerId: ProviderIdMapper
     rawTracker: Record<string, unknown>
   }): number {
+    const { providerId, rawTracker } = params
     const intervalMs = this._resolveOptionalMs({
       legacySecondsKey: 'refreshIntervalSeconds',
       msKey: 'refreshIntervalMs',
-      rawRecord: params.rawTracker,
+      rawRecord: rawTracker,
     })
 
     if (intervalMs === undefined) {
-      return this._resolveDefaultRefreshIntervalMs({ providerId: params.providerId })
+      return this._resolveDefaultRefreshIntervalMs({ providerId })
     }
 
     const clampedIntervalMs = Math.min(
@@ -655,8 +708,9 @@ export class SettingsService {
   }
 
   protected _resolveDefaultRefreshIntervalMs(params: { providerId: ProviderIdMapper }): number {
+    const { providerId } = params
     const catalogEntry = constant.providerCatalog.find((entry) => {
-      return entry.id === params.providerId
+      return entry.id === providerId
     })
 
     if (catalogEntry === undefined) {

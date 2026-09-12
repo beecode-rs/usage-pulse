@@ -1,3 +1,4 @@
+import { typeUtil } from '@beecode/msh-util'
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { osClientService } from '#src/renderer/src/business/service/os-client-service'
@@ -6,7 +7,7 @@ import { ProviderIcon } from '#src/renderer/src/ui-component/provider/provider-i
 import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/tracker-config-fields'
 import { errorUtil } from '#src/renderer/src/util/error-util'
 import { providerCatalogUtil } from '#src/renderer/src/util/provider-catalog-util'
-import { ClaudeTokenSource } from '#src/shared/business/enum/claude-token-source-enum'
+import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import type { OS } from '#src/shared/business/enum/os-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { type AppSettings, type TrackerConfig } from '#src/shared/business/model/settings-model'
@@ -57,12 +58,12 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
       case ProviderIdMapper.CLAUDE: {
         return {
           accessToken: '',
+          accessTokenSource: ClaudeAccessTokenSource.MANUAL,
           id: crypto.randomUUID(),
           isAutoRefreshPaused: false,
           name: '',
           providerId: ProviderIdMapper.CLAUDE,
           refreshIntervalMs: resolveDefaultRefreshIntervalMs(ProviderIdMapper.CLAUDE),
-          tokenSource: ClaudeTokenSource.MANUAL,
         }
       }
 
@@ -91,7 +92,7 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
       }
 
       default: {
-        throw new Error(`unsupported provider: ${String(providerId)}`)
+        throw typeUtil.exhaustiveError('unsupported provider [providerId]', providerId)
       }
     }
   }
@@ -109,7 +110,10 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
       return undefined
     }
 
-    if (tracker.providerId === ProviderIdMapper.CLAUDE && tracker.tokenSource === ClaudeTokenSource.SYSTEM) {
+    if (
+      tracker.providerId === ProviderIdMapper.CLAUDE &&
+      tracker.accessTokenSource === ClaudeAccessTokenSource.SYSTEM
+    ) {
       return undefined
     }
 

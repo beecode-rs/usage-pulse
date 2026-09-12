@@ -1,4 +1,4 @@
-import type { ClaudeTokenSource } from '#src/shared/business/enum/claude-token-source-enum'
+import type { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import type { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import type { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import type { SoundNameMapper } from '#src/shared/business/enum/sound-name-mapper-enum'
@@ -14,7 +14,7 @@ export interface TrackerConfigBase {
 
 export interface ClaudeTrackerConfig extends TrackerConfigBase {
   providerId: ProviderIdMapper.CLAUDE
-  tokenSource: ClaudeTokenSource
+  accessTokenSource: ClaudeAccessTokenSource
 }
 
 export interface DummyTrackerConfig extends TrackerConfigBase {

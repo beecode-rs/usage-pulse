@@ -14,8 +14,8 @@
 //   tty-exact focus path when Ghostty exposes terminal ttys
 // - the macos Ghostty hidden-window outcome: the other-desktop rejection when the
 //   focused terminal never becomes the front window (no Space switch possible)
-// - the focus-support flow: the once-per-run xdotool presence check, the missing-tool
-//   status, and the install-then-refresh path (pkexec never runs; the harness stubs it)
+// - the focus-support flow: the once-per-run xdotool presence check, the unsupported
+//   flag, and the install-then-refresh path (pkexec never runs; the harness stubs it)
 
 import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -24,7 +24,6 @@ import { describe, expect, it } from 'vitest'
 
 import { SessionsServiceContractHarness } from '#src/main/business/service/_sessions-service-contract-harness'
 import { OS } from '#src/shared/business/enum/os-enum'
-import { SessionFocusSupportStatusMapper } from '#src/shared/business/enum/session-focus-support-status-mapper-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus-outcome-mapper-enum'
 import { osUtil } from '#src/main/util/os-util'
@@ -146,12 +145,13 @@ const focusShimEnvKeys = [
 ] as const
 
 const restoreEnvValue = (params: { key: string; value: string | undefined }) => {
-  if (params.value === undefined) {
-    delete process.env[params.key]
+  const { key, value } = params
+  if (value === undefined) {
+    delete process.env[key]
     return
   }
 
-  process.env[params.key] = params.value
+  process.env[key] = value
 }
 
 const installLinuxFocusShims = async () => {
@@ -179,27 +179,32 @@ const installLinuxFocusShims = async () => {
       await rm(binDir, { force: true, recursive: true })
     },
     setPsCommByPid: (params: { commByPid: Record<string, string> }) => {
-      process.env.USAGE_PULSE_PS_COMM_BY_PID = joinSemicolonEntries({ entries: params.commByPid })
+      const { commByPid } = params
+      process.env.USAGE_PULSE_PS_COMM_BY_PID = joinSemicolonEntries({ entries: commByPid })
     },
     setPsDecrementMode: () => {
       process.env.USAGE_PULSE_PS_DECREMENT_PPID = 'true'
     },
     setPsLstartByPid: (params: { lstartByPid: Record<string, string> }) => {
-      process.env.USAGE_PULSE_PS_LSTART_BY_PID = joinSemicolonEntries({ entries: params.lstartByPid })
+      const { lstartByPid } = params
+      process.env.USAGE_PULSE_PS_LSTART_BY_PID = joinSemicolonEntries({ entries: lstartByPid })
     },
     setPsPpidByPid: (params: { ppidByPid: Record<string, string> }) => {
-      process.env.USAGE_PULSE_PS_PPID_BY_PID = Object.entries(params.ppidByPid)
+      const { ppidByPid } = params
+      process.env.USAGE_PULSE_PS_PPID_BY_PID = Object.entries(ppidByPid)
         .map(([pid, ppid]) => {
           return `${pid}=${ppid}`
         })
         .join(',')
     },
     setPsTtyByPid: (params: { ttyByPid: Record<string, string> }) => {
-      process.env.USAGE_PULSE_PS_TTY_BY_PID = joinSemicolonEntries({ entries: params.ttyByPid })
+      const { ttyByPid } = params
+      process.env.USAGE_PULSE_PS_TTY_BY_PID = joinSemicolonEntries({ entries: ttyByPid })
     },
     setWindowForPid: (params: { pid: string; windowId: string }) => {
-      process.env.USAGE_PULSE_XDOTOOL_WINDOW_PID = params.pid
-      process.env.USAGE_PULSE_XDOTOOL_WINDOW_ID = params.windowId
+      const { pid, windowId } = params
+      process.env.USAGE_PULSE_XDOTOOL_WINDOW_PID = pid
+      process.env.USAGE_PULSE_XDOTOOL_WINDOW_ID = windowId
     },
     setWindowHidden: () => {
       process.env.USAGE_PULSE_XDOTOOL_WINDOW_HIDDEN = 'true'
@@ -208,7 +213,8 @@ const installLinuxFocusShims = async () => {
 }
 
 const joinSemicolonEntries = (params: { entries: Record<string, string> }): string => {
-  return Object.entries(params.entries)
+  const { entries } = params
+  return Object.entries(entries)
     .map(([key, value]) => {
       return `${key}=${value}`
     })
@@ -251,17 +257,20 @@ const installOsascriptShim = async () => {
       await rm(binDir, { force: true, recursive: true })
     },
     setWindowTitles: (params: { windowTitles: string }) => {
-      process.env.USAGE_PULSE_OSASCRIPT_WINDOW_TITLES = params.windowTitles
+      const { windowTitles } = params
+      process.env.USAGE_PULSE_OSASCRIPT_WINDOW_TITLES = windowTitles
     },
   }
 }
 
 const readXdotoolInvocations = async (params: { argsLogPath: string }): Promise<string[]> => {
-  return (await readFile(params.argsLogPath, 'utf8')).trim().split('\n')
+  const { argsLogPath } = params
+  return (await readFile(argsLogPath, 'utf8')).trim().split('\n')
 }
 
 const readOsascriptInvocations = async (params: { argsLogPath: string }): Promise<string[]> => {
-  const logContent = await readFile(params.argsLogPath, 'utf8').catch(() => {
+  const { argsLogPath } = params
+  const logContent = await readFile(argsLogPath, 'utf8').catch(() => {
     return ''
   })
 
@@ -675,10 +684,10 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService [contr
 })
 
 describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService focus support [contract supplement]', () => {
-  it('reports ready focus support off linux without touching the install path', async () => {
+  it('reports focus supported off linux without touching the install path', async () => {
     const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
 
-    await expect(service.getFocusSupport()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.READY })
+    await expect(service.isFocusSupported()).resolves.toBe(true)
     expect(service.linuxFocusToolInstallAttemptCount).toBe(0)
   })
 
@@ -687,8 +696,8 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService focus 
 
     try {
       const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
-      await expect(service.getFocusSupport()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.READY })
-      await expect(service.getFocusSupport()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.READY })
+      await expect(service.isFocusSupported()).resolves.toBe(true)
+      await expect(service.isFocusSupported()).resolves.toBe(true)
       const invocations = await readXdotoolInvocations({ argsLogPath: shim.argsLogPath })
 
       expect(invocations).toEqual(['version'])
@@ -697,13 +706,13 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService focus 
     }
   })
 
-  it('reports missing-tool focus support when the xdotool binary is absent', async () => {
+  it('reports focus unsupported when the xdotool binary is absent', async () => {
     const pathOverride = await installBinarylessPath()
 
     try {
       const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
 
-      await expect(service.getFocusSupport()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.MISSING_TOOL })
+      await expect(service.isFocusSupported()).resolves.toBe(false)
     } finally {
       await pathOverride.restoreEnvironment()
     }
@@ -713,11 +722,12 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService focus 
     const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX })
     service.isLinuxFocusToolInstalled = false
 
-    await expect(service.getFocusSupport()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.MISSING_TOOL })
+    await expect(service.isFocusSupported()).resolves.toBe(false)
 
     service.isLinuxFocusToolInstalled = true
 
-    await expect(service.installFocusTool()).resolves.toEqual({ status: SessionFocusSupportStatusMapper.READY })
+    await service.installFocusTool()
+    await expect(service.isFocusSupported()).resolves.toBe(true)
     expect(service.linuxFocusToolInstallAttemptCount).toBe(1)
   })
 

@@ -6,10 +6,10 @@ import { ProviderIcon } from '#src/renderer/src/ui-component/provider/provider-i
 import { UsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
 import { UsageWindowBox } from '#src/renderer/src/ui-component/usage-dashboard/usage-window-box'
 import { dateUtil } from '#src/renderer/src/util/date-util'
+import { usageActivityStatusUtil } from '#src/renderer/src/util/usage-activity-status-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
-import { usageStatusUtil } from '#src/renderer/src/util/usage-status-util'
 import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
-import { UsageStatus } from '#src/shared/business/enum/usage-status-enum'
+import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
 
 export const ProviderUsageCard = (props: {
@@ -76,15 +76,15 @@ export const ProviderUsageCard = (props: {
   }
 
   const resolveStatusText = (): string => {
-    if (isAutoRefreshPaused && providerSnapshot.status === UsageStatus.OK) {
+    if (isAutoRefreshPaused && providerSnapshot.status === UsageActivityStatus.OK) {
       return 'Paused'
     }
 
-    return usageStatusUtil.resolveStatusText(providerSnapshot.status)
+    return usageActivityStatusUtil.resolveStatusText(providerSnapshot.status)
   }
 
   const resolveStatusClassName = (): string => {
-    if (isAutoRefreshPaused && providerSnapshot.status === UsageStatus.OK) {
+    if (isAutoRefreshPaused && providerSnapshot.status === UsageActivityStatus.OK) {
       return 'provider-card-status provider-card-status-paused'
     }
 
@@ -117,16 +117,18 @@ export const ProviderUsageCard = (props: {
   }
 
   const renderPeakProgressBar = (params: { percent: number }): ReactElement => {
+    const { percent } = params
+
     return (
       <div
         aria-label="Time remaining in z.ai peak hours"
         aria-valuemax={100}
         aria-valuemin={0}
-        aria-valuenow={Math.round(params.percent)}
+        aria-valuenow={Math.round(percent)}
         className="provider-card-peak-progress-track"
         role="meter"
       >
-        <div className="provider-card-peak-progress-fill" style={{ width: `${String(params.percent)}%` }} />
+        <div className="provider-card-peak-progress-fill" style={{ width: `${String(percent)}%` }} />
       </div>
     )
   }
@@ -326,7 +328,7 @@ export const ProviderUsageCard = (props: {
         </div>
       </header>
       {renderPeakBanner()}
-      {providerSnapshot.status === UsageStatus.OK && primaryWindow !== undefined && (
+      {providerSnapshot.status === UsageActivityStatus.OK && primaryWindow !== undefined && (
         <div className="provider-card-body">
           <UsageWindowBox
             resetAt={primaryWindow.resetAt}
@@ -357,16 +359,16 @@ export const ProviderUsageCard = (props: {
           </div>
         </div>
       )}
-      {providerSnapshot.status === UsageStatus.PENDING && (
+      {providerSnapshot.status === UsageActivityStatus.PENDING && (
         <p className="provider-card-message">{resolvePendingMessage()}</p>
       )}
-      {providerSnapshot.status === UsageStatus.UNCONFIGURED && (
+      {providerSnapshot.status === UsageActivityStatus.UNCONFIGURED && (
         <p className="provider-card-message">Add an access token in this tracker&apos;s settings to track usage.</p>
       )}
-      {providerSnapshot.status === UsageStatus.ERROR && (
+      {providerSnapshot.status === UsageActivityStatus.ERROR && (
         <p className="provider-card-message provider-card-message-error">{providerSnapshot.errorMessage}</p>
       )}
-      {providerSnapshot.status === UsageStatus.OK && primaryWindow === undefined && (
+      {providerSnapshot.status === UsageActivityStatus.OK && primaryWindow === undefined && (
         <p className="provider-card-message">No usage windows returned.</p>
       )}
       {hasFooterContent && (

@@ -2,15 +2,23 @@ import { constant } from '#src/main/util/constant'
 
 export const constantContractHarness = {
   execAppBundleRegex: (params: { comm: string }) => {
-    return constant.appBundleRegex.exec(params.comm)
+    const { comm } = params
+
+    return constant.appBundleRegex.exec(comm)
   },
   execProcessLineRegex: (params: { line: string }) => {
-    return constant.processLineRegex.exec(params.line)
+    const { line } = params
+
+    return constant.processLineRegex.exec(line)
   },
   execTwoDigitTimeRegex: (params: { time: string }) => {
-    return constant.twoDigitTimeRegex.exec(params.time)
+    const { time } = params
+
+    return constant.twoDigitTimeRegex.exec(time)
   },
   isDigitsOnly: (params: { segment: string }) => {
-    return constant.digitsOnlyRegex.test(params.segment)
+    const { segment } = params
+
+    return constant.digitsOnlyRegex.test(segment)
   },
 }

@@ -1,23 +1,14 @@
 import { app, dialog } from 'electron'
-import { join } from 'node:path'
 
 import { UsagePulseAppFlow } from '#src/main/app-boot/usage-pulse-app-flow'
-import { SchedulingStrategyFactory } from '#src/main/business/component/scheduling-strategy/factory'
-import { SettingsRepo } from '#src/main/business/repo/settings-repo'
-import { TriggerRunLogRepo } from '#src/main/business/repo/trigger-run-log-repo'
-import { UsageSnapshotRepo } from '#src/main/business/repo/usage-snapshot-repo'
-import { SchedulingService } from '#src/main/business/service/scheduling-service'
-import { SessionTranscriptService } from '#src/main/business/service/session-transcript-service'
-import { SessionsPollService } from '#src/main/business/service/sessions-poll-service'
-import { SessionsService } from '#src/main/business/service/sessions-service'
-import { SettingsService } from '#src/main/business/service/settings-service'
-import { SshSessionsService } from '#src/main/business/service/ssh-sessions-service'
+import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
+import { triggerRunLogRepoSingleton } from '#src/main/business/repo/trigger-run-log-repo-singleton'
+import { schedulingServiceSingleton } from '#src/main/business/service/scheduling-service-singleton'
+import { sessionsPollServiceSingleton } from '#src/main/business/service/sessions-poll-service-singleton'
 import { TriggerRunnerService } from '#src/main/business/service/trigger-runner-service'
-import { UpdateService } from '#src/main/business/service/update-service'
-import { UsagePollService } from '#src/main/business/service/usage-poll-service'
-import { SettingsUseCase } from '#src/main/business/use-case/settings-use-case'
+import { updateServiceSingleton } from '#src/main/business/service/update-service-singleton'
+import { usagePollServiceSingleton } from '#src/main/business/service/usage-poll-service-singleton'
 import { devDesktopEntry } from '#src/main/lib/dev-desktop-entry'
-import { config } from '#src/main/util/config'
 import { errorUtil } from '#src/main/util/error-util'
 import { NoSandboxReexecUtil } from '#src/main/util/no-sandbox-reexec-util'
 import { osUtil } from '#src/main/util/os-util'
@@ -35,38 +26,22 @@ const resolveFiredTriggerId = (): string | undefined => {
 }
 
 const bootstrapTriggerWorker = (params: { triggerId: string }): void => {
+  const { triggerId } = params
   app.dock?.hide()
 
-  const userDataPath = app.getPath('userData')
   const runner = new TriggerRunnerService({
-    runLogRepo: new TriggerRunLogRepo({
-      logFilePath: join(userDataPath, 'usage-pulse-trigger-log.jsonl'),
-    }),
-    settingsRepo: new SettingsRepo({
-      settingsFilePath: join(userDataPath, 'usage-pulse-settings.json'),
-    }),
+    runLogRepo: triggerRunLogRepoSingleton(),
+    settingsRepo: settingsRepoSingleton(),
   })
 
   void runner
-    .runTrigger({ source: ScheduleTriggerRunSourceMapper.OS_SCHEDULE, triggerId: params.triggerId })
+    .runTrigger({ source: ScheduleTriggerRunSourceMapper.OS_SCHEDULE, triggerId })
     .then(({ exitCode }) => {
       app.exit(exitCode)
     })
     .catch(() => {
       app.exit(1)
     })
-}
-
-const resolveExecutablePrefixArgs = (): string[] => {
-  if (app.isPackaged) {
-    return ['--no-sandbox']
-  }
-
-  return ['--no-sandbox', app.getAppPath()]
-}
-
-const resolveExecutablePath = (): string => {
-  return config.appImage ?? process.execPath
 }
 
 const noSandboxReexecUtil = new NoSandboxReexecUtil()
@@ -93,49 +68,12 @@ const bootstrapApp = async (): Promise<void> => {
 
   devDesktopEntry.install()
 
-  const settingsRepo = new SettingsRepo({
-    settingsFilePath: join(app.getPath('userData'), 'usage-pulse-settings.json'),
-  })
-  const usageSnapshotRepo = new UsageSnapshotRepo({
-    snapshotFilePath: join(app.getPath('userData'), 'usage-pulse-snapshots.json'),
-  })
-  const pollService = new UsagePollService({ snapshotRepo: usageSnapshotRepo })
-  const schedulingService = new SchedulingService({
-    executablePath: resolveExecutablePath(),
-    executablePrefixArgs: resolveExecutablePrefixArgs(),
-    strategy: new SchedulingStrategyFactory().resolve(),
-  })
-  const sessionTranscriptService = new SessionTranscriptService()
-  const sessionsService = new SessionsService()
-  const sshSessionsService = new SshSessionsService()
-  const sessionsPollService = new SessionsPollService({
-    sessionsService,
-    sessionTranscriptService,
-    sshSessionsService,
-  })
-  const triggerRunLogRepo = new TriggerRunLogRepo({
-    logFilePath: join(app.getPath('userData'), 'usage-pulse-trigger-log.jsonl'),
-  })
-  const updateService = new UpdateService({ currentVersion: app.getVersion() })
-  const settingsService = new SettingsService()
-  const settingsUseCase = new SettingsUseCase({
-    pollService,
-    schedulingService,
-    sessionsPollService,
-    settingsRepo,
-    settingsService,
-  })
-
   await new UsagePulseAppFlow({
-    pollService,
-    schedulingService,
-    sessionsPollService,
-    sessionsService,
-    settingsRepo,
-    settingsUseCase,
-    sshSessionsService,
-    triggerRunLogRepo,
-    updateService,
+    pollService: usagePollServiceSingleton(),
+    schedulingService: schedulingServiceSingleton(),
+    sessionsPollService: sessionsPollServiceSingleton(),
+    settingsRepo: settingsRepoSingleton(),
+    updateService: updateServiceSingleton(),
   }).create()
 }
 

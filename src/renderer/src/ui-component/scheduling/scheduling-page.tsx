@@ -1,3 +1,4 @@
+import { typeUtil } from '@beecode/msh-util'
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { schedulingClientService } from '#src/renderer/src/business/service/scheduling-client-service'
@@ -55,25 +56,27 @@ const resolvePlatformLabel = (platform: OS): string => {
     }
 
     default: {
-      throw new Error(`unsupported platform: ${String(platform)}`)
+      throw typeUtil.exhaustiveError('unsupported platform [platform]', platform)
     }
   }
 }
 
 const resolveFinishedOutcome = (params: { exitCode: number }): { className: string; label: string } => {
-  if (params.exitCode === 0) {
+  const { exitCode } = params
+  if (exitCode === 0) {
     return { className: 'trigger-run-badge is-ok', label: 'OK' }
   }
 
-  if (params.exitCode === constant.scheduleTrigger.run.exitCodeTimedOut) {
+  if (exitCode === constant.scheduleTrigger.run.exitCodeTimedOut) {
     return { className: 'trigger-run-badge is-failed', label: 'Timed out' }
   }
 
-  return { className: 'trigger-run-badge is-failed', label: `Exit ${String(params.exitCode)}` }
+  return { className: 'trigger-run-badge is-failed', label: `Exit ${String(exitCode)}` }
 }
 
 const resolveCardClassName = (params: { isEnabled: boolean }): string => {
-  if (params.isEnabled) {
+  const { isEnabled } = params
+  if (isEnabled) {
     return 'trigger-card'
   }
 
@@ -81,7 +84,8 @@ const resolveCardClassName = (params: { isEnabled: boolean }): string => {
 }
 
 const resolveRunsButtonClassName = (params: { isExpanded: boolean }): string => {
-  if (params.isExpanded) {
+  const { isExpanded } = params
+  if (isExpanded) {
     return 'trigger-icon-button is-active'
   }
 
@@ -89,7 +93,8 @@ const resolveRunsButtonClassName = (params: { isExpanded: boolean }): string => 
 }
 
 const resolveRunsButtonTitle = (params: { isExpanded: boolean }): string => {
-  if (params.isExpanded) {
+  const { isExpanded } = params
+  if (isExpanded) {
     return 'Hide runs'
   }
 
@@ -97,7 +102,8 @@ const resolveRunsButtonTitle = (params: { isExpanded: boolean }): string => {
 }
 
 const resolveSwitchTitle = (params: { isEnabled: boolean }): string => {
-  if (params.isEnabled) {
+  const { isEnabled } = params
+  if (isEnabled) {
     return 'Pause trigger'
   }
 
@@ -105,7 +111,8 @@ const resolveSwitchTitle = (params: { isEnabled: boolean }): string => {
 }
 
 const resolveMasterSwitchTitle = (params: { isEnabled: boolean }): string => {
-  if (params.isEnabled) {
+  const { isEnabled } = params
+  if (isEnabled) {
     return 'Turn off OS scheduling and unload all registered triggers'
   }
 
@@ -113,19 +120,21 @@ const resolveMasterSwitchTitle = (params: { isEnabled: boolean }): string => {
 }
 
 const resolveRunDurationPart = (params: { summary: TriggerRunSummary }): string => {
-  if (params.summary.phase !== ScheduleTriggerRunPhaseMapper.FINISHED) {
+  const { summary } = params
+  if (summary.phase !== ScheduleTriggerRunPhaseMapper.FINISHED) {
     return ''
   }
 
-  return dateUtil.formatPreciseDuration(params.summary.durationMs)
+  return dateUtil.formatPreciseDuration(summary.durationMs)
 }
 
 const resolveRunExitCodePart = (params: { summary: TriggerRunSummary }): string => {
-  if (params.summary.phase !== ScheduleTriggerRunPhaseMapper.FINISHED) {
+  const { summary } = params
+  if (summary.phase !== ScheduleTriggerRunPhaseMapper.FINISHED) {
     return ''
   }
 
-  return `exit ${String(params.summary.exitCode)}`
+  return `exit ${String(summary.exitCode)}`
 }
 
 const resolveRunMeta = (summary: TriggerRunSummary): string => {
@@ -155,7 +164,7 @@ const resolveRunOutcome = (summary: TriggerRunSummary): { className: string; lab
     }
 
     default: {
-      throw new Error(`unsupported run phase: ${String(summary.phase)}`)
+      throw typeUtil.exhaustiveError('unsupported run phase [summary.phase]', summary.phase)
     }
   }
 }
@@ -171,7 +180,7 @@ const resolveRunSourceLabel = (source: ScheduleTriggerRunSourceMapper): string =
     }
 
     default: {
-      throw new Error(`unsupported run source: ${String(source)}`)
+      throw typeUtil.exhaustiveError('unsupported run source [source]', source)
     }
   }
 }
@@ -195,7 +204,7 @@ const resolveSkipReasonLabel = (skipReason: ScheduleTriggerRunSkipReasonMapper):
     }
 
     default: {
-      throw new Error(`unsupported skip reason: ${String(skipReason)}`)
+      throw typeUtil.exhaustiveError('unsupported skip reason [skipReason]', skipReason)
     }
   }
 }
@@ -203,13 +212,14 @@ const resolveSkipReasonLabel = (skipReason: ScheduleTriggerRunSkipReasonMapper):
 const resolveSkippedOutcome = (params: {
   skipReason: ScheduleTriggerRunSkipReasonMapper | ''
 }): { className: string; label: string } => {
-  if (params.skipReason === '') {
+  const { skipReason } = params
+  if (skipReason === '') {
     return { className: 'trigger-run-badge is-skipped', label: 'Skipped' }
   }
 
   return {
     className: 'trigger-run-badge is-skipped',
-    label: `Skipped · ${resolveSkipReasonLabel(params.skipReason)}`,
+    label: `Skipped · ${resolveSkipReasonLabel(skipReason)}`,
   }
 }
 
@@ -317,13 +327,14 @@ export const SchedulingPage = (): ReactElement => {
   }
 
   const loadRuns = async (params: { triggerId: string }): Promise<void> => {
+    const { triggerId } = params
     setRunsErrorMessage('')
 
     try {
-      const entries = await schedulingClientService.getTriggerRunLogs({ triggerId: params.triggerId })
+      const entries = await schedulingClientService.getTriggerRunLogs({ triggerId })
 
       setRunsByTriggerId((previous) => {
-        return { ...previous, [params.triggerId]: entries }
+        return { ...previous, [triggerId]: entries }
       })
     } catch (error) {
       setRunsErrorMessage(errorUtil.resolveMessage(error))
@@ -331,11 +342,12 @@ export const SchedulingPage = (): ReactElement => {
   }
 
   const handleClearRuns = async (params: { triggerId: string }): Promise<void> => {
+    const { triggerId } = params
     setRunsErrorMessage('')
 
     try {
-      await schedulingClientService.clearTriggerRunLogs({ triggerId: params.triggerId })
-      await loadRuns({ triggerId: params.triggerId })
+      await schedulingClientService.clearTriggerRunLogs({ triggerId })
+      await loadRuns({ triggerId })
     } catch (error) {
       setRunsErrorMessage(errorUtil.resolveMessage(error))
     }
@@ -381,22 +393,23 @@ export const SchedulingPage = (): ReactElement => {
   }
 
   const handleToggleRuns = (params: { triggerId: string }): void => {
-    const isExpanded = expandedTriggerIds.has(params.triggerId)
+    const { triggerId } = params
+    const isExpanded = expandedTriggerIds.has(triggerId)
 
     setExpandedTriggerIds((previous) => {
       if (isExpanded) {
         return new Set(
           [...previous].filter((candidateTriggerId) => {
-            return candidateTriggerId !== params.triggerId
+            return candidateTriggerId !== triggerId
           }),
         )
       }
 
-      return new Set([...previous, params.triggerId])
+      return new Set([...previous, triggerId])
     })
 
     if (!isExpanded) {
-      void loadRuns({ triggerId: params.triggerId })
+      void loadRuns({ triggerId })
     }
   }
 
@@ -433,7 +446,8 @@ export const SchedulingPage = (): ReactElement => {
   }
 
   const resolveRunsContent = (params: { triggerId: string }): ReactElement => {
-    const entries = runsByTriggerId[params.triggerId]
+    const { triggerId } = params
+    const entries = runsByTriggerId[triggerId]
 
     if (runsErrorMessage !== '') {
       return <p className="trigger-run-empty">{runsErrorMessage}</p>

@@ -1,7 +1,7 @@
 import { type ReactElement } from 'react'
 
 import '#src/renderer/src/ui-component/side-menu/side-menu.css'
-import { type MenuStatusDotMapper } from '#src/renderer/src/business/model/menu-status-dot-mapper-enum'
+import { type MenuStatusDotMapper } from '#src/renderer/src/business/enum/menu-status-dot-mapper-enum'
 
 export type SideMenuItem<ItemId extends string> = {
   icon: ReactElement
@@ -13,7 +13,8 @@ export type SideMenuItem<ItemId extends string> = {
 }
 
 const resolveCollapseToggleTitle = (params: { isCollapsed: boolean }): string | undefined => {
-  if (params.isCollapsed) {
+  const { isCollapsed } = params
+  if (isCollapsed) {
     return 'Expand'
   }
 
@@ -53,15 +54,17 @@ export const SideMenu = <ItemId extends string>(props: {
   }
 
   const resolveBrandDotClassName = (params: { statusDot: MenuStatusDotMapper | undefined }): string => {
-    if (params.statusDot === undefined) {
+    const { statusDot } = params
+    if (statusDot === undefined) {
       return 'side-menu-brand-dot'
     }
 
-    return `side-menu-brand-dot is-${params.statusDot}`
+    return `side-menu-brand-dot is-${statusDot}`
   }
 
   const resolveItemClassName = (params: { itemId: ItemId }): string => {
-    if (params.itemId === activeItemId) {
+    const { itemId } = params
+    if (itemId === activeItemId) {
       return 'side-menu-item side-menu-item-active'
     }
 
@@ -69,15 +72,17 @@ export const SideMenu = <ItemId extends string>(props: {
   }
 
   const resolveItemTitle = (params: { label: string }): string | undefined => {
+    const { label } = params
     if (isCollapsed) {
-      return params.label
+      return label
     }
 
     return undefined
   }
 
   const resolveItemIconClassName = (params: { isLive: boolean }): string => {
-    if (params.isLive) {
+    const { isLive } = params
+    if (isLive) {
       return 'side-menu-item-icon side-menu-item-icon-live'
     }
 
@@ -85,7 +90,8 @@ export const SideMenu = <ItemId extends string>(props: {
   }
 
   const renderStatusDot = (params: { item: SideMenuItem<ItemId> }): ReactElement | undefined => {
-    const { statusDot: itemStatusDot, statusDotTitle: itemStatusDotTitle } = params.item
+    const { item } = params
+    const { statusDot: itemStatusDot, statusDotTitle: itemStatusDotTitle } = item
 
     if (itemStatusDot === undefined) {
       return undefined
@@ -95,21 +101,23 @@ export const SideMenu = <ItemId extends string>(props: {
   }
 
   const renderItem = (params: { item: SideMenuItem<ItemId> }): ReactElement => {
+    const { item } = params
+
     return (
       <button
-        className={resolveItemClassName({ itemId: params.item.id })}
-        key={params.item.id}
+        className={resolveItemClassName({ itemId: item.id })}
+        key={item.id}
         onClick={() => {
-          onSelectItem(params.item.id)
+          onSelectItem(item.id)
         }}
-        title={resolveItemTitle({ label: params.item.label })}
+        title={resolveItemTitle({ label: item.label })}
         type="button"
       >
-        <span className={resolveItemIconClassName({ isLive: params.item.isLive === true })}>
-          {params.item.icon}
-          {renderStatusDot({ item: params.item })}
+        <span className={resolveItemIconClassName({ isLive: item.isLive === true })}>
+          {item.icon}
+          {renderStatusDot({ item })}
         </span>
-        {!isCollapsed && <span className="side-menu-item-label">{params.item.label}</span>}
+        {!isCollapsed && <span className="side-menu-item-label">{item.label}</span>}
       </button>
     )
   }

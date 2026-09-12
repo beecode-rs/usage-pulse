@@ -26,15 +26,17 @@ const WORK_RANGE_LABEL = 'Work 10:00–18:00'
 const WINDOW_MS = constant.fiveHourWindowMs
 
 const resolvePositionPercent = (params: { dayMs: number }): number => {
+  const { dayMs } = params
   const domainMs = DIAGRAM_DOMAIN_MS.endMs - DIAGRAM_DOMAIN_MS.startMs
-  const offsetMs = params.dayMs - DIAGRAM_DOMAIN_MS.startMs
+  const offsetMs = dayMs - DIAGRAM_DOMAIN_MS.startMs
 
   return (offsetMs / domainMs) * 100
 }
 
 const resolveSegmentLayout = (params: { range: TimeRange }): { leftPercent: number; widthPercent: number } => {
-  const leftPercent = resolvePositionPercent({ dayMs: params.range.startMs })
-  const rightPercent = resolvePositionPercent({ dayMs: params.range.endMs })
+  const { range } = params
+  const leftPercent = resolvePositionPercent({ dayMs: range.startMs })
+  const rightPercent = resolvePositionPercent({ dayMs: range.endMs })
 
   return { leftPercent, widthPercent: rightPercent - leftPercent }
 }

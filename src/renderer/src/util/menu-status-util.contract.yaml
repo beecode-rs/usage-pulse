@@ -1,6 +1,6 @@
 # Contract for MenuStatusUtil.
 # Terms pin the side-menu status dots. The usage dot is 'error' when any provider
-# snapshot reports UsageStatus.ERROR, else 'warning' when any usage window is
+# snapshot reports UsageActivityStatus.ERROR, else 'warning' when any usage window is
 # outpacing the window (usage percent at least 10 points ahead of the
 # elapsed-window percent); remaining time alone never warns. The sessions dot is
 # 'error' when loading failed or the snapshot carries an error message, else 'waiting'
@@ -394,7 +394,7 @@ methods:
               sessions: []
               unreachableHosts: []
         result: error
-  resolveUsageStatusDot:
+  resolveUsageActivityStatusDot:
     terms:
       # No snapshot at all (usage not loaded yet).
       - constructorParams: []

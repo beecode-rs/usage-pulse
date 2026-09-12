@@ -1,18 +1,19 @@
 import { LifeCycle } from '@beecode/msh-app-boot'
 
-import { type SettingsRepo } from '#src/main/business/repo/settings-repo'
-import { type SchedulingService } from '#src/main/business/service/scheduling-service'
+import { type _SettingsRepo } from '#src/main/business/repo/settings-repo-singleton'
+import { type _SchedulingService } from '#src/main/business/service/scheduling-service-singleton'
 import { type AppSettings } from '#src/shared/business/model/settings-model'
 
 export class SettingsLifeCycle extends LifeCycle<void> {
-  protected readonly _schedulingService: SchedulingService
-  protected readonly _settingsRepo: SettingsRepo
+  protected readonly _schedulingService: _SchedulingService
+  protected readonly _settingsRepo: _SettingsRepo
   protected _settings?: AppSettings
 
-  constructor(params: { schedulingService: SchedulingService; settingsRepo: SettingsRepo }) {
+  constructor(params: { schedulingService: _SchedulingService; settingsRepo: _SettingsRepo }) {
+    const { schedulingService, settingsRepo } = params
     super({ name: 'settings' })
-    this._schedulingService = params.schedulingService
-    this._settingsRepo = params.settingsRepo
+    this._schedulingService = schedulingService
+    this._settingsRepo = settingsRepo
   }
 
   getSettings(): AppSettings {

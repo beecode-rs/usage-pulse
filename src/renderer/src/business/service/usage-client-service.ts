@@ -12,21 +12,31 @@ export const usageClientService = {
     return window.usageApi.refreshNow()
   },
   refreshTracker: (params: { trackerId: string }): Promise<void> => {
-    return window.usageApi.refreshTracker({ trackerId: params.trackerId })
+    const { trackerId } = params
+
+    return window.usageApi.refreshTracker({ trackerId })
   },
   saveSettings: (params: { settings: AppSettings }): Promise<AppSettings> => {
-    return window.usageApi.saveSettings(params.settings)
+    const { settings } = params
+
+    return window.usageApi.saveSettings(settings)
   },
   setTrackerPaused: (params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<AppSettings> => {
+    const { isAutoRefreshPaused, trackerId } = params
+
     return window.usageApi.setTrackerPaused({
-      isAutoRefreshPaused: params.isAutoRefreshPaused,
-      trackerId: params.trackerId,
+      isAutoRefreshPaused,
+      trackerId,
     })
   },
   subscribeToSettingsUpdates: (params: { onUpdate: SettingsUpdateListener }): (() => void) => {
-    return window.usageApi.onSettingsUpdate(params.onUpdate)
+    const { onUpdate } = params
+
+    return window.usageApi.onSettingsUpdate(onUpdate)
   },
   subscribeToUsageUpdates: (params: { onUpdate: UsageUpdateListener }): (() => void) => {
-    return window.usageApi.onUsageUpdate(params.onUpdate)
+    const { onUpdate } = params
+
+    return window.usageApi.onUsageUpdate(onUpdate)
   },
 }

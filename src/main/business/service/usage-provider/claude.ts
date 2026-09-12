@@ -14,10 +14,11 @@ export class UsageProviderClaude implements UsageProvider {
   }
 
   async fetchUsage(params: { accessToken: string }): Promise<UsageWindow[]> {
+    const { accessToken } = params
     const rawUsage = await httpUtil.fetchJson({
       headers: {
         accept: 'application/json',
-        authorization: `Bearer ${params.accessToken}`,
+        authorization: `Bearer ${accessToken}`,
       },
       url: this._usageUrl,
     })
@@ -27,7 +28,8 @@ export class UsageProviderClaude implements UsageProvider {
   }
 
   protected _extractUsageRecord(params: { raw: unknown }): Record<string, unknown> {
-    const rootRecord = objectUtil.asRecord(params.raw)
+    const { raw } = params
+    const rootRecord = objectUtil.asRecord(raw)
 
     if (rootRecord === undefined) {
       throw new Error('Claude usage response is not a JSON object')
@@ -37,9 +39,10 @@ export class UsageProviderClaude implements UsageProvider {
   }
 
   protected _buildWindows(params: { usageRecord: Record<string, unknown> }): UsageWindow[] {
+    const { usageRecord } = params
     const fiveHourWindow = this._buildWindow({
       label: '5-hour window',
-      sectionRecord: objectUtil.asRecord(params.usageRecord['five_hour']),
+      sectionRecord: objectUtil.asRecord(usageRecord['five_hour']),
       windowMs: constant.fiveHourWindowMs,
     })
 
@@ -48,7 +51,7 @@ export class UsageProviderClaude implements UsageProvider {
     }
 
     const windows: UsageWindow[] = [fiveHourWindow]
-    const weeklyWindow = this._buildWeeklyWindow({ usageRecord: params.usageRecord })
+    const weeklyWindow = this._buildWeeklyWindow({ usageRecord })
 
     if (weeklyWindow !== undefined) {
       windows.push(weeklyWindow)
@@ -58,9 +61,11 @@ export class UsageProviderClaude implements UsageProvider {
   }
 
   protected _buildWeeklyWindow(params: { usageRecord: Record<string, unknown> }): UsageWindow | undefined {
+    const { usageRecord } = params
+
     return this._buildWindow({
       label: 'Weekly',
-      sectionRecord: objectUtil.asRecord(params.usageRecord['seven_day']),
+      sectionRecord: objectUtil.asRecord(usageRecord['seven_day']),
       windowMs: constant.sevenDayWindowMs,
     })
   }
@@ -70,35 +75,37 @@ export class UsageProviderClaude implements UsageProvider {
     sectionRecord?: Record<string, unknown>
     windowMs?: number
   }): UsageWindow | undefined {
-    if (params.sectionRecord === undefined) {
+    const { label, sectionRecord, windowMs } = params
+    if (sectionRecord === undefined) {
       return undefined
     }
 
-    const percent = this._resolvePercent({ sectionRecord: params.sectionRecord })
+    const percent = this._resolvePercent({ sectionRecord })
 
     if (percent === undefined) {
       return undefined
     }
 
-    const resetAt = this._resolveResetAt({ sectionRecord: params.sectionRecord })
+    const resetAt = this._resolveResetAt({ sectionRecord })
 
     if (resetAt === undefined) {
-      if (params.windowMs === undefined) {
-        return { label: params.label, usedPercent: percent }
+      if (windowMs === undefined) {
+        return { label, usedPercent: percent }
       }
 
-      return { label: params.label, usedPercent: percent, windowMs: params.windowMs }
+      return { label, usedPercent: percent, windowMs }
     }
 
-    if (params.windowMs === undefined) {
-      return { label: params.label, resetAt, usedPercent: percent }
+    if (windowMs === undefined) {
+      return { label, resetAt, usedPercent: percent }
     }
 
-    return { label: params.label, resetAt, usedPercent: percent, windowMs: params.windowMs }
+    return { label, resetAt, usedPercent: percent, windowMs }
   }
 
   protected _resolvePercent(params: { sectionRecord: Record<string, unknown> }): number | undefined {
-    const utilization = params.sectionRecord['utilization']
+    const { sectionRecord } = params
+    const utilization = sectionRecord['utilization']
 
     if (typeof utilization !== 'number' || !Number.isFinite(utilization)) {
       return undefined
@@ -108,7 +115,8 @@ export class UsageProviderClaude implements UsageProvider {
   }
 
   protected _resolveResetAt(params: { sectionRecord: Record<string, unknown> }): number | undefined {
-    const resetsAt = params.sectionRecord['resets_at']
+    const { sectionRecord } = params
+    const resetsAt = sectionRecord['resets_at']
 
     if (typeof resetsAt !== 'string' && typeof resetsAt !== 'number') {
       return undefined

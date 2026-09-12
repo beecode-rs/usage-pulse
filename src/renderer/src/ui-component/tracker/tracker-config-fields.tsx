@@ -1,8 +1,8 @@
 import type { ReactElement } from 'react'
 
 import { DayTimeScheduleFields } from '#src/renderer/src/ui-component/schedule/day-time-schedule-fields'
-import { trackerTokenSourceUtil } from '#src/renderer/src/util/tracker-token-source-util'
-import { ClaudeTokenSource } from '#src/shared/business/enum/claude-token-source-enum'
+import { trackerAccessTokenSourceUtil } from '#src/renderer/src/util/tracker-access-token-source-util'
+import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import type { OS } from '#src/shared/business/enum/os-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import type { TrackerConfig } from '#src/shared/business/model/settings-model'
@@ -22,7 +22,10 @@ export const TrackerConfigFields = (props: {
     return entry.id === config.providerId
   })
   const providerDisplayName = catalogEntry?.name ?? config.providerId
-  const { selectedTokenSource, systemTokenOption } = trackerTokenSourceUtil.resolveSelection({ config, osPlatform })
+  const { selectedAccessTokenSource, systemAccessTokenOption } = trackerAccessTokenSourceUtil.resolveSelection({
+    config,
+    osPlatform,
+  })
 
   return (
     <>
@@ -41,33 +44,33 @@ export const TrackerConfigFields = (props: {
       {config.providerId === ProviderIdMapper.CLAUDE && (
         <div className="settings-field">
           <span className="settings-field-label">Access token</span>
-          <div className="settings-token-source-row">
-            <label className="settings-token-source-option">
+          <div className="settings-access-token-source-row">
+            <label className="settings-access-token-source-option">
               <input
-                checked={selectedTokenSource === ClaudeTokenSource.MANUAL}
-                name={`claude-token-source-${config.id}`}
+                checked={selectedAccessTokenSource === ClaudeAccessTokenSource.MANUAL}
+                name={`claude-access-token-source-${config.id}`}
                 onChange={() => {
-                  onChange({ ...config, tokenSource: ClaudeTokenSource.MANUAL })
+                  onChange({ ...config, accessTokenSource: ClaudeAccessTokenSource.MANUAL })
                 }}
                 type="radio"
               />
               Enter manually
             </label>
-            {systemTokenOption !== undefined && (
-              <label className="settings-token-source-option">
+            {systemAccessTokenOption !== undefined && (
+              <label className="settings-access-token-source-option">
                 <input
-                  checked={selectedTokenSource === ClaudeTokenSource.SYSTEM}
-                  name={`claude-token-source-${config.id}`}
+                  checked={selectedAccessTokenSource === ClaudeAccessTokenSource.SYSTEM}
+                  name={`claude-access-token-source-${config.id}`}
                   onChange={() => {
-                    onChange({ ...config, tokenSource: ClaudeTokenSource.SYSTEM })
+                    onChange({ ...config, accessTokenSource: ClaudeAccessTokenSource.SYSTEM })
                   }}
                   type="radio"
                 />
-                {systemTokenOption.label}
+                {systemAccessTokenOption.label}
               </label>
             )}
           </div>
-          {selectedTokenSource === ClaudeTokenSource.MANUAL && (
+          {selectedAccessTokenSource === ClaudeAccessTokenSource.MANUAL && (
             <input
               className="settings-field-input"
               onChange={(event) => {
@@ -78,8 +81,8 @@ export const TrackerConfigFields = (props: {
               value={config.accessToken}
             />
           )}
-          {selectedTokenSource === ClaudeTokenSource.SYSTEM && systemTokenOption !== undefined && (
-            <p className="settings-hint">{systemTokenOption.hint}</p>
+          {selectedAccessTokenSource === ClaudeAccessTokenSource.SYSTEM && systemAccessTokenOption !== undefined && (
+            <p className="settings-hint">{systemAccessTokenOption.hint}</p>
           )}
         </div>
       )}

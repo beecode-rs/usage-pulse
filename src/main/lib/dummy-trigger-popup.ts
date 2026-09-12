@@ -7,6 +7,7 @@ const POPUP_TITLE = 'Usage Pulse — Dummy tracker'
 
 export const dummyTriggerPopup = {
   show: async (params: { trackerName: string }): Promise<void> => {
+    const { trackerName } = params
     if (osUtil.resolvePlatform() !== OS.MACOS) {
       return
     }
@@ -15,7 +16,7 @@ export const dummyTriggerPopup = {
     await app.dock?.show()
 
     await dialog.showMessageBox({
-      message: `Tracker "${params.trackerName}" was triggered.`,
+      message: `Tracker "${trackerName}" was triggered.`,
       title: POPUP_TITLE,
     })
   },

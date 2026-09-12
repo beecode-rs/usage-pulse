@@ -52,11 +52,12 @@ const audioContextCache: { context?: AudioContext } = {}
 
 export class SessionSoundUtil {
   playSessionSound(params: { soundId: SoundNameMapper; volumePercent: number }): void {
-    if (params.soundId === SoundNameMapper.NONE) {
+    const { soundId, volumePercent } = params
+    if (soundId === SoundNameMapper.NONE) {
       return
     }
 
-    const gain = this.resolveSoundGain({ volumePercent: params.volumePercent })
+    const gain = this.resolveSoundGain({ volumePercent })
 
     if (gain <= 0) {
       return
@@ -64,7 +65,7 @@ export class SessionSoundUtil {
 
     const audioContext = this._resolveAudioContext()
 
-    SESSION_SOUND_TONES[params.soundId].map((tone) => {
+    SESSION_SOUND_TONES[soundId].map((tone) => {
       this._playTone({ audioContext, gain, tone })
     })
   }
@@ -74,23 +75,24 @@ export class SessionSoundUtil {
     previousSessions?: SessionInfo[]
     status: SessionStatusMapper
   }): string[] {
-    if (params.previousSessions === undefined) {
+    const { currentSessions, previousSessions, status } = params
+    if (previousSessions === undefined) {
       return []
     }
 
     const previousStatusSessionIds = new Set(
-      params.previousSessions
+      previousSessions
         .filter((session) => {
-          return session.status === params.status
+          return session.status === status
         })
         .map((session) => {
           return session.sessionId
         }),
     )
 
-    return params.currentSessions
+    return currentSessions
       .filter((session) => {
-        return session.status === params.status && !previousStatusSessionIds.has(session.sessionId)
+        return session.status === status && !previousStatusSessionIds.has(session.sessionId)
       })
       .map((session) => {
         return session.sessionId
@@ -98,8 +100,9 @@ export class SessionSoundUtil {
   }
 
   resolveSoundGain(params: { volumePercent: number }): number {
+    const { volumePercent } = params
     const clampedVolumePercent = Math.min(
-      Math.max(params.volumePercent, constant.soundVolume.minPercent),
+      Math.max(volumePercent, constant.soundVolume.minPercent),
       constant.soundVolume.maxPercent,
     )
 
@@ -112,23 +115,24 @@ export class SessionSoundUtil {
     previousSessions?: SessionInfo[]
     toStatus: SessionStatusMapper
   }): string[] {
-    if (params.previousSessions === undefined) {
+    const { currentSessions, fromStatus, previousSessions, toStatus } = params
+    if (previousSessions === undefined) {
       return []
     }
 
     const fromStatusSessionIds = new Set(
-      params.previousSessions
+      previousSessions
         .filter((session) => {
-          return session.status === params.fromStatus
+          return session.status === fromStatus
         })
         .map((session) => {
           return session.sessionId
         }),
     )
 
-    return params.currentSessions
+    return currentSessions
       .filter((session) => {
-        return session.status === params.toStatus && fromStatusSessionIds.has(session.sessionId)
+        return session.status === toStatus && fromStatusSessionIds.has(session.sessionId)
       })
       .map((session) => {
         return session.sessionId
@@ -136,20 +140,21 @@ export class SessionSoundUtil {
   }
 
   protected _playTone(params: { audioContext: AudioContext; gain: number; tone: SessionSoundTone }): void {
-    const gainNode = params.audioContext.createGain()
-    const oscillator = params.audioContext.createOscillator()
-    const startAtSeconds = params.audioContext.currentTime + params.tone.offsetSeconds
-    const stopAtSeconds = startAtSeconds + params.tone.durationSeconds
+    const { audioContext, gain, tone } = params
+    const gainNode = audioContext.createGain()
+    const oscillator = audioContext.createOscillator()
+    const startAtSeconds = audioContext.currentTime + tone.offsetSeconds
+    const stopAtSeconds = startAtSeconds + tone.durationSeconds
 
-    const toneGain = params.gain * params.tone.gainMultiplier
+    const toneGain = gain * tone.gainMultiplier
 
     gainNode.gain.setValueAtTime(0, startAtSeconds)
     gainNode.gain.linearRampToValueAtTime(toneGain, startAtSeconds + TONE_ATTACK_SECONDS)
     gainNode.gain.exponentialRampToValueAtTime(TONE_SILENCE_GAIN, stopAtSeconds)
-    oscillator.frequency.value = params.tone.frequencyHz
-    oscillator.type = params.tone.waveType
+    oscillator.frequency.value = tone.frequencyHz
+    oscillator.type = tone.waveType
     oscillator.connect(gainNode)
-    gainNode.connect(params.audioContext.destination)
+    gainNode.connect(audioContext.destination)
     oscillator.start(startAtSeconds)
     oscillator.stop(stopAtSeconds)
   }

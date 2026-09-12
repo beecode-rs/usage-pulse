@@ -40,7 +40,7 @@ const providerCatalog: ProviderCatalogEntry[] = [
 
 export const constant = {
   fiveHourWindowMs,
-  legacyClaudeTokenSourceSystem: 'system',
+  legacyClaudeAccessTokenSourceSystem: 'system',
   maxWindowScheduleTriggerPreset,
   planner: {
     dayMs: 86_400_000,

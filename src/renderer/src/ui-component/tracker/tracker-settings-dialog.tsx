@@ -4,7 +4,7 @@ import { osClientService } from '#src/renderer/src/business/service/os-client-se
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/tracker-config-fields'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { trackerTokenSourceUtil } from '#src/renderer/src/util/tracker-token-source-util'
+import { trackerAccessTokenSourceUtil } from '#src/renderer/src/util/tracker-access-token-source-util'
 import type { OS } from '#src/shared/business/enum/os-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { type AppSettings, type TrackerConfig } from '#src/shared/business/model/settings-model'
@@ -41,7 +41,7 @@ export const TrackerSettingsDialog = (props: {
         return
       }
 
-      setTracker(trackerTokenSourceUtil.normalizeConfig({ config: loadedTracker, osPlatform: loadedOsPlatform }))
+      setTracker(trackerAccessTokenSourceUtil.normalizeConfig({ config: loadedTracker, osPlatform: loadedOsPlatform }))
     }
 
     void loadSettings()

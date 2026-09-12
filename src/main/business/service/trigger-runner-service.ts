@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
-import { type SettingsRepo } from '#src/main/business/repo/settings-repo'
-import { type TriggerRunLogRepo } from '#src/main/business/repo/trigger-run-log-repo'
+import { type _SettingsRepo } from '#src/main/business/repo/settings-repo-singleton'
+import { type _TriggerRunLogRepo } from '#src/main/business/repo/trigger-run-log-repo-singleton'
 import { TriggerCommandService } from '#src/main/business/service/trigger-command-service'
 import { dummyTriggerPopup } from '#src/main/lib/dummy-trigger-popup'
 import { constant } from '#src/main/util/constant'
@@ -24,8 +24,8 @@ export class TriggerRunnerService {
   protected readonly _commandService: TriggerCommandService
   protected readonly _dummyAction: DummyTrackerAction
   protected readonly _now: () => Date
-  protected readonly _runLogRepo: TriggerRunLogRepo
-  protected readonly _settingsRepo: SettingsRepo
+  protected readonly _runLogRepo: _TriggerRunLogRepo
+  protected readonly _settingsRepo: _SettingsRepo
   protected readonly _staleSkipMs: number
   protected readonly _triggerDayByWeekdayIndex: readonly ScheduleTriggerDayMapper[] = [
     ScheduleTriggerDayMapper.SUNDAY,
@@ -41,52 +41,54 @@ export class TriggerRunnerService {
     commandService?: TriggerCommandService
     dummyAction?: DummyTrackerAction
     now?: () => Date
-    runLogRepo: TriggerRunLogRepo
-    settingsRepo: SettingsRepo
+    runLogRepo: _TriggerRunLogRepo
+    settingsRepo: _SettingsRepo
     staleSkipMs?: number
   }) {
-    this._commandService = params.commandService ?? new TriggerCommandService()
-    this._dummyAction = params.dummyAction ?? dummyTriggerPopup.show
+    const { commandService, dummyAction, now, runLogRepo, settingsRepo, staleSkipMs } = params
+    this._commandService = commandService ?? new TriggerCommandService()
+    this._dummyAction = dummyAction ?? dummyTriggerPopup.show
     this._now =
-      params.now ??
+      now ??
       ((): Date => {
         return new Date()
       })
-    this._runLogRepo = params.runLogRepo
-    this._settingsRepo = params.settingsRepo
-    this._staleSkipMs = params.staleSkipMs ?? sharedConstant.scheduleTrigger.staleSkip.defaultMs
+    this._runLogRepo = runLogRepo
+    this._settingsRepo = settingsRepo
+    this._staleSkipMs = staleSkipMs ?? sharedConstant.scheduleTrigger.staleSkip.defaultMs
   }
 
   async runTrigger(params: {
     source: ScheduleTriggerRunSourceMapper
     triggerId: string
   }): Promise<{ exitCode: number }> {
+    const { source, triggerId } = params
     const eventId = this._createEventId()
 
     try {
       const settings = await this._settingsRepo.load()
       const trigger = settings.triggers.find((candidate) => {
-        return candidate.id === params.triggerId
+        return candidate.id === triggerId
       })
 
       if (trigger !== undefined) {
-        return await this._runCommandTrigger({ eventId, settings, source: params.source, trigger })
+        return await this._runCommandTrigger({ eventId, settings, source, trigger })
       }
 
       const dummyTracker = settings.trackers.find((candidate): candidate is DummyTrackerConfig => {
-        return candidate.providerId === ProviderIdMapper.DUMMY && candidate.id === params.triggerId
+        return candidate.providerId === ProviderIdMapper.DUMMY && candidate.id === triggerId
       })
 
       if (dummyTracker !== undefined) {
-        return await this._runDummyTracker({ eventId, settings, source: params.source, tracker: dummyTracker })
+        return await this._runDummyTracker({ eventId, settings, source, tracker: dummyTracker })
       }
 
       return await this._resolveSkipOutcome({
         eventId,
         skipReason: ScheduleTriggerRunSkipReasonMapper.NOT_FOUND,
         slot: '',
-        source: params.source,
-        triggerId: params.triggerId,
+        source,
+        triggerId,
         triggerName: '',
       })
     } catch (error) {
@@ -99,8 +101,8 @@ export class TriggerRunnerService {
           phase: ScheduleTriggerRunPhaseMapper.FINISHED,
           skipReason: '',
           slot: '',
-          source: params.source,
-          triggerId: params.triggerId,
+          source,
+          triggerId,
           triggerName: '',
         }),
       })
@@ -115,55 +117,56 @@ export class TriggerRunnerService {
     source: ScheduleTriggerRunSourceMapper
     trigger: ScheduleTriggerConfig
   }): Promise<{ exitCode: number }> {
+    const { eventId, settings, source, trigger } = params
     const guardOutcome = await this._resolveGuardSkipOutcome({
-      days: params.trigger.days,
-      eventId: params.eventId,
-      isDisabled: !params.trigger.isEnabled,
-      isSchedulingEnabled: params.settings.isSchedulingEnabled,
-      source: params.source,
-      times: params.trigger.times,
-      triggerId: params.trigger.id,
-      triggerName: params.trigger.name,
+      days: trigger.days,
+      eventId,
+      isDisabled: !trigger.isEnabled,
+      isSchedulingEnabled: settings.isSchedulingEnabled,
+      source,
+      times: trigger.times,
+      triggerId: trigger.id,
+      triggerName: trigger.name,
     })
 
     if (guardOutcome !== undefined) {
       return guardOutcome
     }
 
-    const nearestSlot = this._resolveNearestSlot({ times: params.trigger.times })
+    const nearestSlot = this._resolveNearestSlot({ times: trigger.times })
 
     await this._appendEntry({
       entry: this._createEntry({
         durationMs: 0,
-        eventId: params.eventId,
+        eventId,
         exitCode: -1,
         outputSnippet: '',
         phase: ScheduleTriggerRunPhaseMapper.STARTED,
         skipReason: '',
         slot: nearestSlot.slot,
-        source: params.source,
-        triggerId: params.trigger.id,
-        triggerName: params.trigger.name,
+        source,
+        triggerId: trigger.id,
+        triggerName: trigger.name,
       }),
     })
 
     const result = await this._commandService.run({
-      command: params.trigger.command,
-      timeoutMs: params.trigger.timeoutMs,
+      command: trigger.command,
+      timeoutMs: trigger.timeoutMs,
     })
 
     await this._appendEntry({
       entry: this._createEntry({
         durationMs: result.durationMs,
-        eventId: params.eventId,
+        eventId,
         exitCode: result.exitCode,
         outputSnippet: result.output,
         phase: ScheduleTriggerRunPhaseMapper.FINISHED,
         skipReason: '',
         slot: nearestSlot.slot,
-        source: params.source,
-        triggerId: params.trigger.id,
-        triggerName: params.trigger.name,
+        source,
+        triggerId: trigger.id,
+        triggerName: trigger.name,
       }),
     })
 
@@ -176,53 +179,54 @@ export class TriggerRunnerService {
     source: ScheduleTriggerRunSourceMapper
     tracker: DummyTrackerConfig
   }): Promise<{ exitCode: number }> {
+    const { eventId, settings, source, tracker } = params
     const guardOutcome = await this._resolveGuardSkipOutcome({
-      days: params.tracker.days,
-      eventId: params.eventId,
-      isDisabled: params.tracker.isAutoRefreshPaused,
-      isSchedulingEnabled: params.settings.isSchedulingEnabled,
-      source: params.source,
-      times: params.tracker.times,
-      triggerId: params.tracker.id,
-      triggerName: params.tracker.name,
+      days: tracker.days,
+      eventId,
+      isDisabled: tracker.isAutoRefreshPaused,
+      isSchedulingEnabled: settings.isSchedulingEnabled,
+      source,
+      times: tracker.times,
+      triggerId: tracker.id,
+      triggerName: tracker.name,
     })
 
     if (guardOutcome !== undefined) {
       return guardOutcome
     }
 
-    const nearestSlot = this._resolveNearestSlot({ times: params.tracker.times })
+    const nearestSlot = this._resolveNearestSlot({ times: tracker.times })
     const startedAtMs = this._now().getTime()
 
     await this._appendEntry({
       entry: this._createEntry({
         durationMs: 0,
-        eventId: params.eventId,
+        eventId,
         exitCode: -1,
         outputSnippet: '',
         phase: ScheduleTriggerRunPhaseMapper.STARTED,
         skipReason: '',
         slot: nearestSlot.slot,
-        source: params.source,
-        triggerId: params.tracker.id,
-        triggerName: params.tracker.name,
+        source,
+        triggerId: tracker.id,
+        triggerName: tracker.name,
       }),
     })
 
-    await this._dummyAction({ trackerName: params.tracker.name })
+    await this._dummyAction({ trackerName: tracker.name })
 
     await this._appendEntry({
       entry: this._createEntry({
         durationMs: this._now().getTime() - startedAtMs,
-        eventId: params.eventId,
+        eventId,
         exitCode: 0,
         outputSnippet: 'dummy popup shown',
         phase: ScheduleTriggerRunPhaseMapper.FINISHED,
         skipReason: '',
         slot: nearestSlot.slot,
-        source: params.source,
-        triggerId: params.tracker.id,
-        triggerName: params.tracker.name,
+        source,
+        triggerId: tracker.id,
+        triggerName: tracker.name,
       }),
     })
 
@@ -239,41 +243,42 @@ export class TriggerRunnerService {
     triggerId: string
     triggerName: string
   }): Promise<{ exitCode: number } | undefined> {
-    if (!params.isSchedulingEnabled || params.isDisabled) {
+    const { days, eventId, isDisabled, isSchedulingEnabled, source, times, triggerId, triggerName } = params
+    if (!isSchedulingEnabled || isDisabled) {
       return await this._resolveSkipOutcome({
-        eventId: params.eventId,
+        eventId,
         skipReason: ScheduleTriggerRunSkipReasonMapper.DISABLED,
-        slot: this._resolveNearestSlot({ times: params.times }).slot,
-        source: params.source,
-        triggerId: params.triggerId,
-        triggerName: params.triggerName,
+        slot: this._resolveNearestSlot({ times }).slot,
+        source,
+        triggerId,
+        triggerName,
       })
     }
 
     const weekdayIndex = this._now().getDay()
     const todayTriggerDay = this._triggerDayByWeekdayIndex[weekdayIndex]
 
-    if (todayTriggerDay === undefined || !params.days.includes(todayTriggerDay)) {
+    if (todayTriggerDay === undefined || !days.includes(todayTriggerDay)) {
       return await this._resolveSkipOutcome({
-        eventId: params.eventId,
+        eventId,
         skipReason: ScheduleTriggerRunSkipReasonMapper.NOT_SCHEDULED_DAY,
-        slot: this._resolveNearestSlot({ times: params.times }).slot,
-        source: params.source,
-        triggerId: params.triggerId,
-        triggerName: params.triggerName,
+        slot: this._resolveNearestSlot({ times }).slot,
+        source,
+        triggerId,
+        triggerName,
       })
     }
 
-    const nearestSlot = this._resolveNearestSlot({ times: params.times })
+    const nearestSlot = this._resolveNearestSlot({ times })
 
     if (nearestSlot.diffMinutes * 60_000 > this._staleSkipMs) {
       return await this._resolveSkipOutcome({
-        eventId: params.eventId,
+        eventId,
         skipReason: ScheduleTriggerRunSkipReasonMapper.STALE,
         slot: nearestSlot.slot,
-        source: params.source,
-        triggerId: params.triggerId,
-        triggerName: params.triggerName,
+        source,
+        triggerId,
+        triggerName,
       })
     }
 
@@ -281,7 +286,8 @@ export class TriggerRunnerService {
   }
 
   protected async _appendEntry(params: { entry: ScheduleTriggerRunLogEntry }): Promise<void> {
-    await this._runLogRepo.append({ entry: params.entry }).catch(() => {
+    const { entry } = params
+    await this._runLogRepo.append({ entry }).catch(() => {
       return undefined
     })
   }
@@ -298,18 +304,21 @@ export class TriggerRunnerService {
     triggerId: string
     triggerName: string
   }): ScheduleTriggerRunLogEntry {
+    const { durationMs, eventId, exitCode, outputSnippet, phase, skipReason, slot, source, triggerId, triggerName } =
+      params
+
     return {
-      durationMs: params.durationMs,
-      eventId: params.eventId,
-      exitCode: params.exitCode,
-      outputSnippet: params.outputSnippet,
-      phase: params.phase,
-      skipReason: params.skipReason,
-      slot: params.slot,
+      durationMs,
+      eventId,
+      exitCode,
+      outputSnippet,
+      phase,
+      skipReason,
+      slot,
       timestamp: this._now().toISOString(),
-      trigger: params.source,
-      triggerId: params.triggerId,
-      triggerName: params.triggerName,
+      trigger: source,
+      triggerId,
+      triggerName,
     }
   }
 
@@ -318,7 +327,8 @@ export class TriggerRunnerService {
   }
 
   protected _parseSlotMinutes(params: { time: string }): number {
-    const match = constant.twoDigitTimeRegex.exec(params.time)
+    const { time } = params
+    const match = constant.twoDigitTimeRegex.exec(time)
     const hoursText = match?.[1]
     const minutesText = match?.[2]
 
@@ -330,9 +340,10 @@ export class TriggerRunnerService {
   }
 
   protected _resolveNearestSlot(params: { times: string[] }): { diffMinutes: number; slot: string } {
+    const { times } = params
     const nowMinutes = this._now().getHours() * 60 + this._now().getMinutes()
 
-    return params.times.reduce<{ diffMinutes: number; slot: string }>(
+    return times.reduce<{ diffMinutes: number; slot: string }>(
       (nearest, time) => {
         const diffMinutes = Math.abs(nowMinutes - this._parseSlotMinutes({ time }))
 
@@ -354,18 +365,19 @@ export class TriggerRunnerService {
     triggerId: string
     triggerName: string
   }): Promise<{ exitCode: number }> {
+    const { eventId, skipReason, slot, source, triggerId, triggerName } = params
     await this._appendEntry({
       entry: this._createEntry({
         durationMs: 0,
-        eventId: params.eventId,
+        eventId,
         exitCode: 0,
         outputSnippet: '',
         phase: ScheduleTriggerRunPhaseMapper.SKIPPED,
-        skipReason: params.skipReason,
-        slot: params.slot,
-        source: params.source,
-        triggerId: params.triggerId,
-        triggerName: params.triggerName,
+        skipReason,
+        slot,
+        source,
+        triggerId,
+        triggerName,
       }),
     })
 

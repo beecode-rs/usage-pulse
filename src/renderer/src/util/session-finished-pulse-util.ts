@@ -9,8 +9,9 @@ export const sessionFinishedPulseUtil = {
     nowMs: number
     previousSessions?: SessionInfo[]
   }): Record<string, number> => {
+    const { currentSessions, finishedAtBySessionId, nowMs, previousSessions } = params
     const idleSessionIds = new Set(
-      params.currentSessions
+      currentSessions
         .filter((session) => {
           return session.status === SessionStatusMapper.IDLE
         })
@@ -18,28 +19,29 @@ export const sessionFinishedPulseUtil = {
           return session.sessionId
         }),
     )
-    const keptEntries = Object.entries(params.finishedAtBySessionId).filter(([sessionId]) => {
+    const keptEntries = Object.entries(finishedAtBySessionId).filter(([sessionId]) => {
       return idleSessionIds.has(sessionId)
     })
     const finishedEntries = new SessionSoundUtil()
       .resolveStatusTransitionSessionIds({
-        currentSessions: params.currentSessions,
+        currentSessions,
         fromStatus: SessionStatusMapper.BUSY,
-        previousSessions: params.previousSessions,
+        previousSessions,
         toStatus: SessionStatusMapper.IDLE,
       })
       .map((sessionId): [string, number] => {
-        return [sessionId, params.nowMs]
+        return [sessionId, nowMs]
       })
 
     return Object.fromEntries([...keptEntries, ...finishedEntries])
   },
 
   resolveIsPulsing: (params: { finishedAtMs?: number; nowMs: number; pulseMs: number }): boolean => {
-    if (params.finishedAtMs === undefined || params.pulseMs <= 0) {
+    const { finishedAtMs, nowMs, pulseMs } = params
+    if (finishedAtMs === undefined || pulseMs <= 0) {
       return false
     }
 
-    return params.nowMs - params.finishedAtMs < params.pulseMs
+    return nowMs - finishedAtMs < pulseMs
   },
 }

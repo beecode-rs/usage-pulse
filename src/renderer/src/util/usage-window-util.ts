@@ -4,10 +4,11 @@ export const usageWindowUtil = {
     usedAmount?: number
     usedPercent: number
   }): string | undefined => {
-    if (params.usedAmount === undefined || params.totalAmount === undefined) {
+    const { totalAmount, usedAmount, usedPercent } = params
+    if (usedAmount === undefined || totalAmount === undefined) {
       return undefined
     }
 
-    return `${String(Math.round(params.usedPercent))}% · ${String(params.usedAmount)} / ${String(params.totalAmount)}`
+    return `${String(Math.round(usedPercent))}% · ${String(usedAmount)} / ${String(totalAmount)}`
   },
 }

@@ -16,60 +16,67 @@ export class SessionTranscriptService {
   protected readonly _cacheByPath = new Map<string, TranscriptCacheEntry>()
   protected readonly _homeDir: string
 
-  constructor(params: { homeDir?: string } = {}) {
-    this._homeDir = params.homeDir ?? homedir()
+  constructor(params: { homeDir: string } = { homeDir: homedir() }) {
+    const { homeDir } = params
+    this._homeDir = homeDir
   }
 
   async enrichSessions(params: { sessions: SessionInfo[] }): Promise<SessionInfo[]> {
+    const { sessions } = params
+
     return Promise.all(
-      params.sessions.map((session) => {
+      sessions.map((session) => {
         return this._enrichSession({ session })
       }),
     )
   }
 
   protected async _enrichSession(params: { session: SessionInfo }): Promise<SessionInfo> {
-    if (params.session.hostId !== undefined) {
-      return params.session
+    const { session } = params
+    if (session.hostId !== undefined) {
+      return session
     }
 
     const transcript = await this._resolveTranscript({
-      cwd: params.session.cwd,
-      sessionId: params.session.sessionId,
+      cwd: session.cwd,
+      sessionId: session.sessionId,
     })
 
     if (transcript === undefined) {
-      return params.session
+      return session
     }
 
-    return { ...params.session, transcript }
+    return { ...session, transcript }
   }
 
   protected _resolveDisplayableTranscript(params: {
     stats: SessionTranscriptStats
   }): SessionTranscriptStats | undefined {
-    if (new ClaudeTranscriptParserService().hasSignal(params.stats)) {
-      return params.stats
+    const { stats } = params
+    if (new ClaudeTranscriptParserService().hasSignal(stats)) {
+      return stats
     }
 
     return undefined
   }
 
   protected _resolveTranscriptFilePath(params: { cwd: string; sessionId: string }): string {
-    const projectDirName = params.cwd.replaceAll('/', '-')
+    const { cwd, sessionId } = params
+    const projectDirName = cwd.replaceAll('/', '-')
 
-    return join(this._homeDir, '.claude', 'projects', projectDirName, `${params.sessionId}.jsonl`)
+    return join(this._homeDir, '.claude', 'projects', projectDirName, `${sessionId}.jsonl`)
   }
 
   protected async _resolveTranscript(params: {
     cwd: string
     sessionId: string
   }): Promise<SessionTranscriptStats | undefined> {
-    if (params.cwd === '' || params.sessionId === '') {
+    const { cwd, sessionId } = params
+    if (cwd === '' || sessionId === '') {
       return undefined
     }
 
-    const filePath = this._resolveTranscriptFilePath({ cwd: params.cwd, sessionId: params.sessionId })
+    const filePath = this._resolveTranscriptFilePath({ cwd, sessionId })
 
     try {
       const fileStat = await stat(filePath)
@@ -96,10 +103,11 @@ export class SessionTranscriptService {
     mtimeMs: number
     transcript: SessionTranscriptStats | undefined
   }): void {
+    const { filePath, mtimeMs, transcript } = params
     if (this._cacheByPath.size >= CACHE_ENTRY_LIMIT) {
       this._cacheByPath.clear()
     }
 
-    this._cacheByPath.set(params.filePath, { mtimeMs: params.mtimeMs, transcript: params.transcript })
+    this._cacheByPath.set(filePath, { mtimeMs, transcript })
   }
 }

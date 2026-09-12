@@ -3,7 +3,9 @@ import { type CSSProperties, type ReactElement } from 'react'
 import { sessionFinishedPulseUtil } from '#src/renderer/src/util/session-finished-pulse-util'
 
 const resolvePulseStyle = (params: { pulseMs: number }): CSSProperties => {
-  return { animationDuration: `${String(params.pulseMs)}ms` }
+  const { pulseMs } = params
+
+  return { animationDuration: `${String(pulseMs)}ms` }
 }
 
 export const SessionFinishedPulse = (props: {

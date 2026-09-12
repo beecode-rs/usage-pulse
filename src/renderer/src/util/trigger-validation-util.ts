@@ -3,15 +3,16 @@ import { constant } from '#src/shared/util/constant'
 
 export const triggerValidationUtil = {
   resolveValidationError(params: { trigger: ScheduleTriggerConfig }): string | undefined {
-    if (params.trigger.command.trim() === '') {
+    const { trigger } = params
+    if (trigger.command.trim() === '') {
       return 'Enter a command for this trigger to run.'
     }
 
-    if (params.trigger.days.length === 0) {
+    if (trigger.days.length === 0) {
       return 'Pick at least one day for this trigger.'
     }
 
-    const filledTimes = params.trigger.times.filter((time) => {
+    const filledTimes = trigger.times.filter((time) => {
       return time !== ''
     })
 

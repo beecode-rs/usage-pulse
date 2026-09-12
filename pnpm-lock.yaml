@@ -14,6 +14,9 @@ importers:
       '@beecode/msh-env':
         specifier: ^2.0.3
         version: 2.0.3(@typescript-eslint/utils@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(jiti@2.7.0)(typescript@6.0.3)
+      '@beecode/msh-util':
+        specifier: ^3.0.1
+        version: 3.0.1(@typescript-eslint/utils@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(jiti@2.7.0)(typescript@6.0.3)
     devDependencies:
       '@beecode/msh-test-contractor':
         specifier: ^1.0.2

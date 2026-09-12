@@ -12,9 +12,10 @@ import { type SessionInfo } from '#src/shared/business/model/session-model'
 const TICK_INTERVAL_MS = 30_000
 
 const resolveBoxClassName = (params: { isRemote: boolean; status: SessionStatusMapper }): string => {
-  const classNames = ['dashboard-session-box', `is-${params.status}`]
+  const { isRemote, status } = params
+  const classNames = ['dashboard-session-box', `is-${status}`]
 
-  if (params.isRemote) {
+  if (isRemote) {
     classNames.push('is-remote')
   }
 

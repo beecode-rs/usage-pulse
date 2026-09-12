@@ -7,30 +7,38 @@ import type { AppSettings } from '#src/shared/business/model/settings-model'
 
 export const schedulingClientService = {
   clearTriggerRunLogs: (params: { triggerId: string }): Promise<void> => {
+    const { triggerId } = params
+
     return window.usageApi.clearTriggerRunLogs({
-      triggerId: params.triggerId,
+      triggerId,
     })
   },
   getSchedulingInfo: (): Promise<SchedulingInfo> => {
     return window.usageApi.getSchedulingInfo()
   },
   getTriggerRunLogs: (params: { triggerId: string }): Promise<ScheduleTriggerRunLogEntry[]> => {
+    const { triggerId } = params
+
     return window.usageApi.getTriggerRunLogs({
-      triggerId: params.triggerId,
+      triggerId,
     })
   },
   inspectTriggerRegistrations: (): Promise<ScheduleTriggerRegistrationHealth[]> => {
     return window.usageApi.inspectTriggerRegistrations()
   },
   setSchedulingEnabled: (params: { isEnabled: boolean }): Promise<AppSettings> => {
+    const { isEnabled } = params
+
     return window.usageApi.setSchedulingEnabled({
-      isEnabled: params.isEnabled,
+      isEnabled,
     })
   },
   setTriggerEnabled: (params: { isEnabled: boolean; triggerId: string }): Promise<AppSettings> => {
+    const { isEnabled, triggerId } = params
+
     return window.usageApi.setTriggerEnabled({
-      isEnabled: params.isEnabled,
-      triggerId: params.triggerId,
+      isEnabled,
+      triggerId,
     })
   },
 }

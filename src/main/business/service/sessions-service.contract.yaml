@@ -4,8 +4,8 @@
 # rejection of the path (the windows platform dispatch, the Linux X11/Wayland and
 # xdotool-install errors), the stubbed xdotool/ps choreography and the macos routing live in
 # sessions-service.test.ts.
-subject: SessionsService
-module: ./sessions-service.js
+subject: _SessionsService
+module: ./sessions-service-singleton.js
 subjectType: class
 constructor:
   # The only own field (_inFlightSnapshot) starts undefined, which the serialized comparison

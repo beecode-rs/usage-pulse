@@ -3,12 +3,14 @@ import { objectUtil } from '#src/main/util/object-util'
 
 export class ClaudeTranscriptParserRecordApplier {
   applyEntry(params: { record: Record<string, unknown>; state: TranscriptParseState }): void {
-    this._applyByType({ record: params.record, state: params.state })
-    this._applySharedEntryFields({ record: params.record, state: params.state })
+    const { record, state } = params
+    this._applyByType({ record, state })
+    this._applySharedEntryFields({ record, state })
   }
 
   protected _applyAssistantRecord(params: { record: Record<string, unknown>; state: TranscriptParseState }): void {
-    const message = objectUtil.asRecord(params.record['message'])
+    const { record, state } = params
+    const message = objectUtil.asRecord(record['message'])
 
     if (message === undefined) {
       return
@@ -17,24 +19,25 @@ export class ClaudeTranscriptParserRecordApplier {
     const messageId = this._resolveNonEmptyString(message['id'])
 
     if (messageId !== '') {
-      if (params.state.seenMessageIds.has(messageId)) {
+      if (state.seenMessageIds.has(messageId)) {
         return
       }
 
-      params.state.seenMessageIds.add(messageId)
+      state.seenMessageIds.add(messageId)
     }
 
-    this._applyAssistantUsage({ message, state: params.state })
+    this._applyAssistantUsage({ message, state })
 
     const model = this._resolveNonEmptyString(message['model'])
 
     if (model !== '') {
-      params.state.model = model
+      state.model = model
     }
   }
 
   protected _applyAssistantUsage(params: { message: Record<string, unknown>; state: TranscriptParseState }): void {
-    const usage = objectUtil.asRecord(params.message['usage'])
+    const { message, state } = params
+    const usage = objectUtil.asRecord(message['usage'])
 
     if (usage === undefined) {
       return
@@ -45,11 +48,11 @@ export class ClaudeTranscriptParserRecordApplier {
     const inputTokens = this._resolveFiniteNumber(usage['input_tokens'])
     const outputTokens = this._resolveFiniteNumber(usage['output_tokens'])
 
-    params.state.cacheCreationTokens = params.state.cacheCreationTokens + cacheCreationTokens
-    params.state.cacheReadTokens = params.state.cacheReadTokens + cacheReadTokens
-    params.state.inputTokens = params.state.inputTokens + inputTokens
-    params.state.outputTokens = params.state.outputTokens + outputTokens
-    params.state.contextSizeTokens = inputTokens + cacheReadTokens + cacheCreationTokens
+    state.cacheCreationTokens = state.cacheCreationTokens + cacheCreationTokens
+    state.cacheReadTokens = state.cacheReadTokens + cacheReadTokens
+    state.inputTokens = state.inputTokens + inputTokens
+    state.outputTokens = state.outputTokens + outputTokens
+    state.contextSizeTokens = inputTokens + cacheReadTokens + cacheCreationTokens
 
     const outputTokenDetails = objectUtil.asRecord(usage['output_tokens_details'])
 
@@ -59,40 +62,41 @@ export class ClaudeTranscriptParserRecordApplier {
 
     const thinkingTokens = this._resolveFiniteNumber(outputTokenDetails['thinking_tokens'])
 
-    params.state.thinkingTokens = params.state.thinkingTokens + thinkingTokens
+    state.thinkingTokens = state.thinkingTokens + thinkingTokens
   }
 
   protected _applyByType(params: { record: Record<string, unknown>; state: TranscriptParseState }): void {
-    switch (params.record['type']) {
+    const { record, state } = params
+    switch (record['type']) {
       case 'ai-title': {
-        const aiTitle = this._resolveNonEmptyString(params.record['aiTitle'])
+        const aiTitle = this._resolveNonEmptyString(record['aiTitle'])
 
         if (aiTitle !== '') {
-          params.state.aiTitle = aiTitle
+          state.aiTitle = aiTitle
         }
 
         return
       }
 
       case 'assistant': {
-        this._applyAssistantRecord({ record: params.record, state: params.state })
+        this._applyAssistantRecord({ record, state })
 
         return
       }
 
       case 'last-prompt': {
-        const lastPrompt = this._resolveNonEmptyString(params.record['lastPrompt'])
+        const lastPrompt = this._resolveNonEmptyString(record['lastPrompt'])
 
         if (lastPrompt !== '') {
-          params.state.lastPrompt = lastPrompt
+          state.lastPrompt = lastPrompt
         }
 
         return
       }
 
       case 'user': {
-        if (params.record['isMeta'] !== true) {
-          params.state.userTurnsCount = params.state.userTurnsCount + 1
+        if (record['isMeta'] !== true) {
+          state.userTurnsCount = state.userTurnsCount + 1
         }
 
         return
@@ -105,15 +109,16 @@ export class ClaudeTranscriptParserRecordApplier {
   }
 
   protected _applySharedEntryFields(params: { record: Record<string, unknown>; state: TranscriptParseState }): void {
-    if (params.state.gitBranch === '') {
-      params.state.gitBranch = this._resolveNonEmptyString(params.record['gitBranch'])
+    const { record, state } = params
+    if (state.gitBranch === '') {
+      state.gitBranch = this._resolveNonEmptyString(record['gitBranch'])
     }
 
-    if (params.state.version === '') {
-      params.state.version = this._resolveNonEmptyString(params.record['version'])
+    if (state.version === '') {
+      state.version = this._resolveNonEmptyString(record['version'])
     }
 
-    const timestamp = params.record['timestamp']
+    const timestamp = record['timestamp']
 
     if (typeof timestamp !== 'string') {
       return
@@ -122,7 +127,7 @@ export class ClaudeTranscriptParserRecordApplier {
     const timestampMs = Date.parse(timestamp)
 
     if (!Number.isNaN(timestampMs)) {
-      params.state.lastActivityAt = timestampMs
+      state.lastActivityAt = timestampMs
     }
   }
 

@@ -9,6 +9,7 @@ export type WindowVisibilityChangeListener = (params: { isVisible: boolean }) =>
 
 export class AppWindow {
   create(params?: { onVisibilityChange?: WindowVisibilityChangeListener }): BrowserWindow {
+    const { onVisibilityChange } = params ?? {}
     this._setDevelopmentDockIcon()
 
     const browserWindow = new BrowserWindow({
@@ -30,8 +31,8 @@ export class AppWindow {
       browserWindow.show()
     })
 
-    if (params?.onVisibilityChange !== undefined) {
-      this._watchVisibility({ browserWindow, onVisibilityChange: params.onVisibilityChange })
+    if (onVisibilityChange !== undefined) {
+      this._watchVisibility({ browserWindow, onVisibilityChange })
     }
 
     browserWindow.webContents.setWindowOpenHandler((details) => {
@@ -77,17 +78,18 @@ export class AppWindow {
     browserWindow: BrowserWindow
     onVisibilityChange: WindowVisibilityChangeListener
   }): void {
+    const { browserWindow, onVisibilityChange } = params
     const notifyVisible = (): void => {
-      params.onVisibilityChange({ isVisible: true })
+      onVisibilityChange({ isVisible: true })
     }
 
     const notifyHidden = (): void => {
-      params.onVisibilityChange({ isVisible: false })
+      onVisibilityChange({ isVisible: false })
     }
 
-    params.browserWindow.on('show', notifyVisible)
-    params.browserWindow.on('restore', notifyVisible)
-    params.browserWindow.on('hide', notifyHidden)
-    params.browserWindow.on('minimize', notifyHidden)
+    browserWindow.on('show', notifyVisible)
+    browserWindow.on('restore', notifyVisible)
+    browserWindow.on('hide', notifyHidden)
+    browserWindow.on('minimize', notifyHidden)
   }
 }

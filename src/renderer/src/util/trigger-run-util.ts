@@ -18,7 +18,8 @@ export type TriggerRunSummary = {
 
 export class TriggerRunUtil {
   groupRunsByEventId(params: { entries: ScheduleTriggerRunLogEntry[] }): TriggerRunSummary[] {
-    const summaryByEventId = params.entries.reduce<Record<string, TriggerRunSummary>>((summaryRecord, entry) => {
+    const { entries } = params
+    const summaryByEventId = entries.reduce<Record<string, TriggerRunSummary>>((summaryRecord, entry) => {
       return {
         ...summaryRecord,
         [entry.eventId]: this._mergeEntry({
@@ -37,28 +38,32 @@ export class TriggerRunUtil {
     entry: ScheduleTriggerRunLogEntry
     summary: TriggerRunSummary
   }): TriggerRunSummary {
+    const { entry, summary } = params
+
     return {
-      ...params.summary,
-      durationMs: params.entry.durationMs,
-      exitCode: params.entry.exitCode,
-      outputSnippet: params.entry.outputSnippet,
-      phase: params.entry.phase,
-      skipReason: params.entry.skipReason,
+      ...summary,
+      durationMs: entry.durationMs,
+      exitCode: entry.exitCode,
+      outputSnippet: entry.outputSnippet,
+      phase: entry.phase,
+      skipReason: entry.skipReason,
     }
   }
 
   protected _createSummaryFromEntry(params: { entry: ScheduleTriggerRunLogEntry }): TriggerRunSummary {
+    const { entry } = params
+
     return {
-      durationMs: params.entry.durationMs,
-      eventId: params.entry.eventId,
-      exitCode: params.entry.exitCode,
-      outputSnippet: params.entry.outputSnippet,
-      phase: params.entry.phase,
-      skipReason: params.entry.skipReason,
-      slot: params.entry.slot,
-      startedAtTimestamp: params.entry.timestamp,
-      trigger: params.entry.trigger,
-      triggerName: params.entry.triggerName,
+      durationMs: entry.durationMs,
+      eventId: entry.eventId,
+      exitCode: entry.exitCode,
+      outputSnippet: entry.outputSnippet,
+      phase: entry.phase,
+      skipReason: entry.skipReason,
+      slot: entry.slot,
+      startedAtTimestamp: entry.timestamp,
+      trigger: entry.trigger,
+      triggerName: entry.triggerName,
     }
   }
 
@@ -66,14 +71,15 @@ export class TriggerRunUtil {
     entry: ScheduleTriggerRunLogEntry
     summary: TriggerRunSummary | undefined
   }): TriggerRunSummary {
-    if (params.summary === undefined) {
-      return this._createSummaryFromEntry({ entry: params.entry })
+    const { entry, summary } = params
+    if (summary === undefined) {
+      return this._createSummaryFromEntry({ entry })
     }
 
-    if (params.entry.phase === ScheduleTriggerRunPhaseMapper.STARTED) {
-      return { ...params.summary, startedAtTimestamp: params.entry.timestamp }
+    if (entry.phase === ScheduleTriggerRunPhaseMapper.STARTED) {
+      return { ...summary, startedAtTimestamp: entry.timestamp }
     }
 
-    return this._applyTerminalEntry({ entry: params.entry, summary: params.summary })
+    return this._applyTerminalEntry({ entry, summary })
   }
 }

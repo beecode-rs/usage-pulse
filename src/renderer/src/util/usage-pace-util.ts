@@ -42,14 +42,16 @@ export class UsagePaceUtil {
     usedPercent: number
     windowMs: number
   }): number | undefined {
-    if (params.resetAt === undefined) {
+    const { now, resetAt, usedPercent, windowMs } = params
+
+    if (resetAt === undefined) {
       return undefined
     }
 
-    const remainingMs = usageResetUtil.resolveRemainingMs({ now: params.now, resetAt: params.resetAt })
-    const elapsedPercent = usageResetUtil.resolveElapsedPercent({ remainingMs, windowMs: params.windowMs })
+    const remainingMs = usageResetUtil.resolveRemainingMs({ now, resetAt })
+    const elapsedPercent = usageResetUtil.resolveElapsedPercent({ remainingMs, windowMs })
 
-    return params.usedPercent - elapsedPercent
+    return usedPercent - elapsedPercent
   }
 
   protected _resolvePaceColorForDiff(params: { diffPercent: number }): string {
@@ -69,11 +71,15 @@ export class UsagePaceUtil {
   }
 
   protected _resolvePaceStepColorVar(params: { paceDirection: 'green' | 'red'; stepCount: number }): string {
-    return `var(--pace-${params.paceDirection}-${String(params.stepCount)})`
+    const { paceDirection, stepCount } = params
+
+    return `var(--pace-${paceDirection}-${String(stepCount)})`
   }
 
   protected _resolvePaceStepCount(params: { diffPercent: number }): number {
-    const driftBeyondBandPercent = Math.abs(params.diffPercent) - PACE_ON_PACE_BAND_PERCENT
+    const { diffPercent } = params
+
+    const driftBeyondBandPercent = Math.abs(diffPercent) - PACE_ON_PACE_BAND_PERCENT
 
     return Math.min(Math.ceil(driftBeyondBandPercent / PACE_STEP_PERCENT), PACE_STEP_MAX_COUNT)
   }

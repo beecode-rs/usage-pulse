@@ -5,7 +5,8 @@ const FIRST_WINDOW_GAP_MS = 18_120_000
 
 export class TriggerPlannerService {
   formatDayMs(params: { dayMs: number }): string {
-    const wrappedDayMs = ((params.dayMs % constant.planner.dayMs) + constant.planner.dayMs) % constant.planner.dayMs
+    const { dayMs } = params
+    const wrappedDayMs = ((dayMs % constant.planner.dayMs) + constant.planner.dayMs) % constant.planner.dayMs
     const hours = Math.floor(wrappedDayMs / 3_600_000)
     const minutesPastHour = Math.floor((wrappedDayMs % 3_600_000) / 60_000)
 
@@ -17,15 +18,16 @@ export class TriggerPlannerService {
     workEndMs: number
     workStartMs: number
   }): string | undefined {
-    const firstWindow = params.windows.at(0)
-    const lastWindow = params.windows.at(-1)
+    const { windows, workEndMs, workStartMs } = params
+    const firstWindow = windows.at(0)
+    const lastWindow = windows.at(-1)
 
     if (firstWindow === undefined || lastWindow === undefined) {
       return 'No window fits before work ends — slide the first trigger earlier.'
     }
 
-    const isFirstTooLate = firstWindow.startMs >= params.workStartMs
-    const isLastTooEarly = lastWindow.endMs <= params.workEndMs
+    const isFirstTooLate = firstWindow.startMs >= workStartMs
+    const isLastTooEarly = lastWindow.endMs <= workEndMs
 
     if (isFirstTooLate && isLastTooEarly) {
       return 'The windows miss the edges of your workday — slide the first trigger so the first window starts before work and the last one ends after it.'
@@ -43,13 +45,16 @@ export class TriggerPlannerService {
   }
 
   resolvePlannerWindows(params: { firstTriggerMs: number; workEndMs: number }): PlannerWindow[] {
-    const startLimitMs = Math.min(params.workEndMs, constant.planner.dayMs)
+    const { firstTriggerMs, workEndMs } = params
+    const startLimitMs = Math.min(workEndMs, constant.planner.dayMs)
 
-    return this._collectWindows({ gapIndex: 0, startLimitMs, startMs: params.firstTriggerMs, windows: [] })
+    return this._collectWindows({ gapIndex: 0, startLimitMs, startMs: firstTriggerMs, windows: [] })
   }
 
   resolveTriggerTimes(params: { windows: PlannerWindow[] }): string[] {
-    return params.windows.map((window) => {
+    const { windows } = params
+
+    return windows.map((window) => {
       return window.startTime
     })
   }

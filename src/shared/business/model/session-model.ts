@@ -1,4 +1,3 @@
-import { type SessionFocusSupportStatusMapper } from '#src/shared/business/enum/session-focus-support-status-mapper-enum'
 import { type SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 
 export type SessionTranscriptStats = {
@@ -34,10 +33,6 @@ export type UnreachableHost = {
   errorMessage: string
   hostId: string
   hostLabel: string
-}
-
-export type SessionFocusSupport = {
-  status: SessionFocusSupportStatusMapper
 }
 
 export type SessionSnapshot = {

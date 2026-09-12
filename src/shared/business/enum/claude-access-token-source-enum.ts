@@ -1,4 +1,4 @@
-export enum ClaudeTokenSource {
+export enum ClaudeAccessTokenSource {
   MANUAL = 'MANUAL',
   SYSTEM = 'SYSTEM',
 }

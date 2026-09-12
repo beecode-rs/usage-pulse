@@ -6,54 +6,37 @@ import { SessionsPollLifeCycle } from '#src/main/app-boot/sessions-poll-life-cyc
 import { SettingsLifeCycle } from '#src/main/app-boot/settings-life-cycle'
 import { UpdateCheckLifeCycle } from '#src/main/app-boot/update-check-life-cycle'
 import { UsagePollLifeCycle } from '#src/main/app-boot/usage-poll-life-cycle'
-import { type SettingsRepo } from '#src/main/business/repo/settings-repo'
-import { type TriggerRunLogRepo } from '#src/main/business/repo/trigger-run-log-repo'
-import { type SchedulingService } from '#src/main/business/service/scheduling-service'
-import { type SessionsPollService } from '#src/main/business/service/sessions-poll-service'
-import { type SessionsService } from '#src/main/business/service/sessions-service'
-import { type SshSessionsService } from '#src/main/business/service/ssh-sessions-service'
-import { type UpdateService } from '#src/main/business/service/update-service'
-import { type UsagePollService } from '#src/main/business/service/usage-poll-service'
-import { type SettingsUseCase } from '#src/main/business/use-case/settings-use-case'
+import { type _SettingsRepo } from '#src/main/business/repo/settings-repo-singleton'
+import { type _SchedulingService } from '#src/main/business/service/scheduling-service-singleton'
+import { type _SessionsPollService } from '#src/main/business/service/sessions-poll-service-singleton'
+import { type _UpdateService } from '#src/main/business/service/update-service-singleton'
+import { type _UsagePollService } from '#src/main/business/service/usage-poll-service-singleton'
 
 export class UsagePulseAppFlow extends AppFlow {
   constructor(params: {
-    pollService: UsagePollService
-    schedulingService: SchedulingService
-    sessionsPollService: SessionsPollService
-    sessionsService: SessionsService
-    settingsRepo: SettingsRepo
-    settingsUseCase: SettingsUseCase
-    sshSessionsService: SshSessionsService
-    triggerRunLogRepo: TriggerRunLogRepo
-    updateService: UpdateService
+    pollService: _UsagePollService
+    schedulingService: _SchedulingService
+    sessionsPollService: _SessionsPollService
+    settingsRepo: _SettingsRepo
+    updateService: _UpdateService
   }) {
+    const { pollService, schedulingService, sessionsPollService, settingsRepo, updateService } = params
     const settingsLifeCycle = new SettingsLifeCycle({
-      schedulingService: params.schedulingService,
-      settingsRepo: params.settingsRepo,
+      schedulingService,
+      settingsRepo,
     })
     const appWindowLifeCycle = new AppWindowLifeCycle({
       onVisibilityChange: ({ isVisible }) => {
-        params.pollService.setWindowVisibility({ isVisible })
-        params.sessionsPollService.setWindowVisibility({ isVisible })
+        pollService.setWindowVisibility({ isVisible })
+        sessionsPollService.setWindowVisibility({ isVisible })
       },
     })
-    const ipcRegistrationLifeCycle = new IpcRegistrationLifeCycle({
-      appWindowLifeCycle,
-      pollService: params.pollService,
-      schedulingService: params.schedulingService,
-      sessionsPollService: params.sessionsPollService,
-      sessionsService: params.sessionsService,
-      settingsUseCase: params.settingsUseCase,
-      sshSessionsService: params.sshSessionsService,
-      triggerRunLogRepo: params.triggerRunLogRepo,
-      updateService: params.updateService,
-    })
+    const ipcRegistrationLifeCycle = new IpcRegistrationLifeCycle()
 
     super(settingsLifeCycle, appWindowLifeCycle, ipcRegistrationLifeCycle, [
-      new SessionsPollLifeCycle({ sessionsPollService: params.sessionsPollService, settingsLifeCycle }),
-      new UpdateCheckLifeCycle({ updateService: params.updateService }),
-      new UsagePollLifeCycle({ pollService: params.pollService, settingsLifeCycle }),
+      new SessionsPollLifeCycle({ sessionsPollService, settingsLifeCycle }),
+      new UpdateCheckLifeCycle({ updateService }),
+      new UsagePollLifeCycle({ pollService, settingsLifeCycle }),
     ])
   }
 }

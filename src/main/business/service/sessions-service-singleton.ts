@@ -1,3 +1,4 @@
+import { singletonPattern, typeUtil } from '@beecode/msh-util'
 import { execFile } from 'node:child_process'
 import { homedir } from 'node:os'
 import { basename } from 'node:path'
@@ -11,12 +12,7 @@ import { errorUtil } from '#src/main/util/error-util'
 import { osUtil } from '#src/main/util/os-util'
 import { rawEnvUtil } from '#src/main/util/raw-env-util'
 import { OS } from '#src/shared/business/enum/os-enum'
-import { SessionFocusSupportStatusMapper } from '#src/shared/business/enum/session-focus-support-status-mapper-enum'
-import {
-  type SessionFocusSupport,
-  type SessionInfo,
-  type SessionSnapshot,
-} from '#src/shared/business/model/session-model'
+import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
 
 const execFileAsync = promisify(execFile)
 
@@ -179,14 +175,15 @@ export type GhosttyFocusPeer = {
   pid: number
 }
 
-export class SessionsService {
-  protected _focusSupport: Promise<SessionFocusSupport> | undefined
+export class _SessionsService {
+  protected _isFocusSupported: Promise<boolean> | undefined
   protected _ghosttyTtySupport: Promise<boolean> | undefined
   protected _inFlightSnapshot: Promise<SessionSnapshot> | undefined
   protected readonly _isWaylandSessionOverride: boolean | undefined
 
   constructor(params: { isWaylandSession?: boolean } = {}) {
-    this._isWaylandSessionOverride = params.isWaylandSession
+    const { isWaylandSession } = params
+    this._isWaylandSessionOverride = isWaylandSession
   }
 
   async listSessions(): Promise<SessionSnapshot> {
@@ -198,24 +195,25 @@ export class SessionsService {
   }
 
   async focusSession(params: { cwd: string; pid: number }): Promise<void> {
+    const { cwd, pid } = params
     await this._focusSessionForPlatform({
-      cwd: params.cwd,
-      pid: params.pid,
+      cwd,
+      pid,
       platform: this._resolveFocusPlatform(),
     })
   }
 
-  getFocusSupport(): Promise<SessionFocusSupport> {
-    this._focusSupport ??= this._resolveFocusSupport()
+  isFocusSupported(): Promise<boolean> {
+    this._isFocusSupported ??= this._resolveIsFocusSupported()
 
-    return this._focusSupport
+    return this._isFocusSupported
   }
 
-  async installFocusTool(): Promise<SessionFocusSupport> {
+  async installFocusTool(): Promise<void> {
     const platform = this._resolveFocusPlatform()
 
     if (platform !== OS.LINUX) {
-      return { status: SessionFocusSupportStatusMapper.READY }
+      return
     }
 
     try {
@@ -224,9 +222,7 @@ export class SessionsService {
       throw new Error(`installing xdotool failed: ${errorUtil.resolveMessage(error)}`)
     }
 
-    this._focusSupport = undefined
-
-    return this.getFocusSupport()
+    this._isFocusSupported = undefined
   }
 
   protected _resolveFocusPlatform(): OS {
@@ -234,13 +230,14 @@ export class SessionsService {
   }
 
   protected async _focusSessionForPlatform(params: { cwd: string; pid: number; platform: OS }): Promise<void> {
-    switch (params.platform) {
+    const { cwd, pid, platform } = params
+    switch (platform) {
       case OS.LINUX: {
-        return this._focusLinuxSession({ pid: params.pid })
+        return this._focusLinuxSession({ pid })
       }
 
       case OS.MACOS: {
-        return this._focusMacOsSession({ cwd: params.cwd, pid: params.pid })
+        return this._focusMacOsSession({ cwd, pid })
       }
 
       case OS.WINDOWS: {
@@ -248,40 +245,43 @@ export class SessionsService {
       }
 
       default: {
-        throw new Error('focusing a session terminal is not supported on the resolved platform')
+        throw typeUtil.exhaustiveError('unsupported platform [platform]', platform)
       }
     }
   }
 
   protected async _focusMacOsSession(params: { cwd: string; pid: number }): Promise<void> {
-    const bundlePath = await this._resolveAppBundlePath({ hopCount: 0, pid: params.pid })
+    const { cwd, pid } = params
+    const bundlePath = await this._resolveAppBundlePath({ hopCount: 0, pid })
 
-    if (params.cwd !== '' && this._isGhosttyBundle({ bundlePath })) {
-      return this._focusGhosttySession({ bundlePath, cwd: params.cwd, pid: params.pid })
+    if (cwd !== '' && this._isGhosttyBundle({ bundlePath })) {
+      return this._focusGhosttySession({ bundlePath, cwd, pid })
     }
 
     await this._activateAppBundle({ bundlePath })
 
-    if (params.cwd === '') {
+    if (cwd === '') {
       return
     }
 
     if (this._isVsCodeBundle({ bundlePath })) {
-      await this._focusVsCodeWindow({ bundlePath, cwd: params.cwd })
+      await this._focusVsCodeWindow({ bundlePath, cwd })
     }
   }
 
   protected async _focusGhosttySession(params: { bundlePath: string; cwd: string; pid: number }): Promise<void> {
-    const outcome = await this._resolveGhosttyFocusOutcome({ cwd: params.cwd, pid: params.pid })
+    const { bundlePath, cwd, pid } = params
+    const outcome = await this._resolveGhosttyFocusOutcome({ cwd, pid })
 
-    return this._applyGhosttyFocusOutcome({ bundlePath: params.bundlePath, outcome })
+    return this._applyGhosttyFocusOutcome({ bundlePath, outcome })
   }
 
   protected async _applyGhosttyFocusOutcome(params: {
     bundlePath: string
     outcome: GhosttyFocusOutcomeMapper
   }): Promise<void> {
-    switch (params.outcome) {
+    const { bundlePath, outcome } = params
+    switch (outcome) {
       case GhosttyFocusOutcomeMapper.FOCUSED: {
         return
       }
@@ -291,11 +291,11 @@ export class SessionsService {
       }
 
       case GhosttyFocusOutcomeMapper.MISSING: {
-        return this._activateAppBundle({ bundlePath: params.bundlePath })
+        return this._activateAppBundle({ bundlePath })
       }
 
       default: {
-        throw new Error('focusing the Ghostty terminal reported an unsupported outcome')
+        throw typeUtil.exhaustiveError('unsupported ghostty focus outcome [outcome]', outcome)
       }
     }
   }
@@ -304,19 +304,21 @@ export class SessionsService {
     cwd: string
     pid: number
   }): Promise<GhosttyFocusOutcomeMapper> {
-    const ttyOutcome = await this._resolveGhosttyTtyFocusOutcome({ pid: params.pid })
+    const { cwd, pid } = params
+    const ttyOutcome = await this._resolveGhosttyTtyFocusOutcome({ pid })
 
     if (ttyOutcome !== GhosttyFocusOutcomeMapper.MISSING) {
       return ttyOutcome
     }
 
-    const matchRank = await this._resolveGhosttyMatchRank({ cwd: params.cwd, pid: params.pid })
+    const matchRank = await this._resolveGhosttyMatchRank({ cwd, pid })
 
-    return this._focusGhosttyTab({ cwd: params.cwd, matchRank })
+    return this._focusGhosttyTab({ cwd, matchRank })
   }
 
   protected async _resolveGhosttyTtyFocusOutcome(params: { pid: number }): Promise<GhosttyFocusOutcomeMapper> {
-    const sessionTty = await this._resolveGhosttySessionTty({ pid: params.pid })
+    const { pid } = params
+    const sessionTty = await this._resolveGhosttySessionTty({ pid })
 
     if (sessionTty === undefined) {
       return GhosttyFocusOutcomeMapper.MISSING
@@ -326,16 +328,18 @@ export class SessionsService {
   }
 
   protected async _resolveGhosttySessionTty(params: { pid: number }): Promise<string | undefined> {
+    const { pid } = params
     if (!(await this._resolveGhosttyTtySupport())) {
       return undefined
     }
 
-    return this._resolveSessionTty({ pid: params.pid })
+    return this._resolveSessionTty({ pid })
   }
 
   protected async _resolveSessionTty(params: { pid: number }): Promise<string | undefined> {
+    const { pid } = params
     try {
-      const ancestry = await this._resolveAppBundleAncestry({ childPid: params.pid, hopCount: 0, pid: params.pid })
+      const ancestry = await this._resolveAppBundleAncestry({ childPid: pid, hopCount: 0, pid })
 
       if (!this._isGhosttyBundle({ bundlePath: ancestry.bundlePath })) {
         return undefined
@@ -348,15 +352,17 @@ export class SessionsService {
   }
 
   protected async _resolveGhosttyMatchRank(params: { cwd: string; pid: number }): Promise<number> {
-    const peers = await this._listGhosttyFocusPeers({ cwd: params.cwd, pid: params.pid })
+    const { cwd, pid } = params
+    const peers = await this._listGhosttyFocusPeers({ cwd, pid })
 
-    return this._resolvePeerRank({ peers, pid: params.pid })
+    return this._resolvePeerRank({ peers, pid })
   }
 
   protected async _listGhosttyFocusPeers(params: { cwd: string; pid: number }): Promise<GhosttyFocusPeer[]> {
-    const sameCwdSessions = await this._listSameCwdSessions({ cwd: params.cwd })
+    const { cwd, pid } = params
+    const sameCwdSessions = await this._listSameCwdSessions({ cwd })
     const sessionPids = [
-      params.pid,
+      pid,
       ...sameCwdSessions.map((session) => {
         return session.pid
       }),
@@ -373,6 +379,7 @@ export class SessionsService {
   }
 
   protected async _listSameCwdSessions(params: { cwd: string }): Promise<SessionInfo[]> {
+    const { cwd } = params
     const sessions = await this._runAgentsQuery()
       .then((stdout) => {
         return new SessionsParserService().parseSessionEntries({ stdout })
@@ -382,13 +389,14 @@ export class SessionsService {
       })
 
     return sessions.filter((session) => {
-      return session.cwd === params.cwd
+      return session.cwd === cwd
     })
   }
 
   protected async _resolveGhosttyFocusPeer(params: { pid: number }): Promise<GhosttyFocusPeer | undefined> {
+    const { pid } = params
     try {
-      const ancestry = await this._resolveAppBundleAncestry({ childPid: params.pid, hopCount: 0, pid: params.pid })
+      const ancestry = await this._resolveAppBundleAncestry({ childPid: pid, hopCount: 0, pid })
 
       if (!this._isGhosttyBundle({ bundlePath: ancestry.bundlePath })) {
         return undefined
@@ -397,7 +405,7 @@ export class SessionsService {
       return {
         hostPid: ancestry.hostPid,
         hostStartedAtMs: await this._resolveProcessStartTime({ pid: ancestry.hostPid }),
-        pid: params.pid,
+        pid,
       }
     } catch {
       return undefined
@@ -405,7 +413,8 @@ export class SessionsService {
   }
 
   protected _resolvePeerRank(params: { peers: GhosttyFocusPeer[]; pid: number }): number {
-    const orderedPeers = [...params.peers].sort((left, right) => {
+    const { peers, pid } = params
+    const orderedPeers = [...peers].sort((left, right) => {
       const startDiff = this._resolvePeerStartMs(left) - this._resolvePeerStartMs(right)
 
       if (startDiff !== 0) {
@@ -415,7 +424,7 @@ export class SessionsService {
       return left.hostPid - right.hostPid
     })
     const position = orderedPeers.findIndex((peer) => {
-      return peer.pid === params.pid
+      return peer.pid === pid
     })
 
     if (position === -1) {
@@ -434,7 +443,8 @@ export class SessionsService {
   }
 
   protected async _focusLinuxSession(params: { pid: number }): Promise<void> {
-    const windowId = await this._resolveLinuxWindowId({ hopCount: 0, pid: params.pid })
+    const { pid } = params
+    const windowId = await this._resolveLinuxWindowId({ hopCount: 0, pid })
 
     if (windowId === undefined) {
       throw new Error(this._resolveLinuxWindowNotFoundMessage())
@@ -460,44 +470,47 @@ export class SessionsService {
   }
 
   protected async _resolveLinuxWindowId(params: { hopCount: number; pid: number }): Promise<string | undefined> {
-    if (params.hopCount >= MAX_ANCESTOR_HOPS) {
+    const { hopCount, pid } = params
+    if (hopCount >= MAX_ANCESTOR_HOPS) {
       return undefined
     }
 
-    const windowId = await this._searchLinuxWindowIdByPid({ pid: params.pid })
+    const windowId = await this._searchLinuxWindowIdByPid({ pid })
 
     if (windowId !== undefined) {
       return windowId
     }
 
-    if (params.pid <= 1) {
+    if (pid <= 1) {
       return undefined
     }
 
-    const entry = await this._resolveProcessEntry({ pid: params.pid })
+    const entry = await this._resolveProcessEntry({ pid })
 
     if (entry === undefined) {
       return undefined
     }
 
-    return this._resolveLinuxWindowId({ hopCount: params.hopCount + 1, pid: entry.ppid })
+    return this._resolveLinuxWindowId({ hopCount: hopCount + 1, pid: entry.ppid })
   }
 
   protected async _searchLinuxWindowIdByPid(params: { pid: number }): Promise<string | undefined> {
+    const { pid } = params
     const visibleWindowId = await this._runLinuxWindowIdSearch({
-      args: ['search', '--onlyvisible', '--pid', String(params.pid)],
+      args: ['search', '--onlyvisible', '--pid', String(pid)],
     })
 
     if (visibleWindowId !== undefined) {
       return visibleWindowId
     }
 
-    return this._runLinuxWindowIdSearch({ args: ['search', '--pid', String(params.pid)] })
+    return this._runLinuxWindowIdSearch({ args: ['search', '--pid', String(pid)] })
   }
 
   protected async _runLinuxWindowIdSearch(params: { args: string[] }): Promise<string | undefined> {
+    const { args } = params
     try {
-      const { stdout } = await execFileAsync('xdotool', params.args, {
+      const { stdout } = await execFileAsync('xdotool', args, {
         timeout: XDOTOOL_TIMEOUT_MS,
       })
 
@@ -514,7 +527,8 @@ export class SessionsService {
   }
 
   protected _parseFirstWindowId(params: { stdout: string }): string | undefined {
-    const firstLine = params.stdout.trim().split('\n')[0]
+    const { stdout } = params
+    const firstLine = stdout.trim().split('\n')[0]
 
     if (firstLine === undefined || firstLine === '') {
       return undefined
@@ -524,33 +538,30 @@ export class SessionsService {
   }
 
   protected async _activateLinuxWindow(params: { windowId: string }): Promise<void> {
+    const { windowId } = params
     try {
-      await execFileAsync('xdotool', ['windowactivate', params.windowId], {
+      await execFileAsync('xdotool', ['windowactivate', windowId], {
         timeout: XDOTOOL_TIMEOUT_MS,
       })
     } catch (error) {
-      throw new Error(`activating window ${params.windowId} failed: ${errorUtil.resolveMessage(error)}`)
+      throw new Error(`activating window ${windowId} failed: ${errorUtil.resolveMessage(error)}`)
     }
   }
 
   protected _isXdotoolMissing(params: { error: unknown }): boolean {
-    return (params.error as { code?: unknown }).code === 'ENOENT'
+    const { error } = params
+
+    return (error as { code?: unknown }).code === 'ENOENT'
   }
 
-  protected async _resolveFocusSupport(): Promise<SessionFocusSupport> {
+  protected async _resolveIsFocusSupported(): Promise<boolean> {
     const platform = this._resolveFocusPlatform()
 
     if (platform !== OS.LINUX) {
-      return { status: SessionFocusSupportStatusMapper.READY }
+      return true
     }
 
-    const isToolInstalled = await this._isLinuxFocusToolInstalled()
-
-    if (isToolInstalled) {
-      return { status: SessionFocusSupportStatusMapper.READY }
-    }
-
-    return { status: SessionFocusSupportStatusMapper.MISSING_TOOL }
+    return this._isLinuxFocusToolInstalled()
   }
 
   protected async _isLinuxFocusToolInstalled(): Promise<boolean> {
@@ -625,10 +636,11 @@ export class SessionsService {
   }
 
   protected async _resolveAppBundlePath(params: { hopCount: number; pid: number }): Promise<string> {
+    const { hopCount, pid } = params
     const ancestry = await this._resolveAppBundleAncestry({
-      childPid: params.pid,
-      hopCount: params.hopCount,
-      pid: params.pid,
+      childPid: pid,
+      hopCount,
+      pid,
     })
 
     return ancestry.bundlePath
@@ -639,40 +651,42 @@ export class SessionsService {
     hopCount: number
     pid: number
   }): Promise<AppBundleAncestry> {
-    if (params.hopCount >= MAX_ANCESTOR_HOPS) {
+    const { childPid, hopCount, pid } = params
+    if (hopCount >= MAX_ANCESTOR_HOPS) {
       throw new Error(
         `could not find an application bundle for the session process; the ancestor walk exceeded ${String(MAX_ANCESTOR_HOPS)} hops`,
       )
     }
 
-    const entry = await this._resolveProcessEntry({ pid: params.pid })
+    const entry = await this._resolveProcessEntry({ pid })
 
     if (entry === undefined) {
-      throw new Error(`could not find process ${String(params.pid)}; the session may have ended`)
+      throw new Error(`could not find process ${String(pid)}; the session may have ended`)
     }
 
     const bundlePath = this._resolveAppBundleFromComm({ comm: entry.comm })
 
     if (bundlePath !== undefined) {
-      return { bundlePath, hostPid: params.childPid }
+      return { bundlePath, hostPid: childPid }
     }
 
-    if (params.pid <= 1) {
+    if (pid <= 1) {
       throw new Error(
         'could not find an application bundle for the session process; it may not belong to a terminal app',
       )
     }
 
     return this._resolveAppBundleAncestry({
-      childPid: params.pid,
-      hopCount: params.hopCount + 1,
+      childPid: pid,
+      hopCount: hopCount + 1,
       pid: entry.ppid,
     })
   }
 
   protected async _resolveProcessEntry(params: { pid: number }): Promise<ProcessEntry | undefined> {
+    const { pid } = params
     try {
-      const { stdout } = await execFileAsync('ps', ['-o', 'ppid=,comm=', '-p', String(params.pid)], {
+      const { stdout } = await execFileAsync('ps', ['-o', 'ppid=,comm=', '-p', String(pid)], {
         timeout: PS_QUERY_TIMEOUT_MS,
       })
 
@@ -683,8 +697,9 @@ export class SessionsService {
   }
 
   protected async _resolveProcessStartTime(params: { pid: number }): Promise<number | undefined> {
+    const { pid } = params
     try {
-      const { stdout } = await execFileAsync('ps', ['-o', 'lstart=', '-p', String(params.pid)], {
+      const { stdout } = await execFileAsync('ps', ['-o', 'lstart=', '-p', String(pid)], {
         timeout: PS_QUERY_TIMEOUT_MS,
       })
 
@@ -695,7 +710,8 @@ export class SessionsService {
   }
 
   protected _parseStartTime(params: { stdout: string }): number | undefined {
-    const startedAtMs = Date.parse(params.stdout.trim())
+    const { stdout } = params
+    const startedAtMs = Date.parse(stdout.trim())
 
     if (Number.isNaN(startedAtMs)) {
       return undefined
@@ -705,8 +721,9 @@ export class SessionsService {
   }
 
   protected async _resolveProcessTtyPath(params: { pid: number }): Promise<string | undefined> {
+    const { pid } = params
     try {
-      const { stdout } = await execFileAsync('ps', ['-o', 'tty=', '-p', String(params.pid)], {
+      const { stdout } = await execFileAsync('ps', ['-o', 'tty=', '-p', String(pid)], {
         timeout: PS_QUERY_TIMEOUT_MS,
       })
       const ttyName = stdout.trim()
@@ -722,7 +739,8 @@ export class SessionsService {
   }
 
   protected _parseProcessLine(params: { line: string }): ProcessEntry | undefined {
-    const match = constant.processLineRegex.exec(params.line)
+    const { line } = params
+    const match = constant.processLineRegex.exec(line)
 
     if (match === null) {
       return undefined
@@ -738,7 +756,8 @@ export class SessionsService {
   }
 
   protected _resolveAppBundleFromComm(params: { comm: string }): string | undefined {
-    const match = constant.appBundleRegex.exec(params.comm)
+    const { comm } = params
+    const match = constant.appBundleRegex.exec(comm)
 
     if (match === null) {
       return undefined
@@ -748,22 +767,26 @@ export class SessionsService {
   }
 
   protected async _activateAppBundle(params: { bundlePath: string }): Promise<void> {
+    const { bundlePath } = params
     try {
-      await execFileAsync('open', ['-a', params.bundlePath], { timeout: OPEN_APP_TIMEOUT_MS })
+      await execFileAsync('open', ['-a', bundlePath], { timeout: OPEN_APP_TIMEOUT_MS })
     } catch (error) {
-      throw new Error(`activating '${params.bundlePath}' failed: ${errorUtil.resolveMessage(error)}`)
+      throw new Error(`activating '${bundlePath}' failed: ${errorUtil.resolveMessage(error)}`)
     }
   }
 
   protected _isGhosttyBundle(params: { bundlePath: string }): boolean {
-    return basename(params.bundlePath) === 'Ghostty.app'
+    const { bundlePath } = params
+
+    return basename(bundlePath) === 'Ghostty.app'
   }
 
   protected async _focusGhosttyTab(params: { cwd: string; matchRank: number }): Promise<GhosttyFocusOutcomeMapper> {
+    const { cwd, matchRank } = params
     try {
       const { stdout } = await execFileAsync(
         'osascript',
-        ['-e', GHOSTTY_TAB_FOCUS_SCRIPT, '--', params.cwd, String(params.matchRank)],
+        ['-e', GHOSTTY_TAB_FOCUS_SCRIPT, '--', cwd, String(matchRank)],
         {
           timeout: OSASCRIPT_TIMEOUT_MS,
         },
@@ -776,7 +799,8 @@ export class SessionsService {
   }
 
   protected _parseGhosttyFocusOutcome(params: { stdout: string }): GhosttyFocusOutcomeMapper {
-    switch (params.stdout.trim()) {
+    const { stdout } = params
+    switch (stdout.trim()) {
       case 'focused': {
         return GhosttyFocusOutcomeMapper.FOCUSED
       }
@@ -792,16 +816,18 @@ export class SessionsService {
   }
 
   protected _resolveGhosttyFocusErrorMessage(params: { error: unknown }): string {
-    if (this._isAutomationDenied({ error: params.error })) {
+    const { error } = params
+    if (this._isAutomationDenied({ error })) {
       return GHOSTTY_AUTOMATION_DENIED_MESSAGE
     }
 
-    return `focusing the Ghostty tab failed: ${this._resolveQueryErrorMessage(params.error)}`
+    return `focusing the Ghostty tab failed: ${this._resolveQueryErrorMessage(error)}`
   }
 
   protected async _focusGhosttyTerminalByTty(params: { sessionTty: string }): Promise<GhosttyFocusOutcomeMapper> {
+    const { sessionTty } = params
     try {
-      const { stdout } = await execFileAsync('osascript', ['-e', GHOSTTY_TTY_FOCUS_SCRIPT, '--', params.sessionTty], {
+      const { stdout } = await execFileAsync('osascript', ['-e', GHOSTTY_TTY_FOCUS_SCRIPT, '--', sessionTty], {
         timeout: OSASCRIPT_TIMEOUT_MS,
       })
 
@@ -830,29 +856,29 @@ export class SessionsService {
   }
 
   protected _isVsCodeBundle(params: { bundlePath: string }): boolean {
-    return basename(params.bundlePath) === VSCODE_BUNDLE_BASENAME
+    const { bundlePath } = params
+
+    return basename(bundlePath) === VSCODE_BUNDLE_BASENAME
   }
 
   protected async _focusVsCodeWindow(params: { bundlePath: string; cwd: string }): Promise<void> {
-    const windowTitles = await this._listVsCodeWindowTitles({ bundlePath: params.bundlePath })
-    const windowIndex = this._resolveVsCodeWindowIndex({ cwd: params.cwd, windowTitles })
+    const { bundlePath, cwd } = params
+    const windowTitles = await this._listVsCodeWindowTitles({ bundlePath })
+    const windowIndex = this._resolveVsCodeWindowIndex({ cwd, windowTitles })
 
     if (windowIndex === undefined) {
       return
     }
 
-    await this._raiseVsCodeWindow({ bundlePath: params.bundlePath, windowIndex })
+    await this._raiseVsCodeWindow({ bundlePath, windowIndex })
   }
 
   protected async _listVsCodeWindowTitles(params: { bundlePath: string }): Promise<string[]> {
+    const { bundlePath } = params
     try {
-      const { stdout } = await execFileAsync(
-        'osascript',
-        ['-e', VSCODE_WINDOW_TITLES_SCRIPT, '--', params.bundlePath],
-        {
-          timeout: OSASCRIPT_TIMEOUT_MS,
-        },
-      )
+      const { stdout } = await execFileAsync('osascript', ['-e', VSCODE_WINDOW_TITLES_SCRIPT, '--', bundlePath], {
+        timeout: OSASCRIPT_TIMEOUT_MS,
+      })
 
       return this._parseVsCodeWindowTitles({ stdout })
     } catch (error) {
@@ -867,7 +893,9 @@ export class SessionsService {
   }
 
   protected _parseVsCodeWindowTitles(params: { stdout: string }): string[] {
-    return params.stdout
+    const { stdout } = params
+
+    return stdout
       .trim()
       .split('\n')
       .filter((line) => {
@@ -876,10 +904,11 @@ export class SessionsService {
   }
 
   protected _resolveVsCodeWindowIndex(params: { cwd: string; windowTitles: string[] }): number | undefined {
-    const workspaceNames = this._resolveVsCodeWorkspaceNameCandidates({ cwd: params.cwd })
+    const { cwd, windowTitles } = params
+    const workspaceNames = this._resolveVsCodeWorkspaceNameCandidates({ cwd })
     const firstMatchedPosition = workspaceNames
       .map((workspaceName) => {
-        return params.windowTitles.findIndex((windowTitle) => {
+        return windowTitles.findIndex((windowTitle) => {
           return this._resolveVsCodeWorkspaceName({ windowTitle }) === workspaceName
         })
       })
@@ -895,18 +924,21 @@ export class SessionsService {
   }
 
   protected _resolveVsCodeWorkspaceName(params: { windowTitle: string }): string {
-    const titleParts = params.windowTitle.split(VSCODE_TITLE_SEPARATOR)
+    const { windowTitle } = params
+    const titleParts = windowTitle.split(VSCODE_TITLE_SEPARATOR)
     const lastTitlePart = titleParts[titleParts.length - 1]
 
     if (lastTitlePart === undefined) {
-      return params.windowTitle
+      return windowTitle
     }
 
     return lastTitlePart
   }
 
   protected _resolveVsCodeWorkspaceNameCandidates(params: { cwd: string }): string[] {
-    return params.cwd
+    const { cwd } = params
+
+    return cwd
       .split('/')
       .filter((pathPart) => {
         return pathPart !== ''
@@ -916,12 +948,11 @@ export class SessionsService {
   }
 
   protected async _raiseVsCodeWindow(params: { bundlePath: string; windowIndex: number }): Promise<void> {
+    const { bundlePath, windowIndex } = params
     try {
-      await execFileAsync(
-        'osascript',
-        ['-e', VSCODE_WINDOW_RAISE_SCRIPT, '--', params.bundlePath, String(params.windowIndex)],
-        { timeout: OSASCRIPT_TIMEOUT_MS },
-      )
+      await execFileAsync('osascript', ['-e', VSCODE_WINDOW_RAISE_SCRIPT, '--', bundlePath, String(windowIndex)], {
+        timeout: OSASCRIPT_TIMEOUT_MS,
+      })
     } catch (error) {
       const deniedMessage = this._resolveVsCodePermissionDeniedMessage({ error })
 
@@ -934,11 +965,12 @@ export class SessionsService {
   }
 
   protected _resolveVsCodePermissionDeniedMessage(params: { error: unknown }): string | undefined {
-    if (this._isAutomationDenied({ error: params.error })) {
+    const { error } = params
+    if (this._isAutomationDenied({ error })) {
       return VSCODE_SYSTEM_EVENTS_DENIED_MESSAGE
     }
 
-    if (this._isAssistiveAccessDenied({ error: params.error })) {
+    if (this._isAssistiveAccessDenied({ error })) {
       return VSCODE_ACCESSIBILITY_DENIED_MESSAGE
     }
 
@@ -946,12 +978,19 @@ export class SessionsService {
   }
 
   protected _isAssistiveAccessDenied(params: { error: unknown }): boolean {
-    return this._resolveQueryErrorMessage(params.error).includes('assistive access')
+    const { error } = params
+
+    return this._resolveQueryErrorMessage(error).includes('assistive access')
   }
 
   protected _isAutomationDenied(params: { error: unknown }): boolean {
-    const message = this._resolveQueryErrorMessage(params.error)
+    const { error } = params
+    const message = this._resolveQueryErrorMessage(error)
 
     return message.includes('Not authorized') || message.includes('-1743')
   }
 }
+
+export const sessionsServiceSingleton = singletonPattern(() => {
+  return new _SessionsService()
+})

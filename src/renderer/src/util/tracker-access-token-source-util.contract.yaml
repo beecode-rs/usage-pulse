@@ -1,9 +1,9 @@
-# Contract for trackerTokenSourceUtil.
-# Terms cover the per-platform token-source decision rules for the tracker config UI:
-# the platform system-token option (label + hint), the effective selected source, and the
+# Contract for trackerAccessTokenSourceUtil.
+# Terms cover the per-platform access-token-source decision rules for the tracker config UI:
+# the platform system-access-token option (label + hint), the effective selected source, and the
 # load-time normalization that keeps a stored system source on windows repairable.
-subject: trackerTokenSourceUtil
-module: ./tracker-token-source-util.js
+subject: trackerAccessTokenSourceUtil
+module: ./tracker-access-token-source-util.js
 subjectType: function
 methods:
   normalizeConfig:
@@ -19,7 +19,7 @@ methods:
               name: Claude
               providerId: claude
               refreshIntervalMs: 300000
-              tokenSource: SYSTEM
+              accessTokenSource: SYSTEM
             osPlatform: WINDOWS
         result:
           accessToken: ''
@@ -28,7 +28,7 @@ methods:
           name: Claude
           providerId: claude
           refreshIntervalMs: 300000
-          tokenSource: MANUAL
+          accessTokenSource: MANUAL
       # On linux the stored system source is kept as-is.
       - params:
           - config:
@@ -38,7 +38,7 @@ methods:
               name: Claude
               providerId: claude
               refreshIntervalMs: 300000
-              tokenSource: SYSTEM
+              accessTokenSource: SYSTEM
             osPlatform: LINUX
         result:
           accessToken: ''
@@ -47,7 +47,7 @@ methods:
           name: Claude
           providerId: claude
           refreshIntervalMs: 300000
-          tokenSource: SYSTEM
+          accessTokenSource: SYSTEM
       # A claude tracker already on manual stays manual on windows.
       - params:
           - config:
@@ -57,7 +57,7 @@ methods:
               name: Claude
               providerId: claude
               refreshIntervalMs: 300000
-              tokenSource: MANUAL
+              accessTokenSource: MANUAL
             osPlatform: WINDOWS
         result:
           accessToken: ''
@@ -66,7 +66,7 @@ methods:
           name: Claude
           providerId: claude
           refreshIntervalMs: 300000
-          tokenSource: MANUAL
+          accessTokenSource: MANUAL
       # Non-claude trackers pass through untouched.
       - params:
           - config:
@@ -90,7 +90,7 @@ methods:
           times: ['09:00']
   resolveSelection:
     terms:
-      # Linux offers the logged-in Claude Code system token option and keeps the stored source.
+      # Linux offers the logged-in Claude Code system access token option and keeps the stored source.
       - params:
           - config:
               accessToken: ''
@@ -99,14 +99,14 @@ methods:
               name: Claude
               providerId: claude
               refreshIntervalMs: 300000
-              tokenSource: SYSTEM
+              accessTokenSource: SYSTEM
             osPlatform: LINUX
         result:
-          selectedTokenSource: SYSTEM
-          systemTokenOption:
+          selectedAccessTokenSource: SYSTEM
+          systemAccessTokenOption:
             hint: 'Reads the OAuth token from ~/.claude/.credentials.json on every poll, so it tracks the one Claude Code account logged in on this machine.'
-            label: 'Use system token (logged-in Claude Code)'
-      # macOS offers the Keychain system token option; no Linux wording appears.
+            label: 'Use system access token (logged-in Claude Code)'
+      # macOS offers the Keychain system access token option; no Linux wording appears.
       - params:
           - config:
               accessToken: ''
@@ -115,14 +115,14 @@ methods:
               name: Claude
               providerId: claude
               refreshIntervalMs: 300000
-              tokenSource: MANUAL
+              accessTokenSource: MANUAL
             osPlatform: MACOS
         result:
-          selectedTokenSource: MANUAL
-          systemTokenOption:
+          selectedAccessTokenSource: MANUAL
+          systemAccessTokenOption:
             hint: 'Reads the OAuth token from the macOS Keychain entry "Claude Code-credentials" on every poll, so it tracks the one Claude Code account logged in on this machine. Not available on Windows yet.'
-            label: 'Use system token (macOS Keychain)'
-      # Windows offers no system token option, and even a stored system source resolves to
+            label: 'Use system access token (macOS Keychain)'
+      # Windows offers no system access token option, and even a stored system source resolves to
       # manual so the rendered radio never claims system support (post-normalization the
       # config already carries manual; this pins the defensive pre-normalization display).
       - params:
@@ -133,10 +133,10 @@ methods:
               name: Claude
               providerId: claude
               refreshIntervalMs: 300000
-              tokenSource: SYSTEM
+              accessTokenSource: SYSTEM
             osPlatform: WINDOWS
         result:
-          selectedTokenSource: MANUAL
+          selectedAccessTokenSource: MANUAL
       # Non-claude providers have no token source section at all: manual, no option.
       - params:
           - config:
@@ -150,4 +150,4 @@ methods:
               times: ['09:00']
             osPlatform: LINUX
         result:
-          selectedTokenSource: MANUAL
+          selectedAccessTokenSource: MANUAL

@@ -5,7 +5,7 @@ import {
   useRef,
 } from 'react'
 
-import { PlannerDialToneMapper } from '#src/renderer/src/business/model/planner-dial-tone-mapper-enum'
+import { PlannerDialToneMapper } from '#src/renderer/src/business/enum/planner-dial-tone-mapper-enum'
 import { constant } from '#src/renderer/src/util/constant'
 import { PlannerDialUtil } from '#src/renderer/src/util/planner-dial-util'
 
@@ -30,11 +30,12 @@ const resolvePointOnCircle = (params: {
   center: number
   radius: number
 }): { x: number; y: number } => {
-  const angleRadians = (params.angleDegrees * Math.PI) / 180
+  const { angleDegrees, center, radius } = params
+  const angleRadians = (angleDegrees * Math.PI) / 180
 
   return {
-    x: params.center + params.radius * Math.cos(angleRadians),
-    y: params.center + params.radius * Math.sin(angleRadians),
+    x: center + radius * Math.cos(angleRadians),
+    y: center + radius * Math.sin(angleRadians),
   }
 }
 
@@ -52,23 +53,22 @@ const resolveArcPath = (params: {
   radius: number
   startAngleDegrees: number
 }): string => {
+  const { center, endAngleDegrees, radius, startAngleDegrees } = params
   const startPoint = resolvePointOnCircle({
-    angleDegrees: params.startAngleDegrees,
-    center: params.center,
-    radius: params.radius,
+    angleDegrees: startAngleDegrees,
+    center,
+    radius,
   })
   const endPoint = resolvePointOnCircle({
-    angleDegrees: params.endAngleDegrees,
-    center: params.center,
-    radius: params.radius,
+    angleDegrees: endAngleDegrees,
+    center,
+    radius,
   })
-  const largeArcFlag = resolveLargeArcFlag(params.endAngleDegrees - params.startAngleDegrees)
+  const largeArcFlag = resolveLargeArcFlag(endAngleDegrees - startAngleDegrees)
 
   return [
     `M ${String(startPoint.x)} ${String(startPoint.y)}`,
-    `A ${String(params.radius)} ${String(params.radius)} 0 ${String(largeArcFlag)} 1 ${String(endPoint.x)} ${String(
-      endPoint.y,
-    )}`,
+    `A ${String(radius)} ${String(radius)} 0 ${String(largeArcFlag)} 1 ${String(endPoint.x)} ${String(endPoint.y)}`,
   ].join(' ')
 }
 

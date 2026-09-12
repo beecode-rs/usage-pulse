@@ -1,17 +1,20 @@
+import { singletonPattern } from '@beecode/msh-util'
+import { app } from 'electron'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { dirname, join } from 'node:path'
 
 import { SettingsService } from '#src/main/business/service/settings-service'
 import { type AppSettings } from '#src/shared/business/model/settings-model'
 
 export type SettingsSaveListener = (params: { settings: AppSettings }) => void
 
-export class SettingsRepo {
+export class _SettingsRepo {
   protected readonly _saveListeners: SettingsSaveListener[] = []
   protected readonly _settingsFilePath: string
 
   constructor(params: { settingsFilePath: string }) {
-    this._settingsFilePath = params.settingsFilePath
+    const { settingsFilePath } = params
+    this._settingsFilePath = settingsFilePath
   }
 
   async load(): Promise<AppSettings> {
@@ -25,18 +28,21 @@ export class SettingsRepo {
   }
 
   onSave(params: { listener: SettingsSaveListener }): void {
-    this._saveListeners.push(params.listener)
+    const { listener } = params
+    this._saveListeners.push(listener)
   }
 
   async save(params: { settings: AppSettings }): Promise<void> {
+    const { settings } = params
     await mkdir(dirname(this._settingsFilePath), { recursive: true })
-    await writeFile(this._settingsFilePath, `${JSON.stringify(params.settings, null, 2)}\n`, 'utf8')
-    this._notifySaveListeners({ settings: params.settings })
+    await writeFile(this._settingsFilePath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8')
+    this._notifySaveListeners({ settings })
   }
 
   protected _notifySaveListeners(params: { settings: AppSettings }): void {
+    const { settings } = params
     this._saveListeners.forEach((listener) => {
-      listener({ settings: params.settings })
+      listener({ settings })
     })
   }
 
@@ -59,10 +65,17 @@ export class SettingsRepo {
   }
 
   protected _parseJsonContent(params: { content: string }): unknown {
+    const { content } = params
     try {
-      return JSON.parse(params.content)
+      return JSON.parse(content)
     } catch {
       return undefined
     }
   }
 }
+
+export const settingsRepoSingleton = singletonPattern(() => {
+  return new _SettingsRepo({
+    settingsFilePath: join(app.getPath('userData'), 'usage-pulse-settings.json'),
+  })
+})
