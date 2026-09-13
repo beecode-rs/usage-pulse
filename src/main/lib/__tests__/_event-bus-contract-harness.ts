@@ -1,4 +1,4 @@
-import { EventBusUtil } from '#src/main/util/event-bus-util'
+import { EventBus } from '#src/main/lib/event-bus'
 
 type MessageMap = {
   ping: string
@@ -7,11 +7,11 @@ type MessageMap = {
 
 type Message = { payload: string; type: keyof MessageMap }
 
-export const eventBusUtilContractHarness = {
+export const eventBusContractHarness = {
   deliverMessagesInOrder: (params: { messages: Message[] }): string[] => {
     const { messages } = params
     const deliveries: string[] = []
-    const bus = new EventBusUtil<MessageMap>()
+    const bus = new EventBus<MessageMap>()
     const subscription = bus.subscribe({
       listener: (payload) => {
         deliveries.push(payload)
@@ -28,7 +28,7 @@ export const eventBusUtilContractHarness = {
   deliverNothingToLateSubscriber: (params: { firstMessage: Message; secondMessage: Message }): string[] => {
     const { firstMessage, secondMessage } = params
     const deliveries: string[] = []
-    const bus = new EventBusUtil<MessageMap>()
+    const bus = new EventBus<MessageMap>()
     bus.emit(firstMessage)
     const subscription = bus.subscribe({
       listener: (payload) => {
@@ -43,7 +43,7 @@ export const eventBusUtilContractHarness = {
   },
   deliverToAllSubscribers: (params: { listenerCount: number; message: Message }): string[][] => {
     const { listenerCount, message } = params
-    const bus = new EventBusUtil<MessageMap>()
+    const bus = new EventBus<MessageMap>()
     const deliveriesByListener: string[][] = []
     const subscriptions = Array.from({ length: listenerCount }, () => {
       const deliveries: string[] = []
@@ -65,14 +65,14 @@ export const eventBusUtilContractHarness = {
   },
   isEmitWithoutSubscribersSafe: (params: { message: Message }): boolean => {
     const { message } = params
-    const bus = new EventBusUtil<MessageMap>()
+    const bus = new EventBus<MessageMap>()
     bus.emit(message)
 
     return true
   },
   keepDeliveringWhenListenerThrows: (params: { message: Message }): string[][] => {
     const { message } = params
-    const bus = new EventBusUtil<MessageMap>()
+    const bus = new EventBus<MessageMap>()
     const throwingSubscription = bus.subscribe({
       listener: () => {
         throw new Error('listener failure')
@@ -105,7 +105,7 @@ export const eventBusUtilContractHarness = {
     unsubscribeListenerIndex: number
   }): string[][] => {
     const { listenerCount, message, unsubscribeListenerIndex } = params
-    const bus = new EventBusUtil<MessageMap>()
+    const bus = new EventBus<MessageMap>()
     const deliveriesByListener: string[][] = []
     const subscriptions = Array.from({ length: listenerCount }, () => {
       const deliveries: string[] = []
@@ -134,7 +134,7 @@ export const eventBusUtilContractHarness = {
     staleDeliveries: string[]
   } => {
     const { firstMessage, secondMessage } = params
-    const bus = new EventBusUtil<MessageMap>()
+    const bus = new EventBus<MessageMap>()
     const staleDeliveries: string[] = []
     const freshDeliveries: string[] = []
     const staleSubscription = bus.subscribe({

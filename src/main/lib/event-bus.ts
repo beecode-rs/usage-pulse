@@ -1,11 +1,11 @@
 import { Subject } from 'rxjs'
 
-type EventBusUtilMessage<MESSAGE_MAP extends Record<string, unknown>> = {
+type EventBusMessage<MESSAGE_MAP extends Record<string, unknown>> = {
   [KEY in keyof MESSAGE_MAP]: { payload: MESSAGE_MAP[KEY]; type: KEY }
 }[keyof MESSAGE_MAP]
 
-export class EventBusUtil<MESSAGE_MAP extends Record<string, unknown>> {
-  protected readonly _subject = new Subject<EventBusUtilMessage<MESSAGE_MAP>>()
+export class EventBus<MESSAGE_MAP extends Record<string, unknown>> {
+  protected readonly _subject = new Subject<EventBusMessage<MESSAGE_MAP>>()
 
   emit<KEY extends keyof MESSAGE_MAP & string>(params: { payload: MESSAGE_MAP[KEY]; type: KEY }): void {
     const { payload, type } = params

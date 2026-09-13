@@ -1,15 +1,15 @@
-# Contract for the typed EventBusUtil: one generic bus wrapping one rxjs
+# Contract for the typed EventBus: one generic bus wrapping one rxjs
 # Subject shared by every message type. The contractor resolves only flat
 # callable subjects, so the terms drive the scenario functions in
-# __tests__/_event-bus-util-contract-harness.ts: each one wires typed
+# __tests__/_event-bus-contract-harness.ts: each one wires typed
 # listeners on a fresh bus, emits { payload, type } messages, and returns the
 # captured deliveries for a JSON deep-equal comparison. Subject delivery is
 # synchronous, so captured arrays and their order are deterministic without
 # any test scheduler. The harness message map has two keys (ping, pong) with
 # string payloads, so a subscription to ping also proves type isolation by
 # never seeing pong emissions.
-subject: eventBusUtilContractHarness
-module: ./__tests__/_event-bus-util-contract-harness.js
+subject: eventBusContractHarness
+module: ./__tests__/_event-bus-contract-harness.js
 subjectType: function
 methods:
   deliverMessagesInOrder:
