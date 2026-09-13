@@ -1,61 +1,25 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
-
+import { UsageSnapshotDal } from '#src/main/dal/usage-snapshot-dal'
 import { objectUtil } from '#src/main/util/object-util'
 import type { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot, type UsageWindow } from '#src/shared/business/model/usage-model'
 import { constant } from '#src/shared/util/constant'
 
-export class UsageSnapshotRepo {
-  protected readonly _snapshotFilePath: string
+export interface IUsageSnapshotDal {
+  readSnapshots: () => Promise<unknown>
+  writeSnapshots: (params: { snapshotsByTrackerId: Record<string, ProviderSnapshot> }) => Promise<void>
+}
 
-  constructor(params: { snapshotFilePath: string }) {
-    const { snapshotFilePath } = params
-    this._snapshotFilePath = snapshotFilePath
-  }
+export class UsageSnapshotRepo {
+  protected readonly _dal: IUsageSnapshotDal = new UsageSnapshotDal()
 
   async load(): Promise<Record<string, ProviderSnapshot>> {
-    const fileContent = await this._readFileContent()
-
-    if (fileContent === undefined) {
-      return {}
-    }
-
-    return this._sanitizeSnapshots({ rawSnapshots: this._parseJsonContent({ content: fileContent }) })
+    return this._sanitizeSnapshots({ rawSnapshots: await this._dal.readSnapshots() })
   }
 
   async save(params: { snapshotsByTrackerId: Record<string, ProviderSnapshot> }): Promise<void> {
     const { snapshotsByTrackerId } = params
-    await mkdir(dirname(this._snapshotFilePath), { recursive: true })
-    await writeFile(this._snapshotFilePath, `${JSON.stringify(snapshotsByTrackerId, null, 2)}\n`, 'utf8')
-  }
-
-  protected async _readFileContent(): Promise<string | undefined> {
-    try {
-      return await readFile(this._snapshotFilePath, 'utf8')
-    } catch (error) {
-      if (this._isNotFoundError(error)) {
-        return undefined
-      }
-
-      throw error
-    }
-  }
-
-  protected _isNotFoundError(error: unknown): boolean {
-    const errnoException = error as NodeJS.ErrnoException
-
-    return errnoException.code === 'ENOENT'
-  }
-
-  protected _parseJsonContent(params: { content: string }): unknown {
-    const { content } = params
-    try {
-      return JSON.parse(content)
-    } catch {
-      return undefined
-    }
+    await this._dal.writeSnapshots({ snapshotsByTrackerId })
   }
 
   protected _sanitizeSnapshots(params: { rawSnapshots: unknown }): Record<string, ProviderSnapshot> {

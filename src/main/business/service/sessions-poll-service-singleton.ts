@@ -1,41 +1,23 @@
 import { singletonPattern } from '@beecode/msh-util'
 
+import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { SessionTranscriptService } from '#src/main/business/service/session-transcript-service'
-import { _SessionsService, sessionsServiceSingleton } from '#src/main/business/service/sessions-service-singleton'
-import {
-  _SshSessionsService,
-  sshSessionsServiceSingleton,
-} from '#src/main/business/service/ssh-sessions-service-singleton'
+import { sessionsServiceSingleton } from '#src/main/business/service/sessions-service-singleton'
+import { sshSessionsServiceSingleton } from '#src/main/business/service/ssh-sessions-service-singleton'
 import { errorUtil } from '#src/main/util/error-util'
-import { type SessionSnapshot, type SessionsUpdateListener } from '#src/shared/business/model/session-model'
+import { type SessionSnapshot } from '#src/shared/business/model/session-model'
 import { type AppSettings } from '#src/shared/business/model/settings-model'
 
 export class _SessionsPollService {
   protected _isWindowVisible = false
-  protected _listeners: SessionsUpdateListener[] = []
   protected _refreshInFlight: Promise<SessionSnapshot> | undefined
   protected _settings: AppSettings | undefined
   protected _snapshot: SessionSnapshot | undefined
   protected _timer: NodeJS.Timeout | undefined
-  protected readonly _sessionTranscriptService: SessionTranscriptService
-  protected readonly _sessionsService: _SessionsService
-  protected readonly _sshSessionsService: _SshSessionsService
-
-  constructor(params?: {
-    sessionTranscriptService?: SessionTranscriptService
-    sessionsService?: _SessionsService
-    sshSessionsService?: _SshSessionsService
-  }) {
-    const {
-      sessionTranscriptService = new SessionTranscriptService(),
-      sessionsService = new _SessionsService(),
-      sshSessionsService = new _SshSessionsService(),
-    } = params ?? {}
-
-    this._sessionTranscriptService = sessionTranscriptService
-    this._sessionsService = sessionsService
-    this._sshSessionsService = sshSessionsService
-  }
+  protected readonly _sessionTranscriptService = new SessionTranscriptService()
+  protected readonly _sessionsService = sessionsServiceSingleton()
+  protected readonly _sshSessionsService = sshSessionsServiceSingleton()
 
   async start(params: { settings: AppSettings }): Promise<void> {
     const { settings } = params
@@ -107,17 +89,6 @@ export class _SessionsPollService {
     return this._snapshot
   }
 
-  onUpdate(params: { listener: SessionsUpdateListener }): () => void {
-    const { listener } = params
-    this._listeners.push(listener)
-
-    return () => {
-      this._listeners = this._listeners.filter((currentListener) => {
-        return currentListener !== listener
-      })
-    }
-  }
-
   protected async _resumeAutoRefresh(): Promise<void> {
     const settings = this._settings
 
@@ -165,14 +136,14 @@ export class _SessionsPollService {
       const snapshot = await this._fetchSnapshot({ settings })
 
       this._snapshot = snapshot
-      this._notifyListeners({ snapshot })
+      appEventBusSingleton().emit({ payload: snapshot, type: AppEventType.SESSIONS_SNAPSHOT })
 
       return snapshot
     } catch (error) {
       const snapshot = this._buildErrorSnapshot({ errorMessage: errorUtil.resolveMessage(error) })
 
       this._snapshot = snapshot
-      this._notifyListeners({ snapshot })
+      appEventBusSingleton().emit({ payload: snapshot, type: AppEventType.SESSIONS_SNAPSHOT })
 
       return snapshot
     }
@@ -232,20 +203,8 @@ export class _SessionsPollService {
   protected async _onRefreshTimer(): Promise<void> {
     await this.refreshNow()
   }
-
-  protected _notifyListeners(params: { snapshot: SessionSnapshot }): void {
-    const { snapshot } = params
-
-    this._listeners.forEach((listener) => {
-      listener(snapshot)
-    })
-  }
 }
 
 export const sessionsPollServiceSingleton = singletonPattern(() => {
-  return new _SessionsPollService({
-    sessionsService: sessionsServiceSingleton(),
-    sessionTranscriptService: new SessionTranscriptService(),
-    sshSessionsService: sshSessionsServiceSingleton(),
-  })
+  return new _SessionsPollService()
 })

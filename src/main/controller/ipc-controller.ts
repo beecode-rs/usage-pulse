@@ -7,8 +7,7 @@ import { sessionsServiceSingleton } from '#src/main/business/service/sessions-se
 import { sshSessionsServiceSingleton } from '#src/main/business/service/ssh-sessions-service-singleton'
 import { updateServiceSingleton } from '#src/main/business/service/update-service-singleton'
 import { usagePollServiceSingleton } from '#src/main/business/service/usage-poll-service-singleton'
-import { settingsUseCaseSingleton } from '#src/main/business/use-case/settings-use-case-singleton'
-import { appWindowStoreSingleton } from '#src/main/lib/app-window-store-singleton'
+import { settingsUseCase } from '#src/main/business/use-case/settings-use-case'
 import { objectUtil } from '#src/main/util/object-util'
 import { osUtil } from '#src/main/util/os-util'
 import { IpcChannelMapper } from '#src/shared/business/enum/ipc-channel-mapper-enum'
@@ -28,7 +27,6 @@ export class IpcController {
   protected readonly _schedulingService = schedulingServiceSingleton()
   protected readonly _sessionsPollService = sessionsPollServiceSingleton()
   protected readonly _sessionsService = sessionsServiceSingleton()
-  protected readonly _settingsUseCase = settingsUseCaseSingleton()
   protected readonly _sshSessionsService = sshSessionsServiceSingleton()
   protected readonly _triggerRunLogRepo = triggerRunLogRepoSingleton()
   protected readonly _updateService = updateServiceSingleton()
@@ -41,7 +39,6 @@ export class IpcController {
     this._registerTriggerHandlers()
     this._registerUpdateHandlers()
     this._registerUsageHandlers()
-    this._registerEventForwarders()
   }
 
   protected _registerOsHandlers(): void {
@@ -62,10 +59,10 @@ export class IpcController {
         const isEnabled = rawRecord?.['isEnabled']
 
         if (typeof isEnabled !== 'boolean') {
-          return await this._settingsUseCase.loadSettings()
+          return await settingsUseCase.loadSettings()
         }
 
-        return await this._settingsUseCase.setSchedulingEnabled({ isEnabled })
+        return await settingsUseCase.setSchedulingEnabled({ isEnabled })
       },
     )
   }
@@ -113,11 +110,11 @@ export class IpcController {
 
   protected _registerSettingsHandlers(): void {
     ipcMain.handle(IpcChannelMapper.SETTINGS_GET, async (): Promise<AppSettings> => {
-      return await this._settingsUseCase.loadSettings()
+      return await settingsUseCase.loadSettings()
     })
 
     ipcMain.handle(IpcChannelMapper.SETTINGS_SAVE, async (_event, rawSettings: unknown): Promise<AppSettings> => {
-      return await this._settingsUseCase.saveSettings({ rawSettings })
+      return await settingsUseCase.saveSettings({ rawSettings })
     })
   }
 
@@ -148,7 +145,7 @@ export class IpcController {
     )
 
     ipcMain.handle(IpcChannelMapper.TRIGGER_OS_INSPECT, async (): Promise<ScheduleTriggerRegistrationHealth[]> => {
-      const settings = await this._settingsUseCase.loadSettings()
+      const settings = await settingsUseCase.loadSettings()
 
       return await this._schedulingService.inspectRegistrations({ settings })
     })
@@ -159,10 +156,10 @@ export class IpcController {
       const isEnabled = rawRecord?.['isEnabled']
 
       if (typeof triggerId !== 'string' || typeof isEnabled !== 'boolean') {
-        return await this._settingsUseCase.loadSettings()
+        return await settingsUseCase.loadSettings()
       }
 
-      return await this._settingsUseCase.setTriggerEnabled({ isEnabled, triggerId })
+      return await settingsUseCase.setTriggerEnabled({ isEnabled, triggerId })
     })
   }
 
@@ -207,37 +204,11 @@ export class IpcController {
         const isAutoRefreshPaused = rawRecord?.['isAutoRefreshPaused']
 
         if (typeof trackerId !== 'string' || typeof isAutoRefreshPaused !== 'boolean') {
-          return await this._settingsUseCase.loadSettings()
+          return await settingsUseCase.loadSettings()
         }
 
-        return await this._settingsUseCase.setTrackerPaused({ isAutoRefreshPaused, trackerId })
+        return await settingsUseCase.setTrackerPaused({ isAutoRefreshPaused, trackerId })
       },
     )
-  }
-
-  protected _registerEventForwarders(): void {
-    this._pollService.onUpdate({
-      listener: (snapshot) => {
-        appWindowStoreSingleton().sendToRenderer({ channel: IpcChannelMapper.USAGE_UPDATE, payload: snapshot })
-      },
-    })
-
-    this._sessionsPollService.onUpdate({
-      listener: (snapshot) => {
-        appWindowStoreSingleton().sendToRenderer({ channel: IpcChannelMapper.SESSIONS_UPDATE, payload: snapshot })
-      },
-    })
-
-    this._settingsUseCase.onSave({
-      listener: ({ settings }) => {
-        appWindowStoreSingleton().sendToRenderer({ channel: IpcChannelMapper.SETTINGS_UPDATE, payload: settings })
-      },
-    })
-
-    this._updateService.onUpdate({
-      listener: (status) => {
-        appWindowStoreSingleton().sendToRenderer({ channel: IpcChannelMapper.UPDATE_STATUS, payload: status })
-      },
-    })
   }
 }

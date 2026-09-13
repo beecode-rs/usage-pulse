@@ -1,0 +1,169 @@
+# Contract for the typed EventBusUtil: one generic bus wrapping one rxjs
+# Subject shared by every message type. The contractor resolves only flat
+# callable subjects, so the terms drive the scenario functions in
+# __tests__/_event-bus-util-contract-harness.ts: each one wires typed
+# listeners on a fresh bus, emits { payload, type } messages, and returns the
+# captured deliveries for a JSON deep-equal comparison. Subject delivery is
+# synchronous, so captured arrays and their order are deterministic without
+# any test scheduler. The harness message map has two keys (ping, pong) with
+# string payloads, so a subscription to ping also proves type isolation by
+# never seeing pong emissions.
+subject: eventBusUtilContractHarness
+module: ./__tests__/_event-bus-util-contract-harness.js
+subjectType: function
+methods:
+  deliverMessagesInOrder:
+    terms:
+      # Two messages of the subscribed type arrive in emission order.
+      - params:
+          - messages:
+              - payload: first
+                type: ping
+              - payload: second
+                type: ping
+        result: [first, second]
+      # Duplicate payloads are delivered again; the bus is a stream, not a set.
+      - params:
+          - messages:
+              - payload: ping
+                type: ping
+              - payload: ping
+                type: ping
+        result: [ping, ping]
+      # Emissions of another type are skipped entirely.
+      - params:
+          - messages:
+              - payload: ignored-pong
+                type: pong
+              - payload: kept-ping
+                type: ping
+              - payload: ignored-pong
+                type: pong
+        result: [kept-ping]
+      # Zero messages emitted means zero deliveries.
+      - params:
+          - messages: []
+        result: []
+  deliverNothingToLateSubscriber:
+    terms:
+      # A message emitted before subscribing is not replayed to the late
+      # subscriber; only the later emission arrives.
+      - params:
+          - firstMessage:
+              payload: before
+              type: ping
+            secondMessage:
+              payload: after
+              type: ping
+        result: [after]
+      # An earlier emission of another type is equally invisible.
+      - params:
+          - firstMessage:
+              payload: before
+              type: pong
+            secondMessage:
+              payload: after
+              type: ping
+        result: [after]
+  deliverToAllSubscribers:
+    terms:
+      # Two subscribers of the same type both receive the emitted payload.
+      - params:
+          - listenerCount: 2
+            message:
+              payload: snapshot-saved
+              type: ping
+        result:
+          - [snapshot-saved]
+          - [snapshot-saved]
+      # Three subscribers: everyone gets the identical payload.
+      - params:
+          - listenerCount: 3
+            message:
+              payload: snapshot-saved
+              type: ping
+        result:
+          - [snapshot-saved]
+          - [snapshot-saved]
+          - [snapshot-saved]
+      # A subscriber of another type receives nothing.
+      - params:
+          - listenerCount: 1
+            message:
+              payload: pong-only
+              type: pong
+        result:
+          - []
+  isEmitWithoutSubscribersSafe:
+    terms:
+      # Emitting with zero subscribers is a no-op, not a throw.
+      - params:
+          - message:
+              payload: no-listeners
+              type: ping
+        result: true
+      # Same for an emission of a type nobody ever subscribed to.
+      - params:
+          - message:
+              payload: no-listeners
+              type: pong
+        result: true
+  keepDeliveringWhenListenerThrows:
+    terms:
+      # A throwing first subscriber cannot break the subscribers after it:
+      # both healthy listeners still receive the payload.
+      - params:
+          - message:
+              payload: still-delivered
+              type: ping
+        result:
+          - [still-delivered]
+          - [still-delivered]
+  unsubscribeListenerBlocksFurtherDelivery:
+    terms:
+      # Unsubscribing the first of two listeners: only the second is served.
+      - params:
+          - listenerCount: 2
+            message:
+              payload: middle-unsubscribed
+              type: ping
+            unsubscribeListenerIndex: 0
+        result:
+          - []
+          - [middle-unsubscribed]
+      # Unsubscribing the second of two listeners: only the first is served.
+      - params:
+          - listenerCount: 2
+            message:
+              payload: middle-unsubscribed
+              type: ping
+            unsubscribeListenerIndex: 1
+        result:
+          - [middle-unsubscribed]
+          - []
+      # Unsubscribing the middle of three listeners leaves both neighbours served.
+      - params:
+          - listenerCount: 3
+            message:
+              payload: middle-unsubscribed
+              type: ping
+            unsubscribeListenerIndex: 1
+        result:
+          - [middle-unsubscribed]
+          - []
+          - [middle-unsubscribed]
+  unsubscribeTwiceKeepsBusUsable:
+    terms:
+      # A second unsubscribe call is a harmless no-op: the stale listener stays
+      # silent and a listener subscribed afterwards still receives later
+      # messages in order.
+      - params:
+          - firstMessage:
+              payload: first
+              type: ping
+            secondMessage:
+              payload: second
+              type: ping
+        result:
+          freshDeliveries: [first, second]
+          staleDeliveries: []

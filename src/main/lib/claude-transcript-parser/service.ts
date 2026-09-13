@@ -49,9 +49,7 @@ export class ClaudeTranscriptParserService {
       return state
     }
 
-    new ClaudeTranscriptParserRecordApplier().applyEntry({ record, state })
-
-    return state
+    return new ClaudeTranscriptParserRecordApplier().applyEntry({ record, state })
   }
 
   protected _tryParseEntry(params: { line: string }): Record<string, unknown> | undefined {

@@ -2,7 +2,6 @@ import { singletonPattern } from '@beecode/msh-util'
 import { app } from 'electron'
 
 import { SchedulingStrategyFactory } from '#src/main/business/component/scheduling-strategy/factory'
-import type { SchedulingStrategy } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
 import { config } from '#src/main/util/config'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import type { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
@@ -19,17 +18,10 @@ type SchedulableRegistration = {
 }
 
 export class _SchedulingService {
-  protected readonly _executablePrefixArgs: string[]
-  protected readonly _executablePath: string
+  protected readonly _executablePrefixArgs = this._resolveDefaultExecutablePrefixArgs()
+  protected readonly _executablePath = config.appImage ?? process.execPath
   protected readonly _fingerprintsByRegistrationId = new Map<string, string>()
-  protected readonly _strategy: SchedulingStrategy
-
-  constructor(params: { executablePrefixArgs?: string[]; executablePath?: string; strategy: SchedulingStrategy }) {
-    const { executablePrefixArgs, executablePath, strategy } = params
-    this._executablePrefixArgs = executablePrefixArgs ?? []
-    this._executablePath = executablePath ?? process.execPath
-    this._strategy = strategy
-  }
+  protected readonly _strategy = new SchedulingStrategyFactory().resolve()
 
   getSchedulingInfo(): SchedulingInfo {
     return {
@@ -81,6 +73,14 @@ export class _SchedulingService {
 
     await this._removeRegistrations({ registrationIds: orphanedIds })
     await this._syncSchedulableRegistrations({ registeredIds, schedulables })
+  }
+
+  protected _resolveDefaultExecutablePrefixArgs(): string[] {
+    if (app.isPackaged) {
+      return ['--no-sandbox']
+    }
+
+    return ['--no-sandbox', app.getAppPath()]
   }
 
   protected _resolveSchedulables(params: { settings: AppSettings }): SchedulableRegistration[] {
@@ -171,17 +171,5 @@ export class _SchedulingService {
 }
 
 export const schedulingServiceSingleton = singletonPattern(() => {
-  const resolveExecutablePrefixArgs = (): string[] => {
-    if (app.isPackaged) {
-      return ['--no-sandbox']
-    }
-
-    return ['--no-sandbox', app.getAppPath()]
-  }
-
-  return new _SchedulingService({
-    executablePath: config.appImage ?? process.execPath,
-    executablePrefixArgs: resolveExecutablePrefixArgs(),
-    strategy: new SchedulingStrategyFactory().resolve(),
-  })
+  return new _SchedulingService()
 })

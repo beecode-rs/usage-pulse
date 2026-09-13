@@ -1,0 +1,107 @@
+# Contract for the appEventBusSingleton typed message map.
+# The contractor resolves only flat callable subjects, so the terms drive the
+# scenario functions in _app-event-bus-contract-harness.ts. Each round-trip
+# term subscribes to one event type, emits that type's own payload, and
+# expects the identical payload back (deep equal), pinning both delivery and
+# the per-type payload wiring. The remaining terms pin that repeated singleton
+# calls hand out the same bus instance and that an emit of one event type
+# never reaches a subscriber of another type. The singleton is module state
+# shared by every term in this file, so each scenario unsubscribes before
+# returning.
+subject: appEventBusContractHarness
+module: ./_app-event-bus-contract-harness.js
+subjectType: function
+methods:
+  isSameBusInstanceAcrossSingletonCalls:
+    terms:
+      # Calling the singleton twice yields the same bus instance, so
+      # main-process emitters and renderer-facing subscribers connect to one
+      # Subject.
+      - params: []
+        result: true
+  sessionsSnapshotDeliveriesAfterUsageSnapshotEmit:
+    terms:
+      # A usage snapshot emit never reaches a sessions snapshot subscriber:
+      # subscriptions are isolated by event type on the shared bus.
+      - params:
+          - message:
+              providers: []
+        result: []
+  sessionsSnapshotRoundTrip:
+    terms:
+      # A session snapshot passes through the SESSIONS_SNAPSHOT event unchanged.
+      - params:
+          - message:
+              errorMessage: host unreachable
+              fetchedAt: 1726000000000
+              sessions: []
+              unreachableHosts: []
+        result:
+          - errorMessage: host unreachable
+            fetchedAt: 1726000000000
+            sessions: []
+            unreachableHosts: []
+  settingsSavedRoundTrip:
+    terms:
+      # A full settings object passes through the SETTINGS_SAVED event unchanged.
+      - params:
+          - message:
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: chime
+        result:
+          - isSchedulingEnabled: true
+            isSessionsAutoRefreshPaused: false
+            sessionFinishedPulseMs: 25000
+            sessionFinishedSoundId: ding
+            sessionsRefreshIntervalMs: 5000
+            soundVolumePercent: 40
+            sshHosts: []
+            trackers: []
+            triggers: []
+            waitingSoundId: chime
+  updateStatusRoundTrip:
+    terms:
+      # An update status with every optional field passes through the
+      # UPDATE_STATUS event unchanged.
+      - params:
+          - message:
+              currentVersion: 0.6.1
+              isUpdateAvailable: true
+              latestVersion: 0.7.0
+              releaseUrl: https://github.com/milosbugarinovic/usage-pulse/releases/tag/v0.7.0
+        result:
+          - currentVersion: 0.6.1
+            isUpdateAvailable: true
+            latestVersion: 0.7.0
+            releaseUrl: https://github.com/milosbugarinovic/usage-pulse/releases/tag/v0.7.0
+  usageSnapshotRoundTrip:
+    terms:
+      # A usage snapshot with a populated provider entry passes through the
+      # USAGE_SNAPSHOT event unchanged.
+      - params:
+          - message:
+              providers:
+                - providerId: claude
+                  status: OK
+                  trackerId: claude-main
+                  trackerName: Claude
+                  usage:
+                    - label: 5h window
+                      usedPercent: 42.5
+        result:
+          - providers:
+              - providerId: claude
+                status: OK
+                trackerId: claude-main
+                trackerName: Claude
+                usage:
+                  - label: 5h window
+                    usedPercent: 42.5

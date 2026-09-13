@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
-import { type _SettingsRepo } from '#src/main/business/repo/settings-repo-singleton'
-import { type _TriggerRunLogRepo } from '#src/main/business/repo/trigger-run-log-repo-singleton'
+import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
+import { triggerRunLogRepoSingleton } from '#src/main/business/repo/trigger-run-log-repo-singleton'
 import { TriggerCommandService } from '#src/main/business/service/trigger-command-service'
 import { dummyTriggerPopup } from '#src/main/lib/dummy-trigger-popup'
 import { constant } from '#src/main/util/constant'
@@ -21,12 +21,11 @@ import { constant as sharedConstant } from '#src/shared/util/constant'
 export type DummyTrackerAction = (params: { trackerName: string }) => Promise<void>
 
 export class TriggerRunnerService {
-  protected readonly _commandService: TriggerCommandService
-  protected readonly _dummyAction: DummyTrackerAction
-  protected readonly _now: () => Date
-  protected readonly _runLogRepo: _TriggerRunLogRepo
-  protected readonly _settingsRepo: _SettingsRepo
-  protected readonly _staleSkipMs: number
+  protected readonly _commandService = new TriggerCommandService()
+  protected readonly _dummyAction: DummyTrackerAction = dummyTriggerPopup.show
+  protected readonly _runLogRepo = triggerRunLogRepoSingleton()
+  protected readonly _settingsRepo = settingsRepoSingleton()
+  protected readonly _staleSkipMs = sharedConstant.scheduleTrigger.staleSkip.defaultMs
   protected readonly _triggerDayByWeekdayIndex: readonly ScheduleTriggerDayMapper[] = [
     ScheduleTriggerDayMapper.SUNDAY,
     ScheduleTriggerDayMapper.MONDAY,
@@ -36,27 +35,6 @@ export class TriggerRunnerService {
     ScheduleTriggerDayMapper.FRIDAY,
     ScheduleTriggerDayMapper.SATURDAY,
   ]
-
-  constructor(params: {
-    commandService?: TriggerCommandService
-    dummyAction?: DummyTrackerAction
-    now?: () => Date
-    runLogRepo: _TriggerRunLogRepo
-    settingsRepo: _SettingsRepo
-    staleSkipMs?: number
-  }) {
-    const { commandService, dummyAction, now, runLogRepo, settingsRepo, staleSkipMs } = params
-    this._commandService = commandService ?? new TriggerCommandService()
-    this._dummyAction = dummyAction ?? dummyTriggerPopup.show
-    this._now =
-      now ??
-      ((): Date => {
-        return new Date()
-      })
-    this._runLogRepo = runLogRepo
-    this._settingsRepo = settingsRepo
-    this._staleSkipMs = staleSkipMs ?? sharedConstant.scheduleTrigger.staleSkip.defaultMs
-  }
 
   async runTrigger(params: {
     source: ScheduleTriggerRunSourceMapper
@@ -324,6 +302,10 @@ export class TriggerRunnerService {
 
   protected _createEventId(): string {
     return `evt_${randomUUID()}`
+  }
+
+  protected _now(): Date {
+    return new Date()
   }
 
   protected _parseSlotMinutes(params: { time: string }): number {

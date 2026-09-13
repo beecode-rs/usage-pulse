@@ -38,7 +38,8 @@
 	"dependencies": {
 		"@beecode/msh-app-boot": "^2.0.2",
 		"@beecode/msh-env": "^2.0.3",
-		"@beecode/msh-util": "^3.0.1"
+		"@beecode/msh-util": "^3.0.1",
+		"rxjs": "^7.8.2"
 	},
 	"devDependencies": {
 		"@beecode/msh-test-contractor": "^1.0.2",

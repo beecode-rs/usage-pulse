@@ -1,9 +1,11 @@
 import { singletonPattern } from '@beecode/msh-util'
 import { app } from 'electron'
 
+import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { objectUtil } from '#src/main/util/object-util'
 import { VersionCompareUtil } from '#src/main/util/version-compare-util'
-import { type UpdateStatus, type UpdateStatusListener } from '#src/shared/business/model/update-model'
+import { type UpdateStatus } from '#src/shared/business/model/update-model'
 
 type LatestRelease = {
   htmlUrl: string
@@ -11,15 +13,9 @@ type LatestRelease = {
 }
 
 export class _UpdateService {
-  protected _listeners: UpdateStatusListener[] = []
-  protected _status: UpdateStatus
+  protected _status: UpdateStatus = { currentVersion: app.getVersion(), isUpdateAvailable: false }
   protected readonly _latestReleaseUrl = 'https://api.github.com/repos/beecode-rs/usage-pulse/releases/latest'
   protected readonly _requestTimeoutMs = 10_000
-
-  constructor(params: { currentVersion: string }) {
-    const { currentVersion } = params
-    this._status = { currentVersion, isUpdateAvailable: false }
-  }
 
   getStatus(): UpdateStatus {
     return this._status
@@ -31,22 +27,11 @@ export class _UpdateService {
       const nextStatus = this._resolveNextStatus({ latestRelease })
 
       this._status = nextStatus
-      this._notifyListeners({ status: nextStatus })
+      appEventBusSingleton().emit({ payload: nextStatus, type: AppEventType.UPDATE_STATUS })
 
       return nextStatus
     } catch {
       return this._status
-    }
-  }
-
-  onUpdate(params: { listener: UpdateStatusListener }): () => void {
-    const { listener } = params
-    this._listeners.push(listener)
-
-    return () => {
-      this._listeners = this._listeners.filter((currentListener) => {
-        return currentListener !== listener
-      })
     }
   }
 
@@ -112,15 +97,8 @@ export class _UpdateService {
 
     return { htmlUrl, tagName }
   }
-
-  protected _notifyListeners(params: { status: UpdateStatus }): void {
-    const { status } = params
-    this._listeners.forEach((listener) => {
-      listener(status)
-    })
-  }
 }
 
 export const updateServiceSingleton = singletonPattern(() => {
-  return new _UpdateService({ currentVersion: app.getVersion() })
+  return new _UpdateService()
 })

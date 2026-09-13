@@ -1,14 +1,12 @@
 import { LifeCycle } from '@beecode/msh-app-boot'
 
-import { type _UpdateService } from '#src/main/business/service/update-service-singleton'
+import { updateServiceSingleton } from '#src/main/business/service/update-service-singleton'
 
 export class UpdateCheckLifeCycle extends LifeCycle<void> {
-  protected readonly _updateService: _UpdateService
+  protected readonly _updateService = updateServiceSingleton()
 
-  constructor(params: { updateService: _UpdateService }) {
-    const { updateService } = params
+  constructor() {
     super({ name: 'update check' })
-    this._updateService = updateService
   }
 
   protected _createFn(): Promise<void> {

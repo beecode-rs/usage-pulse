@@ -1,8 +1,8 @@
 import { singletonPattern } from '@beecode/msh-util'
-import { app } from 'electron'
-import { join } from 'node:path'
 
+import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
 import { UsageSnapshotRepo } from '#src/main/business/repo/usage-snapshot-repo'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { ClaudeSystemAccessTokenService } from '#src/main/business/service/claude-system-access-token-service'
 import { UsageProviderClaude } from '#src/main/business/service/usage-provider/claude'
 import { UsageProviderDummy } from '#src/main/business/service/usage-provider/dummy'
@@ -13,39 +13,23 @@ import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type AppSettings, type TrackerConfig } from '#src/shared/business/model/settings-model'
-import {
-  type ProviderSnapshot,
-  type UsageSnapshot,
-  type UsageUpdateListener,
-} from '#src/shared/business/model/usage-model'
+import { type ProviderSnapshot, type UsageSnapshot } from '#src/shared/business/model/usage-model'
 
 export class _UsagePollService {
   protected _generationByTrackerId = new Map<string, number>()
   protected _isWindowVisible = false
-  protected _listeners: UsageUpdateListener[] = []
   protected _nextPollAtByTrackerId = new Map<string, number>()
   protected _settings: AppSettings | undefined
   protected _snapshotByTrackerId = new Map<string, ProviderSnapshot>()
   protected _timerByTrackerId = new Map<string, NodeJS.Timeout>()
-  protected readonly _claudeSystemAccessTokenService: ClaudeSystemAccessTokenService
-  protected readonly _providers: Record<ProviderIdMapper, UsageProvider>
-  protected readonly _snapshotRepo?: UsageSnapshotRepo
-
-  constructor(params?: {
-    claudeSystemAccessTokenService?: ClaudeSystemAccessTokenService
-    providers?: Record<ProviderIdMapper, UsageProvider>
-    snapshotRepo?: UsageSnapshotRepo
-  }) {
-    const {
-      claudeSystemAccessTokenService = new ClaudeSystemAccessTokenService(),
-      providers = this._createDefaultProviders(),
-      snapshotRepo,
-    } = params ?? {}
-
-    this._claudeSystemAccessTokenService = claudeSystemAccessTokenService
-    this._providers = providers
-    this._snapshotRepo = snapshotRepo
+  protected readonly _claudeSystemAccessTokenService = new ClaudeSystemAccessTokenService()
+  protected readonly _providers: Record<ProviderIdMapper, UsageProvider> = {
+    [ProviderIdMapper.CLAUDE]: new UsageProviderClaude(),
+    [ProviderIdMapper.DUMMY]: new UsageProviderDummy(),
+    [ProviderIdMapper.ZAI]: new UsageProviderZai(),
   }
+
+  protected readonly _snapshotRepo = new UsageSnapshotRepo()
 
   async start(params: { settings: AppSettings }): Promise<void> {
     const { settings } = params
@@ -136,7 +120,7 @@ export class _UsagePollService {
 
     if (tracker.isAutoRefreshPaused) {
       this._cancelTrackerTimer({ trackerId: tracker.id })
-      this._notifyListeners({ snapshot: this._buildSnapshot() })
+      appEventBusSingleton().emit({ payload: this._buildSnapshot(), type: AppEventType.USAGE_SNAPSHOT })
 
       return
     }
@@ -146,25 +130,6 @@ export class _UsagePollService {
 
   getSnapshot(): UsageSnapshot {
     return this._buildSnapshot()
-  }
-
-  onUpdate(params: { listener: UsageUpdateListener }): () => void {
-    const { listener } = params
-    this._listeners.push(listener)
-
-    return () => {
-      this._listeners = this._listeners.filter((currentListener) => {
-        return currentListener !== listener
-      })
-    }
-  }
-
-  protected _createDefaultProviders(): Record<ProviderIdMapper, UsageProvider> {
-    return {
-      [ProviderIdMapper.CLAUDE]: new UsageProviderClaude(),
-      [ProviderIdMapper.DUMMY]: new UsageProviderDummy(),
-      [ProviderIdMapper.ZAI]: new UsageProviderZai(),
-    }
   }
 
   protected _resolveTracker(params: { trackerId: string }): TrackerConfig | undefined {
@@ -183,7 +148,7 @@ export class _UsagePollService {
   protected async _pollTrackerOnce(params: { tracker: TrackerConfig }): Promise<boolean> {
     const { tracker } = params
     const generation = this._beginTrackerPoll({ trackerId: tracker.id })
-    this._notifyListeners({ snapshot: this._buildSnapshot() })
+    appEventBusSingleton().emit({ payload: this._buildSnapshot(), type: AppEventType.USAGE_SNAPSHOT })
 
     const providerSnapshot = await this._pollTracker({ tracker })
 
@@ -193,7 +158,7 @@ export class _UsagePollService {
 
     this._snapshotByTrackerId.set(tracker.id, providerSnapshot)
     this._persistSnapshots()
-    this._notifyListeners({ snapshot: this._buildSnapshot() })
+    appEventBusSingleton().emit({ payload: this._buildSnapshot(), type: AppEventType.USAGE_SNAPSHOT })
 
     return true
   }
@@ -233,13 +198,7 @@ export class _UsagePollService {
   }
 
   protected async _hydratePersistedSnapshots(): Promise<void> {
-    const snapshotRepo = this._snapshotRepo
-
-    if (snapshotRepo === undefined) {
-      return
-    }
-
-    const persistedSnapshotsByTrackerId = await snapshotRepo.load()
+    const persistedSnapshotsByTrackerId = await this._snapshotRepo.load()
     const settings = this._settings
 
     if (settings === undefined) {
@@ -305,13 +264,7 @@ export class _UsagePollService {
   }
 
   protected _persistSnapshots(): void {
-    const snapshotRepo = this._snapshotRepo
-
-    if (snapshotRepo === undefined) {
-      return
-    }
-
-    void snapshotRepo.save({ snapshotsByTrackerId: this._buildPersistedSnapshotsByTrackerId() }).catch(() => {
+    void this._snapshotRepo.save({ snapshotsByTrackerId: this._buildPersistedSnapshotsByTrackerId() }).catch(() => {
       return undefined
     })
   }
@@ -461,19 +414,8 @@ export class _UsagePollService {
     clearTimeout(timer)
     this._timerByTrackerId.delete(trackerId)
   }
-
-  protected _notifyListeners(params: { snapshot: UsageSnapshot }): void {
-    const { snapshot } = params
-    this._listeners.forEach((listener) => {
-      listener(snapshot)
-    })
-  }
 }
 
 export const usagePollServiceSingleton = singletonPattern(() => {
-  return new _UsagePollService({
-    snapshotRepo: new UsageSnapshotRepo({
-      snapshotFilePath: join(app.getPath('userData'), 'usage-pulse-snapshots.json'),
-    }),
-  })
+  return new _UsagePollService()
 })

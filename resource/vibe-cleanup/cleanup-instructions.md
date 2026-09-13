@@ -122,3 +122,23 @@ like this
  (targets: src/renderer/src/ui-component/provider/provider-icon.tsx and the 9 icon components under src/renderer/src/ui-component/icon/)
 - so for the tsx we use props instead of params, but we need to have props as an object
  (targets: src/renderer/src/ui-component/scheduling/add-trigger-dialog.tsx, src/renderer/src/ui-component/provider/provider-icon.tsx and the 9 icon components under src/renderer/src/ui-component/icon/)
+---
+- we need to make settings use case (@src/main/business/use-case/settings-use-case-singleton.ts) not singlton, use case should be ststeles call. also we dont wwant to use deoendenci injection in the constructor so use nodejs import instrad
+---
+- we dont use dipendenci injection if not needed through constructor, if we can use nodejs import use thst
+---
+- in ClaudeTranscriptParserService (src/main/lib/claude-transcript-parser/service.ts) we have some functiond that produce sideeffect. we prefer functional programming, so we never mutate variables that are passed in to the function
+---
+- we need to move the file system write read logic to the dal layer and leave repo layer to work with abstrsct storage. the dal layer is whete the actal storage framework lives, and repo is clear business logic for storing data (targets: src/main/business/repo/settings-repo-singleton.ts, src/main/business/repo/usage-snapshot-repo.ts, src/main/business/repo/trigger-run-log-repo-singleton.ts)
+- repo should not know anything about saving to file or reading from file, or even where the file is located. everithing regarding file is in dal. we are using words like save edit create remove in out business logic repo. read write is for file dal. we can have one common file dal to encapsulet repeating things in file dal, and have one dal for each repo
+---
+- implement tjr rxjs event bus and replace listeners subscriver with event bus emmit message and subscribe to message so the logic is decoupled. /orchestrating-ts-agents
+- i see the event bus implementstion in lib, but i dont see it being used anywhere. we where suposed to replace the listeners and subscribers to the listeners with event bus like in visualiser project. i dont see the rxjs controller where we subscribe to things and we need an easy way to emit i thing we use util layer in visualiser project
+---
+- check all src files and if we are passing service objects through constructor , dont, stop using dependancy injection of services using constructor params, use node import instead
+---
+- can we have one universal emuter in util folder that we can emit any message by type and expect paykoad based on generic message type. like we do in @../visualiser/ project (targets: src/main/lib/event-bus/event-bus.ts, src/main/business/service/app-event-bus-singleton.ts)
+---
+- move lifecycle classes (src/main/app-boot/*-life-cycle.ts) into a subfolder life-cycle
+---
+- EventBusUtil (src/main/util/event-bus-util.ts) looks more like a lib layer code than the util
