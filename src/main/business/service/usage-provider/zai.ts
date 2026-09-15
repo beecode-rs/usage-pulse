@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
 import { httpUtil } from '#src/main/util/http-util'
 import { objectUtil } from '#src/main/util/object-util'
@@ -5,6 +7,54 @@ import { percentUtil } from '#src/main/util/percent-util'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import type { UsageWindow } from '#src/shared/business/model/usage-model'
 import { constant } from '#src/shared/util/constant'
+
+const limitPercentageSchema = z
+  .number()
+  .transform((value) => {
+    return percentUtil.roundPercentToOneDecimal(percentUtil.clampPercent(value))
+  })
+  .optional()
+  .catch(undefined)
+
+const limitNextResetTimeSchema = z
+  .union([z.string(), z.number()])
+  .optional()
+  .transform((value) => {
+    if (value === undefined) {
+      return undefined
+    }
+
+    const resetDate = new Date(value)
+
+    if (Number.isNaN(resetDate.getTime())) {
+      return undefined
+    }
+
+    return resetDate.getTime()
+  })
+  .catch(undefined)
+
+const limitRecordSchema = z.object({
+  currentValue: z.number().optional().catch(undefined),
+  nextResetTime: limitNextResetTimeSchema,
+  number: z.number().optional().catch(undefined),
+  percentage: limitPercentageSchema,
+  type: z.string().optional().catch(undefined),
+  unit: z.number().optional().catch(undefined),
+  usage: z.number().optional().catch(undefined),
+})
+
+const limitRecordsSchema = z.array(z.unknown()).transform((limits) => {
+  return limits.reduce<z.infer<typeof limitRecordSchema>[]>((limitRecords, limit) => {
+    const parsedLimit = limitRecordSchema.safeParse(limit)
+
+    if (parsedLimit.success) {
+      return [...limitRecords, parsedLimit.data]
+    }
+
+    return limitRecords
+  }, [])
+})
 
 export class UsageProviderZai implements UsageProvider {
   protected readonly _quotaLimitUrl = 'https://api.z.ai/api/monitor/usage/quota/limit'
@@ -26,7 +76,7 @@ export class UsageProviderZai implements UsageProvider {
     return this._buildWindows({ limits })
   }
 
-  protected _extractLimits(params: { raw: unknown }): unknown[] {
+  protected _extractLimits(params: { raw: unknown }): z.infer<typeof limitRecordSchema>[] {
     const { raw } = params
     const dataRecord = this._extractDataRecord({ raw })
 
@@ -34,13 +84,13 @@ export class UsageProviderZai implements UsageProvider {
       throw new Error('z.ai usage response is missing the data object')
     }
 
-    const limits = dataRecord['limits']
+    const parsedLimits = limitRecordsSchema.safeParse(dataRecord['limits'])
 
-    if (!Array.isArray(limits)) {
+    if (!parsedLimits.success) {
       throw new Error('z.ai usage response is missing the limits array')
     }
 
-    return limits
+    return parsedLimits.data
   }
 
   protected _extractDataRecord(params: { raw: unknown }): Record<string, unknown> | undefined {
@@ -54,7 +104,7 @@ export class UsageProviderZai implements UsageProvider {
     return objectUtil.asRecord(rootRecord['data'])
   }
 
-  protected _buildWindows(params: { limits: unknown[] }): UsageWindow[] {
+  protected _buildWindows(params: { limits: z.infer<typeof limitRecordSchema>[] }): UsageWindow[] {
     const { limits } = params
     const windows = [
       this._buildWindow({
@@ -79,7 +129,7 @@ export class UsageProviderZai implements UsageProvider {
     return windows
   }
 
-  protected _buildMcpQuotaWindow(params: { limits: unknown[] }): UsageWindow | undefined {
+  protected _buildMcpQuotaWindow(params: { limits: z.infer<typeof limitRecordSchema>[] }): UsageWindow | undefined {
     const { limits } = params
     const limitRecord = this._findLimitRecord({ limits, limitType: 'TIME_LIMIT' })
 
@@ -92,7 +142,7 @@ export class UsageProviderZai implements UsageProvider {
   }
 
   protected _stampMcpAmounts(params: {
-    limitRecord?: Record<string, unknown>
+    limitRecord?: z.infer<typeof limitRecordSchema>
     window?: UsageWindow
   }): UsageWindow | undefined {
     const { limitRecord, window } = params
@@ -100,8 +150,8 @@ export class UsageProviderZai implements UsageProvider {
       return window
     }
 
-    const usedAmount = this._resolveFiniteCount({ value: limitRecord['currentValue'] })
-    const totalAmount = this._resolveFiniteCount({ value: limitRecord['usage'] })
+    const usedAmount = this._resolveFiniteCount({ value: limitRecord.currentValue })
+    const totalAmount = this._resolveFiniteCount({ value: limitRecord.usage })
 
     if (usedAmount === undefined || totalAmount === undefined || totalAmount <= 0) {
       return window
@@ -110,9 +160,9 @@ export class UsageProviderZai implements UsageProvider {
     return { ...window, totalAmount, usedAmount }
   }
 
-  protected _resolveFiniteCount(params: { value: unknown }): number | undefined {
+  protected _resolveFiniteCount(params: { value?: number }): number | undefined {
     const { value } = params
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+    if (value === undefined || value < 0) {
       return undefined
     }
 
@@ -134,26 +184,20 @@ export class UsageProviderZai implements UsageProvider {
 
   protected _findLimitRecord(params: {
     limitNumber?: number
-    limits: unknown[]
+    limits: z.infer<typeof limitRecordSchema>[]
     limitType: string
     limitUnit?: number
-  }): Record<string, unknown> | undefined {
+  }): z.infer<typeof limitRecordSchema> | undefined {
     const { limitNumber, limits, limitType, limitUnit } = params
-    const matchingLimit = limits.find((limit) => {
-      const limitRecord = objectUtil.asRecord(limit)
-
-      if (limitRecord === undefined) {
-        return false
-      }
-
+    const matchingLimit = limits.find((limitRecord) => {
       return (
-        limitRecord['type'] === limitType &&
-        this._matchesOptionalLimitField({ actual: limitRecord['unit'], expected: limitUnit }) &&
-        this._matchesOptionalLimitField({ actual: limitRecord['number'], expected: limitNumber })
+        limitRecord.type === limitType &&
+        this._matchesOptionalLimitField({ actual: limitRecord.unit, expected: limitUnit }) &&
+        this._matchesOptionalLimitField({ actual: limitRecord.number, expected: limitNumber })
       )
     })
 
-    return objectUtil.asRecord(matchingLimit)
+    return matchingLimit
   }
 
   protected _matchesOptionalLimitField(params: { actual: unknown; expected?: number }): boolean {
@@ -167,62 +211,35 @@ export class UsageProviderZai implements UsageProvider {
 
   protected _buildWindow(params: {
     expectedLabel: string
-    limitRecord?: Record<string, unknown>
+    limitRecord?: z.infer<typeof limitRecordSchema>
     windowMs?: number
   }): UsageWindow | undefined {
     const { expectedLabel, limitRecord, windowMs } = params
-    if (limitRecord === undefined) {
+    if (limitRecord?.percentage === undefined) {
       return undefined
     }
 
-    const percent = this._resolvePercent({ limitRecord })
-
-    if (percent === undefined) {
-      return undefined
-    }
-
-    const resetAt = this._resolveResetAt({ limitRecord })
-
-    if (resetAt === undefined) {
+    if (limitRecord.nextResetTime === undefined) {
       if (windowMs === undefined) {
-        return { label: expectedLabel, usedPercent: percent }
+        return { label: expectedLabel, usedPercent: limitRecord.percentage }
       }
 
-      return { label: expectedLabel, usedPercent: percent, windowMs }
+      return { label: expectedLabel, usedPercent: limitRecord.percentage, windowMs }
     }
 
     if (windowMs === undefined) {
-      return { label: expectedLabel, resetAt, usedPercent: percent }
+      return {
+        label: expectedLabel,
+        resetAt: limitRecord.nextResetTime,
+        usedPercent: limitRecord.percentage,
+      }
     }
 
-    return { label: expectedLabel, resetAt, usedPercent: percent, windowMs }
-  }
-
-  protected _resolvePercent(params: { limitRecord: Record<string, unknown> }): number | undefined {
-    const { limitRecord } = params
-    const percent = limitRecord['percentage']
-
-    if (typeof percent !== 'number' || !Number.isFinite(percent)) {
-      return undefined
+    return {
+      label: expectedLabel,
+      resetAt: limitRecord.nextResetTime,
+      usedPercent: limitRecord.percentage,
+      windowMs,
     }
-
-    return percentUtil.roundPercentToOneDecimal(percentUtil.clampPercent(percent))
-  }
-
-  protected _resolveResetAt(params: { limitRecord: Record<string, unknown> }): number | undefined {
-    const { limitRecord } = params
-    const nextResetTime = limitRecord['nextResetTime']
-
-    if (typeof nextResetTime !== 'string' && typeof nextResetTime !== 'number') {
-      return undefined
-    }
-
-    const resetDate = new Date(nextResetTime)
-
-    if (Number.isNaN(resetDate.getTime())) {
-      return undefined
-    }
-
-    return resetDate.getTime()
   }
 }

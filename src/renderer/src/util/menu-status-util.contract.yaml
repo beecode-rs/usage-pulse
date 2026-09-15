@@ -267,10 +267,6 @@ methods:
                   status: OK
                   trackerId: t-claude
                   trackerName: Claude
-                - providerId: dummy
-                  status: OK
-                  trackerId: t-dummy
-                  trackerName: Dummy
         result: !undefined
       # An hour past the weekday peak window.
       - constructorParams: []
@@ -443,15 +439,6 @@ methods:
                   status: ERROR
                   trackerId: t-zai
                   trackerName: z.ai
-                - providerId: dummy
-                  status: OK
-                  trackerId: t-dummy
-                  trackerName: Dummy
-                  usage:
-                    - label: 5h
-                      resetAt: 1800000
-                      usedPercent: 50
-                      windowMs: 3600000
         result: error
       # An errored provider outranks a warning window on another provider.
       - constructorParams: []

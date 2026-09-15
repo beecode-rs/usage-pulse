@@ -6,16 +6,15 @@ import { usageClientService } from '#src/renderer/src/business/service/usage-cli
 import { ProviderIcon } from '#src/renderer/src/ui-component/provider/provider-icon'
 import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/tracker-config-fields'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { providerCatalogUtil } from '#src/renderer/src/util/provider-catalog-util'
 import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import type { OS } from '#src/shared/business/enum/os-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
-import { type AppSettings, type TrackerConfig } from '#src/shared/business/model/settings-model'
+import { SettingsModel, type TrackerConfig } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
 
 export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => void }): ReactElement => {
   const { onClose, onSaved } = props
-  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [newTracker, setNewTracker] = useState<TrackerConfig | undefined>(undefined)
   const [osPlatform, setOsPlatform] = useState<OS | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
@@ -78,19 +77,6 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
         }
       }
 
-      case ProviderIdMapper.DUMMY: {
-        return {
-          accessToken: '',
-          days: [...constant.scheduleTrigger.days],
-          id: crypto.randomUUID(),
-          isAutoRefreshPaused: false,
-          name: '',
-          providerId: ProviderIdMapper.DUMMY,
-          refreshIntervalMs: resolveDefaultRefreshIntervalMs(ProviderIdMapper.DUMMY),
-          times: ['09:00'],
-        }
-      }
-
       default: {
         throw typeUtil.exhaustiveError('unsupported provider [providerId]', providerId)
       }
@@ -98,18 +84,6 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
   }
 
   const resolveTrackerValidationError = (tracker: TrackerConfig): string | undefined => {
-    if (tracker.providerId === ProviderIdMapper.DUMMY) {
-      if (tracker.days.length === 0) {
-        return 'Pick at least one day for this tracker.'
-      }
-
-      if (tracker.times.length === 0) {
-        return 'Add at least one time for this tracker.'
-      }
-
-      return undefined
-    }
-
     if (
       tracker.providerId === ProviderIdMapper.CLAUDE &&
       tracker.accessTokenSource === ClaudeAccessTokenSource.SYSTEM
@@ -147,7 +121,7 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
 
     try {
       await usageClientService.saveSettings({
-        settings: { ...settings, trackers: [...settings.trackers, newTracker] },
+        settings: new SettingsModel({ settings: { ...settings, trackers: [...settings.trackers, newTracker] } }),
       })
     } catch (error) {
       setErrorMessage(errorUtil.resolveMessage(error))
@@ -182,7 +156,7 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
             </button>
           </header>
           <p className="settings-hint">Choose which provider you want to monitor.</p>
-          {providerCatalogUtil.resolveVisibleCatalogEntries().map((catalogEntry) => {
+          {constant.providerCatalog.map((catalogEntry) => {
             return (
               <button
                 className="provider-choice"

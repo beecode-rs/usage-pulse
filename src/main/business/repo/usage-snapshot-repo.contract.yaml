@@ -1,0 +1,457 @@
+# Contract for UsageSnapshotRepo.load, the zod validation boundary over the
+# persisted snapshots file: each raw record is safeParsed against the provider
+# snapshot schema with drop-invalid semantics. Snapshots are dropped when
+# trackerId is missing or empty, providerId is outside the provider catalog,
+# fetchedAt is not a number, or no usage window survives validation; invalid
+# windows are dropped individually while valid siblings keep the entry alive.
+# Surviving entries are re-keyed by their validated trackerId, status is
+# always OK on output, and trackerName falls back to the catalog entry name
+# when the persisted value is not a non-empty string. A term can only make a
+# single call while the repo reads a file, so the terms drive the scenario
+# functions in _usage-snapshot-repo-contract-harness.ts. Every scenario pins
+# the repo's dal to its own fresh temp file via the repo's snapshotFilePath
+# constructor param, so no snapshots bleed between terms.
+subject: usageSnapshotRepoContractHarness
+module: ./_usage-snapshot-repo-contract-harness.js
+subjectType: function
+methods:
+  loadAfterSave:
+    terms:
+      # save then load round-trips a fully populated snapshot: optionals
+      # persist and status comes back OK.
+      - params:
+          - snapshotsByTrackerId:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                status: OK
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    resetAt: 1757950000000
+                    totalAmount: 100
+                    usedAmount: 42
+                    usedPercent: 42.5
+                    windowMs: 18000000
+                  - label: 7d
+                    resetAt: 1758500000000
+                    totalAmount: 200
+                    usedAmount: 80
+                    usedPercent: 40
+                    windowMs: 604800000
+        result:
+          tracker-claude-main:
+            fetchedAt: 1757900000000
+            providerId: claude
+            status: OK
+            trackerId: tracker-claude-main
+            trackerName: Claude main plan
+            usage:
+              - label: 5h
+                resetAt: 1757950000000
+                totalAmount: 100
+                usedAmount: 42
+                usedPercent: 42.5
+                windowMs: 18000000
+              - label: 7d
+                resetAt: 1758500000000
+                totalAmount: 200
+                usedAmount: 80
+                usedPercent: 40
+                windowMs: 604800000
+      # A snapshot saved with ERROR status and error fields comes back with
+      # status OK and without errorMessage or nextRefreshAt: load's output
+      # shape only carries the sanitized fields.
+      - params:
+          - snapshotsByTrackerId:
+              tracker-claude-main:
+                errorMessage: provider exploded
+                fetchedAt: 1757900000000
+                nextRefreshAt: 1757900900000
+                providerId: claude
+                status: ERROR
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result:
+          tracker-claude-main:
+            fetchedAt: 1757900000000
+            providerId: claude
+            status: OK
+            trackerId: tracker-claude-main
+            trackerName: Claude main plan
+            usage:
+              - label: 5h
+                usedPercent: 42.5
+  loadOnMalformedFile:
+    terms:
+      # A snapshots file that is not valid JSON reads as no snapshots instead
+      # of throwing.
+      - params: []
+        result: {}
+  loadOnMissingFile:
+    terms:
+      # A snapshots file that does not exist yet reads as no snapshots.
+      - params: []
+        result: {}
+  loadOnRawSnapshots:
+    terms:
+      # A fully valid snapshot survives with status forced to OK.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    resetAt: 1757950000000
+                    totalAmount: 100
+                    usedAmount: 42
+                    usedPercent: 42.5
+                    windowMs: 18000000
+                  - label: 7d
+                    resetAt: 1758500000000
+                    totalAmount: 200
+                    usedAmount: 80
+                    usedPercent: 40
+                    windowMs: 604800000
+        result:
+          tracker-claude-main:
+            fetchedAt: 1757900000000
+            providerId: claude
+            status: OK
+            trackerId: tracker-claude-main
+            trackerName: Claude main plan
+            usage:
+              - label: 5h
+                resetAt: 1757950000000
+                totalAmount: 100
+                usedAmount: 42
+                usedPercent: 42.5
+                windowMs: 18000000
+              - label: 7d
+                resetAt: 1758500000000
+                totalAmount: 200
+                usedAmount: 80
+                usedPercent: 40
+                windowMs: 604800000
+      # The output is keyed by the snapshot's own trackerId, not by the
+      # persisted record key.
+      - params:
+          - rawSnapshots:
+              stale-key:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result:
+          tracker-claude-main:
+            fetchedAt: 1757900000000
+            providerId: claude
+            status: OK
+            trackerId: tracker-claude-main
+            trackerName: Claude main plan
+            usage:
+              - label: 5h
+                usedPercent: 42.5
+      # An empty trackerId drops the snapshot.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: ''
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result: {}
+      # A missing trackerId drops the snapshot.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result: {}
+      # A providerId outside the provider catalog drops the snapshot.
+      - params:
+          - rawSnapshots:
+              tracker-openai-main:
+                fetchedAt: 1757900000000
+                providerId: openai
+                trackerId: tracker-openai-main
+                trackerName: OpenAI main plan
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result: {}
+      # A missing fetchedAt drops the snapshot.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result: {}
+      # A string fetchedAt drops the snapshot.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: '2026-09-15T07:00:00.000Z'
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result: {}
+      # A null fetchedAt drops the snapshot; this is also what any
+      # non-finite number persisted through JSON becomes.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: null
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result: {}
+      # A snapshot whose usage array has no windows at all is dropped.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage: []
+        result: {}
+      # A snapshot whose every window fails validation is dropped, even though
+      # the array itself is present.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: ''
+                    usedPercent: 42.5
+                  - label: 5h
+                    usedPercent: high
+        result: {}
+      # Invalid windows are dropped individually while a valid sibling keeps
+      # the snapshot alive.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: ''
+                    usedPercent: 42.5
+                  - label: 7d
+                    usedPercent: 40
+                    windowMs: 604800000
+        result:
+          tracker-claude-main:
+            fetchedAt: 1757900000000
+            providerId: claude
+            status: OK
+            trackerId: tracker-claude-main
+            trackerName: Claude main plan
+            usage:
+              - label: 7d
+                usedPercent: 40
+                windowMs: 604800000
+      # Window optionals with invalid values are caught back to undefined and
+      # the window survives with only its required fields.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    resetAt: soon
+                    totalAmount: null
+                    usedAmount: many
+                    usedPercent: 42.5
+                    windowMs: false
+        result:
+          tracker-claude-main:
+            fetchedAt: 1757900000000
+            providerId: claude
+            status: OK
+            trackerId: tracker-claude-main
+            trackerName: Claude main plan
+            usage:
+              - label: 5h
+                usedPercent: 42.5
+      # A window with no optional fields at all survives the same way.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result:
+          tracker-claude-main:
+            fetchedAt: 1757900000000
+            providerId: claude
+            status: OK
+            trackerId: tracker-claude-main
+            trackerName: Claude main plan
+            usage:
+              - label: 5h
+                usedPercent: 42.5
+      # An empty trackerName falls back to the catalog name for the
+      # providerId.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: ''
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result:
+          tracker-claude-main:
+            fetchedAt: 1757900000000
+            providerId: claude
+            status: OK
+            trackerId: tracker-claude-main
+            trackerName: Claude
+            usage:
+              - label: 5h
+                usedPercent: 42.5
+      # A snapshot with no trackerName key at all also falls back to the
+      # catalog name: the schema field is optional, so an absent value reaches
+      # the fallback like a present-but-invalid one.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: tracker-claude-main
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result:
+          tracker-claude-main:
+            fetchedAt: 1757900000000
+            providerId: claude
+            status: OK
+            trackerId: tracker-claude-main
+            trackerName: Claude
+            usage:
+              - label: 5h
+                usedPercent: 42.5
+      # A non-string trackerName falls back to the catalog name as well.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: 42
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result:
+          tracker-claude-main:
+            fetchedAt: 1757900000000
+            providerId: claude
+            status: OK
+            trackerId: tracker-claude-main
+            trackerName: Claude
+            usage:
+              - label: 5h
+                usedPercent: 42.5
+      # The catalog fallback uses the entry matching the providerId, so a zai
+      # snapshot falls back to z.ai.
+      - params:
+          - rawSnapshots:
+              tracker-zai-main:
+                fetchedAt: 1757900000000
+                providerId: zai
+                trackerId: tracker-zai-main
+                trackerName: ''
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result:
+          tracker-zai-main:
+            fetchedAt: 1757900000000
+            providerId: zai
+            status: OK
+            trackerId: tracker-zai-main
+            trackerName: z.ai
+            usage:
+              - label: 5h
+                usedPercent: 42.5
+      # Among mixed raw snapshots only the valid ones load.
+      - params:
+          - rawSnapshots:
+              tracker-claude-main:
+                fetchedAt: 1757900000000
+                providerId: claude
+                trackerId: tracker-claude-main
+                trackerName: Claude main plan
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+              tracker-openai-main:
+                fetchedAt: 1757900000000
+                providerId: openai
+                trackerId: tracker-openai-main
+                trackerName: OpenAI main plan
+                usage:
+                  - label: 5h
+                    usedPercent: 42.5
+        result:
+          tracker-claude-main:
+            fetchedAt: 1757900000000
+            providerId: claude
+            status: OK
+            trackerId: tracker-claude-main
+            trackerName: Claude main plan
+            usage:
+              - label: 5h
+                usedPercent: 42.5
+      # A top-level array is not a snapshot record and reads as no snapshots.
+      - params:
+          - rawSnapshots: []
+        result: {}
+      # A null payload is not a snapshot record and reads as no snapshots.
+      - params:
+          - rawSnapshots: null
+        result: {}

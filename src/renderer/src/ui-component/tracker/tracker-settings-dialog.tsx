@@ -6,8 +6,7 @@ import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/trac
 import { errorUtil } from '#src/renderer/src/util/error-util'
 import { trackerAccessTokenSourceUtil } from '#src/renderer/src/util/tracker-access-token-source-util'
 import type { OS } from '#src/shared/business/enum/os-enum'
-import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
-import { type AppSettings, type TrackerConfig } from '#src/shared/business/model/settings-model'
+import { SettingsModel, type TrackerConfig } from '#src/shared/business/model/settings-model'
 
 export const TrackerSettingsDialog = (props: {
   onClose: () => void
@@ -15,7 +14,7 @@ export const TrackerSettingsDialog = (props: {
   trackerId: string
 }): ReactElement => {
   const { onClose, onSaved, trackerId } = props
-  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [tracker, setTracker] = useState<TrackerConfig | undefined>(undefined)
   const [osPlatform, setOsPlatform] = useState<OS | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
@@ -47,32 +46,8 @@ export const TrackerSettingsDialog = (props: {
     void loadSettings()
   }, [trackerId])
 
-  const resolveTrackerValidationError = (candidate: TrackerConfig): string | undefined => {
-    if (candidate.providerId !== ProviderIdMapper.DUMMY) {
-      return undefined
-    }
-
-    if (candidate.days.length === 0) {
-      return 'Pick at least one day for this tracker.'
-    }
-
-    if (candidate.times.length === 0) {
-      return 'Add at least one time for this tracker.'
-    }
-
-    return undefined
-  }
-
   const handleSave = async (): Promise<void> => {
     if (settings === undefined || tracker === undefined) {
-      return
-    }
-
-    const validationError = resolveTrackerValidationError(tracker)
-
-    if (validationError !== undefined) {
-      setErrorMessage(validationError)
-
       return
     }
 
@@ -88,7 +63,9 @@ export const TrackerSettingsDialog = (props: {
     setErrorMessage('')
 
     try {
-      await usageClientService.saveSettings({ settings: { ...settings, trackers: nextTrackers } })
+      await usageClientService.saveSettings({
+        settings: new SettingsModel({ settings: { ...settings, trackers: nextTrackers } }),
+      })
     } catch (error) {
       setErrorMessage(errorUtil.resolveMessage(error))
       setIsSaving(false)
@@ -120,7 +97,9 @@ export const TrackerSettingsDialog = (props: {
     setErrorMessage('')
 
     try {
-      await usageClientService.saveSettings({ settings: { ...settings, trackers: nextTrackers } })
+      await usageClientService.saveSettings({
+        settings: new SettingsModel({ settings: { ...settings, trackers: nextTrackers } }),
+      })
     } catch (error) {
       setErrorMessage(errorUtil.resolveMessage(error))
       setIsSaving(false)

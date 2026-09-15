@@ -6,14 +6,14 @@ import { TrackerSettingsDialog } from '#src/renderer/src/ui-component/tracker/tr
 import { DashboardAddButton } from '#src/renderer/src/ui-component/usage-dashboard/dashboard-add-button'
 import { ProviderUsageCard } from '#src/renderer/src/ui-component/usage-dashboard/provider-usage-card'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
-import type { AppSettings } from '#src/shared/business/model/settings-model'
+import type { SettingsModel } from '#src/shared/business/model/settings-model'
 import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
 
 const NOW_TICK_INTERVAL_MS = 1000
 
 export const UsageDashboard = (): ReactElement => {
   const [snapshot, setSnapshot] = useState<UsageSnapshot | undefined>(undefined)
-  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [nowMs, setNowMs] = useState((): number => {
     return Date.now()

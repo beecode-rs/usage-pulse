@@ -1,6 +1,6 @@
 import type { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import type { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
-import type { AppSettings } from '#src/shared/business/model/settings-model'
+import type { SettingsModel } from '#src/shared/business/model/settings-model'
 
 export type UsageWindow = {
   label: string
@@ -28,4 +28,4 @@ export type UsageSnapshot = {
 
 export type UsageUpdateListener = (snapshot: UsageSnapshot) => void
 
-export type SettingsUpdateListener = (settings: AppSettings) => void
+export type SettingsUpdateListener = (settings: SettingsModel) => void

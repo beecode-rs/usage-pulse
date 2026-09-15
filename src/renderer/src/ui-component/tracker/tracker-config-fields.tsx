@@ -1,6 +1,5 @@
 import type { ReactElement } from 'react'
 
-import { DayTimeScheduleFields } from '#src/renderer/src/ui-component/schedule/day-time-schedule-fields'
 import { trackerAccessTokenSourceUtil } from '#src/renderer/src/util/tracker-access-token-source-util'
 import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import type { OS } from '#src/shared/business/enum/os-enum'
@@ -99,21 +98,6 @@ export const TrackerConfigFields = (props: {
             value={config.accessToken}
           />
         </label>
-      )}
-      {config.providerId === ProviderIdMapper.DUMMY && (
-        <>
-          <DayTimeScheduleFields
-            days={config.days}
-            onChange={({ days, times }) => {
-              onChange({ ...config, days, times })
-            }}
-            times={config.times}
-          />
-          <p className="settings-hint">
-            Dev-only test tracker: shows a native macOS popup each time this schedule fires and never displays usage
-            data.
-          </p>
-        </>
       )}
       <label className="settings-field">
         <span className="settings-field-label">Refresh interval (minutes)</span>

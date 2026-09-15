@@ -1,0 +1,186 @@
+# Contract for UsageProviderZai.fetchUsage, the zod validation boundary over
+# the z.ai quota limit response. The only network point is httpUtil.fetchJson,
+# mocked in _usage-provider-zai-contract-harness.ts via vi.mock plus a mutable
+# response holder so each term injects the raw response shape the provider
+# must parse. The data object and its limits array are mandatory and throw
+# when missing, while individual limit records are safeParsed with
+# drop-invalid semantics. A TOKENS_LIMIT record with unit 3 and number 5 maps
+# to the fixed 5-hour window and a TIME_LIMIT record maps to the MCP quota
+# window, whose windowMs is the calendar month ending at nextResetTime.
+# Percentages are clamped to 0-100 and rounded to one decimal, amounts come
+# from currentValue and usage Math.round-ed and are stamped only when both are
+# present with a positive total, and an unparseable nextResetTime drops resetAt
+# and with it the derived windowMs. The harness wraps the async call in a
+# try/catch so rejections surface as errorMessage markers instead of failing
+# the runner.
+subject: usageProviderZaiContractHarness
+module: ./_usage-provider-zai-contract-harness.js
+subjectType: function
+methods:
+  fetchUsage:
+    terms:
+      # TOKENS_LIMIT unit 3 number 5 plus TIME_LIMIT produce the 5-hour window
+      # with the fixed windowMs and the MCP quota window with the calendar
+      # month ending at nextResetTime, rounded percentage, Math.round-ed
+      # amounts from currentValue and usage, and the amount key order
+      # totalAmount before usedAmount.
+      - params:
+          - accessToken: zai-token
+            response:
+              data:
+                limits:
+                  - type: TOKENS_LIMIT
+                    unit: 3
+                    number: 5
+                    percentage: 42.25
+                    nextResetTime: '2026-09-15T18:00:00.000Z'
+                  - type: TIME_LIMIT
+                    percentage: 66.66
+                    nextResetTime: '2026-09-15T12:00:00.000Z'
+                    currentValue: 123.4
+                    usage: 456.7
+        result:
+          windows:
+            - label: 5-hour window
+              resetAt: 1789495200000
+              usedPercent: 42.3
+              windowMs: 18000000
+            - label: MCP quota
+              resetAt: 1789473600000
+              usedPercent: 66.7
+              windowMs: 2678400000
+              totalAmount: 457
+              usedAmount: 123
+      # usage at zero leaves the MCP amounts unstamped while the calendar
+      # month windowMs still comes from nextResetTime, here a 30-day month.
+      - params:
+          - accessToken: zai-token
+            response:
+              data:
+                limits:
+                  - type: TIME_LIMIT
+                    percentage: 50.5
+                    nextResetTime: '2026-10-15T12:00:00.000Z'
+                    currentValue: 7
+                    usage: 0
+        result:
+          windows:
+            - label: MCP quota
+              resetAt: 1792065600000
+              usedPercent: 50.5
+              windowMs: 2592000000
+      # A missing currentValue leaves the MCP amounts unstamped the same way.
+      - params:
+          - accessToken: zai-token
+            response:
+              data:
+                limits:
+                  - type: TIME_LIMIT
+                    percentage: 40
+                    nextResetTime: '2026-09-15T12:00:00.000Z'
+                    usage: 30
+        result:
+          windows:
+            - label: MCP quota
+              resetAt: 1789473600000
+              usedPercent: 40
+              windowMs: 2678400000
+      # A response with no data object throws.
+      - params:
+          - accessToken: zai-token
+            response: {}
+        result:
+          errorMessage: z.ai usage response is missing the data object
+      # A data value that is not a record throws the same message.
+      - params:
+          - accessToken: zai-token
+            response:
+              data: nope
+        result:
+          errorMessage: z.ai usage response is missing the data object
+      # A limits value that is not an array throws the missing-limits message.
+      - params:
+          - accessToken: zai-token
+            response:
+              data:
+                limits: nope
+        result:
+          errorMessage: z.ai usage response is missing the limits array
+      # An empty limits array parses but yields no windows, which throws.
+      - params:
+          - accessToken: zai-token
+            response:
+              data:
+                limits: []
+        result:
+          errorMessage: z.ai usage response contains no recognizable quota limits
+      # Records that parse but match no known limit, alongside a schema-invalid
+      # junk record that is dropped, still leave no recognizable limits.
+      - params:
+          - accessToken: zai-token
+            response:
+              data:
+                limits:
+                  - type: TOKENS_LIMIT
+                    unit: 9
+                    number: 5
+                    percentage: 42.25
+                    nextResetTime: '2026-09-15T18:00:00.000Z'
+                  - junk
+                  - type: OTHER_LIMIT
+                    percentage: 10
+        result:
+          errorMessage: z.ai usage response contains no recognizable quota limits
+      # An unparseable nextResetTime drops resetAt, and without it neither the
+      # calendar month windowMs nor anything else derived from it is stamped,
+      # while the rounded amounts still land.
+      - params:
+          - accessToken: zai-token
+            response:
+              data:
+                limits:
+                  - type: TIME_LIMIT
+                    percentage: 40
+                    nextResetTime: nope
+                    currentValue: 10.2
+                    usage: 20.7
+        result:
+          windows:
+            - label: MCP quota
+              usedPercent: 40
+              totalAmount: 21
+              usedAmount: 10
+      # A percentage above 100 is clamped to 100.
+      - params:
+          - accessToken: zai-token
+            response:
+              data:
+                limits:
+                  - type: TOKENS_LIMIT
+                    unit: 3
+                    number: 5
+                    percentage: 250
+                    nextResetTime: '2026-09-15T18:00:00.000Z'
+        result:
+          windows:
+            - label: 5-hour window
+              resetAt: 1789495200000
+              usedPercent: 100
+              windowMs: 18000000
+      # A negative percentage is clamped to 0.
+      - params:
+          - accessToken: zai-token
+            response:
+              data:
+                limits:
+                  - type: TOKENS_LIMIT
+                    unit: 3
+                    number: 5
+                    percentage: -3
+                    nextResetTime: '2026-09-15T18:00:00.000Z'
+        result:
+          windows:
+            - label: 5-hour window
+              resetAt: 1789495200000
+              usedPercent: 0
+              windowMs: 18000000

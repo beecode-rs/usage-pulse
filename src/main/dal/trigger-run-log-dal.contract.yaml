@@ -1,0 +1,371 @@
+# Contract for TriggerRunLogDal, the JSONL trigger run log: appended and
+# written entries persist as one JSON object per line, and readLogEntries
+# safeParses every line against the ScheduleTriggerRunLogEntry zod schema,
+# dropping blank lines, JSON-invalid lines and schema-invalid lines. A term
+# can only make a single call while the dal is stateful across calls, so the
+# terms drive the scenario functions in _trigger-run-log-dal-contract-harness.ts.
+# Every scenario constructs its own dal pinned to a fresh temp file via the
+# logFilePath constructor param, so nothing written in one term can leak into
+# another. readEntriesOnRawLines pre-writes arbitrary lines (string lines land
+# verbatim, entry objects are serialized) to reach the parser with input the
+# dal itself would never produce.
+subject: triggerRunLogDalContractHarness
+module: ./_trigger-run-log-dal-contract-harness.js
+subjectType: function
+methods:
+  readEntriesAfterAppend:
+    terms:
+      # appendLogEntry then readLogEntries round-trips one finished entry,
+      # including the empty-string skipReason the schema allows.
+      - params:
+          - entries:
+              - durationMs: 1250
+                eventId: evt-42
+                exitCode: 0
+                outputSnippet: build finished
+                phase: finished
+                skipReason: ''
+                slot: '07:00'
+                timestamp: '2026-09-15T07:00:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-morning
+                triggerName: Morning build
+        result:
+          - durationMs: 1250
+            eventId: evt-42
+            exitCode: 0
+            outputSnippet: build finished
+            phase: finished
+            skipReason: ''
+            slot: '07:00'
+            timestamp: '2026-09-15T07:00:00.000Z'
+            trigger: os-schedule
+            triggerId: trigger-morning
+            triggerName: Morning build
+      # A skipped entry with a real skipReason and the manual trigger source
+      # round-trips too, covering every enum union member.
+      - params:
+          - entries:
+              - durationMs: 0
+                eventId: evt-43
+                exitCode: 0
+                outputSnippet: ''
+                phase: skipped
+                skipReason: not-scheduled-day
+                slot: '12:02'
+                timestamp: '2026-09-15T12:02:00.000Z'
+                trigger: manual
+                triggerId: trigger-evening
+                triggerName: Evening sync
+        result:
+          - durationMs: 0
+            eventId: evt-43
+            exitCode: 0
+            outputSnippet: ''
+            phase: skipped
+            skipReason: not-scheduled-day
+            slot: '12:02'
+            timestamp: '2026-09-15T12:02:00.000Z'
+            trigger: manual
+            triggerId: trigger-evening
+            triggerName: Evening sync
+      # Sequential appends accumulate: both entries come back in write order.
+      - params:
+          - entries:
+              - durationMs: 1250
+                eventId: evt-42
+                exitCode: 0
+                outputSnippet: build finished
+                phase: finished
+                skipReason: ''
+                slot: '07:00'
+                timestamp: '2026-09-15T07:00:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-morning
+                triggerName: Morning build
+              - durationMs: 500
+                eventId: evt-44
+                exitCode: 0
+                outputSnippet: starting up
+                phase: started
+                skipReason: ''
+                slot: '17:05'
+                timestamp: '2026-09-15T17:05:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-evening
+                triggerName: Evening sync
+        result:
+          - durationMs: 1250
+            eventId: evt-42
+            exitCode: 0
+            outputSnippet: build finished
+            phase: finished
+            skipReason: ''
+            slot: '07:00'
+            timestamp: '2026-09-15T07:00:00.000Z'
+            trigger: os-schedule
+            triggerId: trigger-morning
+            triggerName: Morning build
+          - durationMs: 500
+            eventId: evt-44
+            exitCode: 0
+            outputSnippet: starting up
+            phase: started
+            skipReason: ''
+            slot: '17:05'
+            timestamp: '2026-09-15T17:05:00.000Z'
+            trigger: os-schedule
+            triggerId: trigger-evening
+            triggerName: Evening sync
+  readEntriesAfterAppendWithRotation:
+    terms:
+      # With rotateMaxBytes at 1 byte every append rotates, and rotation keeps
+      # only the last rotateKeepLineCount non-blank lines: appending three
+      # entries with a keep count of 2 leaves the last two readable.
+      - params:
+          - entries:
+              - durationMs: 1250
+                eventId: evt-42
+                exitCode: 0
+                outputSnippet: build finished
+                phase: finished
+                skipReason: ''
+                slot: '07:00'
+                timestamp: '2026-09-15T07:00:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-morning
+                triggerName: Morning build
+              - durationMs: 0
+                eventId: evt-43
+                exitCode: 0
+                outputSnippet: ''
+                phase: skipped
+                skipReason: not-scheduled-day
+                slot: '12:02'
+                timestamp: '2026-09-15T12:02:00.000Z'
+                trigger: manual
+                triggerId: trigger-evening
+                triggerName: Evening sync
+              - durationMs: 500
+                eventId: evt-44
+                exitCode: 0
+                outputSnippet: starting up
+                phase: started
+                skipReason: ''
+                slot: '17:05'
+                timestamp: '2026-09-15T17:05:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-evening
+                triggerName: Evening sync
+            rotateKeepLineCount: 2
+        result:
+          - durationMs: 0
+            eventId: evt-43
+            exitCode: 0
+            outputSnippet: ''
+            phase: skipped
+            skipReason: not-scheduled-day
+            slot: '12:02'
+            timestamp: '2026-09-15T12:02:00.000Z'
+            trigger: manual
+            triggerId: trigger-evening
+            triggerName: Evening sync
+          - durationMs: 500
+            eventId: evt-44
+            exitCode: 0
+            outputSnippet: starting up
+            phase: started
+            skipReason: ''
+            slot: '17:05'
+            timestamp: '2026-09-15T17:05:00.000Z'
+            trigger: os-schedule
+            triggerId: trigger-evening
+            triggerName: Evening sync
+  readEntriesAfterWrite:
+    terms:
+      # writeLogEntries replaces the whole file and the entries read back
+      # exactly as written.
+      - params:
+          - entries:
+              - durationMs: 1250
+                eventId: evt-42
+                exitCode: 0
+                outputSnippet: build finished
+                phase: finished
+                skipReason: ''
+                slot: '07:00'
+                timestamp: '2026-09-15T07:00:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-morning
+                triggerName: Morning build
+              - durationMs: 500
+                eventId: evt-44
+                exitCode: 0
+                outputSnippet: starting up
+                phase: started
+                skipReason: ''
+                slot: '17:05'
+                timestamp: '2026-09-15T17:05:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-evening
+                triggerName: Evening sync
+        result:
+          - durationMs: 1250
+            eventId: evt-42
+            exitCode: 0
+            outputSnippet: build finished
+            phase: finished
+            skipReason: ''
+            slot: '07:00'
+            timestamp: '2026-09-15T07:00:00.000Z'
+            trigger: os-schedule
+            triggerId: trigger-morning
+            triggerName: Morning build
+          - durationMs: 500
+            eventId: evt-44
+            exitCode: 0
+            outputSnippet: starting up
+            phase: started
+            skipReason: ''
+            slot: '17:05'
+            timestamp: '2026-09-15T17:05:00.000Z'
+            trigger: os-schedule
+            triggerId: trigger-evening
+            triggerName: Evening sync
+  readEntriesAfterWriteEmptyEntries:
+    terms:
+      # Writing no entries empties the file, and reading an empty file yields
+      # no entries rather than an error.
+      - params: []
+        result: []
+  readEntriesOnMissingFile:
+    terms:
+      # A log file that does not exist yet reads as no entries.
+      - params: []
+        result: []
+  readEntriesOnRawLines:
+    terms:
+      # One valid JSONL line parses into the entry.
+      - params:
+          - lines:
+              - durationMs: 1250
+                eventId: evt-42
+                exitCode: 0
+                outputSnippet: build finished
+                phase: finished
+                skipReason: ''
+                slot: '07:00'
+                timestamp: '2026-09-15T07:00:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-morning
+                triggerName: Morning build
+        result:
+          - durationMs: 1250
+            eventId: evt-42
+            exitCode: 0
+            outputSnippet: build finished
+            phase: finished
+            skipReason: ''
+            slot: '07:00'
+            timestamp: '2026-09-15T07:00:00.000Z'
+            trigger: os-schedule
+            triggerId: trigger-morning
+            triggerName: Morning build
+      # A valid entry surrounded by a blank line, a valid-JSON wrong-shape
+      # line and a truncated-JSON line: only the valid entry survives.
+      - params:
+          - lines:
+              - ''
+              - '{"junk":"value"}'
+              - '{"durationMs": 1250'
+              - durationMs: 1250
+                eventId: evt-42
+                exitCode: 0
+                outputSnippet: build finished
+                phase: finished
+                skipReason: ''
+                slot: '07:00'
+                timestamp: '2026-09-15T07:00:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-morning
+                triggerName: Morning build
+              - ''
+        result:
+          - durationMs: 1250
+            eventId: evt-42
+            exitCode: 0
+            outputSnippet: build finished
+            phase: finished
+            skipReason: ''
+            slot: '07:00'
+            timestamp: '2026-09-15T07:00:00.000Z'
+            trigger: os-schedule
+            triggerId: trigger-morning
+            triggerName: Morning build
+      # Blank, wrong-shape and truncated lines alone yield no entries.
+      - params:
+          - lines:
+              - ''
+              - ''
+              - '{"junk":"value"}'
+              - '{"durationMs": 1250'
+        result: []
+      # A schema-valid line carrying an unknown extra key survives with the
+      # extra key stripped by the zod object schema.
+      - params:
+          - lines:
+              - durationMs: 1250
+                eventId: evt-42
+                exitCode: 0
+                outputSnippet: build finished
+                phase: finished
+                skipReason: ''
+                slot: '07:00'
+                timestamp: '2026-09-15T07:00:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-morning
+                triggerName: Morning build
+                unexpectedField: surprise
+        result:
+          - durationMs: 1250
+            eventId: evt-42
+            exitCode: 0
+            outputSnippet: build finished
+            phase: finished
+            skipReason: ''
+            slot: '07:00'
+            timestamp: '2026-09-15T07:00:00.000Z'
+            trigger: os-schedule
+            triggerId: trigger-morning
+            triggerName: Morning build
+      # A valid-JSON line whose phase is outside the enum is dropped.
+      - params:
+          - lines:
+              - durationMs: 1250
+                eventId: evt-42
+                exitCode: 0
+                outputSnippet: build finished
+                phase: running
+                skipReason: ''
+                slot: '07:00'
+                timestamp: '2026-09-15T07:00:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-morning
+                triggerName: Morning build
+        result: []
+      # A valid-JSON line with a string-typed exitCode fails the schema and is
+      # dropped.
+      - params:
+          - lines:
+              - durationMs: 1250
+                eventId: evt-42
+                exitCode: '0'
+                outputSnippet: build finished
+                phase: finished
+                skipReason: ''
+                slot: '07:00'
+                timestamp: '2026-09-15T07:00:00.000Z'
+                trigger: os-schedule
+                triggerId: trigger-morning
+                triggerName: Morning build
+        result: []

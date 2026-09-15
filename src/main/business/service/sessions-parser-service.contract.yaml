@@ -1,0 +1,119 @@
+# Contract for SessionsParserService.parseSessionEntries, the zod validation
+# boundary over 'claude agents --json' stdout: each raw array entry is
+# safeParsed against the session entry schema with drop-invalid semantics.
+# Entries are dropped, not thrown, when pid or startedAt is not a number or
+# sessionId is not a string, while cwd/kind/name fall back to '' when absent or
+# non-string and status outside busy/idle/waiting/unknown falls back to
+# unknown. Leading and trailing junk around the JSON array is recovered by
+# slicing from the first '[' to the last ']', while output with no recoverable
+# array slice or a non-array JSON root throws. The terms drive
+# _sessions-parser-service-contract-harness.ts, which wraps the call in a
+# try/catch so thrown messages surface as errorMessage markers instead of
+# failing the runner.
+subject: sessionsParserServiceContractHarness
+module: ./_sessions-parser-service-contract-harness.js
+subjectType: function
+methods:
+  parseSessionEntries:
+    terms:
+      # A multi-entry array keeps every valid entry with the SessionInfo
+      # mapping intact: strings pass through, absent and non-string
+      # cwd/kind/name both default to '', and busy/idle/waiting map straight
+      # through the status enum.
+      - params:
+          - stdout: '[{"cwd":"/home/milos/repo","kind":"main","name":"build-agent","pid":4242,"sessionId":"sess-42","startedAt":1757900000000,"status":"busy"},{"pid":7,"sessionId":"sess-7","startedAt":1757900100000,"status":"idle"},{"cwd":42,"kind":null,"name":true,"pid":9,"sessionId":"sess-9","startedAt":1757900200000,"status":"waiting"}]'
+        result:
+          sessions:
+            - cwd: /home/milos/repo
+              kind: main
+              name: build-agent
+              pid: 4242
+              sessionId: sess-42
+              startedAt: 1757900000000
+              status: busy
+            - cwd: ''
+              kind: ''
+              name: ''
+              pid: 7
+              sessionId: sess-7
+              startedAt: 1757900100000
+              status: idle
+            - cwd: ''
+              kind: ''
+              name: ''
+              pid: 9
+              sessionId: sess-9
+              startedAt: 1757900200000
+              status: waiting
+      # Status outside the enum falls back to unknown, and the literal
+      # 'unknown' string is itself a valid member that maps to unknown.
+      - params:
+          - stdout: '[{"pid":1,"sessionId":"s1","startedAt":10,"status":"running"},{"pid":2,"sessionId":"s2","startedAt":20,"status":"unknown"}]'
+        result:
+          sessions:
+            - cwd: ''
+              kind: ''
+              name: ''
+              pid: 1
+              sessionId: s1
+              startedAt: 10
+              status: unknown
+            - cwd: ''
+              kind: ''
+              name: ''
+              pid: 2
+              sessionId: s2
+              startedAt: 20
+              status: unknown
+      # Entries with a string pid, a number sessionId, a string startedAt or a
+      # non-object shape are dropped while a valid sibling survives.
+      - params:
+          - stdout: '[{"pid":"4242","sessionId":"sess-a","startedAt":1,"status":"busy","cwd":"x","kind":"k","name":"n"},{"pid":5,"sessionId":42,"startedAt":2,"status":"idle"},{"pid":6,"sessionId":"sess-c","startedAt":"3","status":"waiting"},42,{"pid":8,"sessionId":"survivor","startedAt":5,"status":"busy","cwd":"y","kind":"kk","name":"nn"}]'
+        result:
+          sessions:
+            - cwd: y
+              kind: kk
+              name: nn
+              pid: 8
+              sessionId: survivor
+              startedAt: 5
+              status: busy
+      # A JSON root that is not an array throws the unexpected-output message.
+      - params:
+          - stdout: '{"pid":1}'
+        result:
+          errorMessage: "'claude agents --json' printed unexpected output: expected a JSON array of sessions"
+      # Invalid JSON with a recoverable bracket slice: leading junk before the
+      # array and trailing text after it are both discarded.
+      - params:
+          - stdout: 'Warning: agent list follows [{"pid":11,"sessionId":"sess-11","startedAt":30,"status":"busy","cwd":"/w","kind":"k","name":"nm"}] done'
+        result:
+          sessions:
+            - cwd: /w
+              kind: k
+              name: nm
+              pid: 11
+              sessionId: sess-11
+              startedAt: 30
+              status: busy
+      # Invalid JSON with no '[' at all throws the not-valid-JSON message.
+      - params:
+          - stdout: 'totally not json'
+        result:
+          errorMessage: "'claude agents --json' printed output that is not valid JSON"
+      # Invalid JSON with a '[' but no ']' has no recoverable slice.
+      - params:
+          - stdout: '[{"pid":1'
+        result:
+          errorMessage: "'claude agents --json' printed output that is not valid JSON"
+      # A slice that spans the brackets but is still not valid JSON throws the
+      # not-valid-JSON message.
+      - params:
+          - stdout: 'noise [ oops ] end'
+        result:
+          errorMessage: "'claude agents --json' printed output that is not valid JSON"
+      # An empty array parses to no sessions.
+      - params:
+          - stdout: '[]'
+        result:
+          sessions: []

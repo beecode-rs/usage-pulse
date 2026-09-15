@@ -1,0 +1,120 @@
+# Contract for UsageProviderClaude.fetchUsage, the zod validation boundary
+# over the Anthropic oauth usage response. The only network point is
+# httpUtil.fetchJson, mocked in _usage-provider-claude-contract-harness.ts via
+# vi.mock plus a mutable response holder so each term injects the raw response
+# shape the provider must parse. A usable five_hour section with a numeric
+# utilization is mandatory: it is missing or unusable the provider throws,
+# while seven_day is best-effort and silently skipped. Utilization is clamped
+# to 0-100 and rounded to one decimal, resets_at is parsed into an epoch Date
+# and an unparseable value just drops resetAt. The harness wraps the async
+# call in a try/catch so rejections surface as errorMessage markers instead of
+# failing the runner.
+subject: usageProviderClaudeContractHarness
+module: ./_usage-provider-claude-contract-harness.js
+subjectType: function
+methods:
+  fetchUsage:
+    terms:
+      # A full response yields both windows: five_hour with the Date-parsed
+      # resets_at, rounded utilization and the fixed 5h windowMs, and
+      # seven_day with its own resetAt, an over-100 utilization clamped to
+      # 100 and the fixed weekly windowMs.
+      - params:
+          - accessToken: claude-token
+            response:
+              five_hour:
+                resets_at: '2026-09-15T12:00:00.000Z'
+                utilization: 42.25
+              seven_day:
+                resets_at: '2026-09-22T09:30:00.000Z'
+                utilization: 250
+        result:
+          windows:
+            - label: 5-hour window
+              resetAt: 1789473600000
+              usedPercent: 42.3
+              windowMs: 18000000
+            - label: Weekly
+              resetAt: 1790069400000
+              usedPercent: 100
+              windowMs: 604800000
+      # five_hour absent entirely throws the missing-section message.
+      - params:
+          - accessToken: claude-token
+            response:
+              seven_day:
+                resets_at: '2026-09-22T09:30:00.000Z'
+                utilization: 40
+        result:
+          errorMessage: Claude usage response is missing the 'five_hour' section
+      # five_hour present but not a record is caught back to undefined and
+      # throws the same missing-section message.
+      - params:
+          - accessToken: claude-token
+            response:
+              five_hour: nope
+        result:
+          errorMessage: Claude usage response is missing the 'five_hour' section
+      # five_hour present with a non-number utilization is unusable and throws
+      # the same missing-section message.
+      - params:
+          - accessToken: claude-token
+            response:
+              five_hour:
+                resets_at: '2026-09-15T12:00:00.000Z'
+                utilization: high
+        result:
+          errorMessage: Claude usage response is missing the 'five_hour' section
+      # seven_day present but not a record is silently skipped, leaving only
+      # the five-hour window.
+      - params:
+          - accessToken: claude-token
+            response:
+              five_hour:
+                resets_at: '2026-09-15T12:00:00.000Z'
+                utilization: 42.25
+              seven_day: nope
+        result:
+          windows:
+            - label: 5-hour window
+              resetAt: 1789473600000
+              usedPercent: 42.3
+              windowMs: 18000000
+      # seven_day as a record without a usable utilization is skipped the same
+      # way, so the weekly window never appears half-built.
+      - params:
+          - accessToken: claude-token
+            response:
+              five_hour:
+                utilization: 42.25
+              seven_day:
+                resets_at: '2026-09-22T09:30:00.000Z'
+        result:
+          windows:
+            - label: 5-hour window
+              usedPercent: 42.3
+              windowMs: 18000000
+      # An unparseable resets_at keeps the window but omits resetAt.
+      - params:
+          - accessToken: claude-token
+            response:
+              five_hour:
+                resets_at: not-a-date
+                utilization: 55.1
+        result:
+          windows:
+            - label: 5-hour window
+              usedPercent: 55.1
+              windowMs: 18000000
+      # A response root that is a string is not a JSON object and throws.
+      - params:
+          - accessToken: claude-token
+            response: claude-down
+        result:
+          errorMessage: Claude usage response is not a JSON object
+      # A null response root throws the same not-a-JSON-object message.
+      - params:
+          - accessToken: claude-token
+            response: null
+        result:
+          errorMessage: Claude usage response is not a JSON object

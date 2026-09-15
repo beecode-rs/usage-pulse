@@ -3,7 +3,7 @@ import { type ReactElement, useEffect, useState } from 'react'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { SessionSoundField } from '#src/renderer/src/ui-component/sessions/session-sound-field'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import type { AppSettings } from '#src/shared/business/model/settings-model'
+import { SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
 
 const resolveClampedSecondsAsMs = (params: { maxMs: number; minMs: number; seconds: number }): number => {
@@ -33,7 +33,7 @@ const renderCloseIcon = (): ReactElement => {
 
 export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: () => void }): ReactElement => {
   const { onClose, onSaved } = props
-  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [refreshIntervalMs, setRefreshIntervalMs] = useState(constant.sessionsRefreshInterval.defaultMs)
   const [sessionFinishedPulseMs, setSessionFinishedPulseMs] = useState<number>(constant.sessionFinishedPulse.defaultMs)
   const [sessionFinishedSoundId, setSessionFinishedSoundId] = useState(constant.sessionFinishedSound.defaultId)
@@ -67,14 +67,16 @@ export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: ()
 
     try {
       await usageClientService.saveSettings({
-        settings: {
-          ...settings,
-          sessionFinishedPulseMs,
-          sessionFinishedSoundId,
-          sessionsRefreshIntervalMs: refreshIntervalMs,
-          soundVolumePercent,
-          waitingSoundId,
-        },
+        settings: new SettingsModel({
+          settings: {
+            ...settings,
+            sessionFinishedPulseMs,
+            sessionFinishedSoundId,
+            sessionsRefreshIntervalMs: refreshIntervalMs,
+            soundVolumePercent,
+            waitingSoundId,
+          },
+        }),
       })
     } catch (error) {
       setErrorMessage(errorUtil.resolveMessage(error))

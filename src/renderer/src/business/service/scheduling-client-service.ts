@@ -3,7 +3,7 @@ import type {
   ScheduleTriggerRunLogEntry,
   SchedulingInfo,
 } from '#src/shared/business/model/schedule-trigger-model'
-import type { AppSettings } from '#src/shared/business/model/settings-model'
+import type { SettingsModel } from '#src/shared/business/model/settings-model'
 
 export const schedulingClientService = {
   clearTriggerRunLogs: (params: { triggerId: string }): Promise<void> => {
@@ -26,14 +26,14 @@ export const schedulingClientService = {
   inspectTriggerRegistrations: (): Promise<ScheduleTriggerRegistrationHealth[]> => {
     return window.usageApi.inspectTriggerRegistrations()
   },
-  setSchedulingEnabled: (params: { isEnabled: boolean }): Promise<AppSettings> => {
+  setSchedulingEnabled: (params: { isEnabled: boolean }): Promise<SettingsModel> => {
     const { isEnabled } = params
 
     return window.usageApi.setSchedulingEnabled({
       isEnabled,
     })
   },
-  setTriggerEnabled: (params: { isEnabled: boolean; triggerId: string }): Promise<AppSettings> => {
+  setTriggerEnabled: (params: { isEnabled: boolean; triggerId: string }): Promise<SettingsModel> => {
     const { isEnabled, triggerId } = params
 
     return window.usageApi.setTriggerEnabled({

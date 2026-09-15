@@ -1,0 +1,187 @@
+# Contract for SettingsModel, the editable settings model: the constructor
+# seeds every settings field with its default (constants from the shared
+# constant object, empty collections) and hydrates over those defaults with the
+# optional settings param, replacing whole fields. The with* edit helpers
+# return a fresh model copy with exactly one part changed: the scheduling flag
+# on the whole object, the pause flag or enabled flag only on the id-matching
+# entry, leaving non-matching siblings untouched.
+subject: SettingsModel
+module: ./settings-model.js
+subjectType: class
+constructor:
+  terms:
+    # No params: every field comes back as its default.
+    - params: []
+      result:
+        isSchedulingEnabled: false
+        isSessionsAutoRefreshPaused: false
+        sessionFinishedPulseMs: 10000
+        sessionFinishedSoundId: success
+        sessionsRefreshIntervalMs: 5000
+        soundVolumePercent: 40
+        sshHosts: []
+        trackers: []
+        triggers: []
+        waitingSoundId: chime
+    # Given settings: provided fields survive verbatim (collections replace
+    # wholesale) and absent fields fall back to their defaults.
+    - params:
+        - settings:
+            isSchedulingEnabled: true
+            sessionFinishedSoundId: ding
+            trackers:
+              - accessToken: 'tok'
+                accessTokenSource: 'MANUAL'
+                id: 't-1'
+                isAutoRefreshPaused: false
+                name: 'Claude'
+                providerId: 'claude'
+                refreshIntervalMs: 900000
+      result:
+        isSchedulingEnabled: true
+        isSessionsAutoRefreshPaused: false
+        sessionFinishedPulseMs: 10000
+        sessionFinishedSoundId: ding
+        sessionsRefreshIntervalMs: 5000
+        soundVolumePercent: 40
+        sshHosts: []
+        trackers:
+          - accessToken: 'tok'
+            accessTokenSource: 'MANUAL'
+            id: 't-1'
+            isAutoRefreshPaused: false
+            name: 'Claude'
+            providerId: 'claude'
+            refreshIntervalMs: 900000
+        triggers: []
+        waitingSoundId: chime
+methods:
+  withSchedulingEnabled:
+    terms:
+      # The model copy is returned with only the scheduling flag flipped.
+      - constructorParams:
+          - settings:
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: false
+              sessionFinishedPulseMs: 10000
+              sessionFinishedSoundId: success
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: chime
+        params:
+          - isEnabled: true
+        result:
+          isSchedulingEnabled: true
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+  withTrackerPaused:
+    terms:
+      # Only the tracker with the matching id is flipped; the non-matching sibling is
+      # returned untouched.
+      - constructorParams:
+          - settings:
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: false
+              sessionFinishedPulseMs: 10000
+              sessionFinishedSoundId: success
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers:
+                - accessToken: 'tok'
+                  accessTokenSource: 'MANUAL'
+                  id: 't-1'
+                  isAutoRefreshPaused: false
+                  name: 'Claude'
+                  providerId: 'claude'
+                  refreshIntervalMs: 900000
+                - accessToken: 'zk'
+                  id: 't-2'
+                  isAutoRefreshPaused: false
+                  name: 'z.ai'
+                  providerId: 'zai'
+                  refreshIntervalMs: 900000
+              triggers: []
+              waitingSoundId: chime
+        params:
+          - isAutoRefreshPaused: true
+            trackerId: 't-1'
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers:
+            - accessToken: 'tok'
+              accessTokenSource: 'MANUAL'
+              id: 't-1'
+              isAutoRefreshPaused: true
+              name: 'Claude'
+              providerId: 'claude'
+              refreshIntervalMs: 900000
+            - accessToken: 'zk'
+              id: 't-2'
+              isAutoRefreshPaused: false
+              name: 'z.ai'
+              providerId: 'zai'
+              refreshIntervalMs: 900000
+          triggers: []
+          waitingSoundId: chime
+  withTriggerEnabled:
+    terms:
+      # The trigger with the matching id is flipped to the requested enabled state.
+      - constructorParams:
+          - settings:
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: false
+              sessionFinishedPulseMs: 10000
+              sessionFinishedSoundId: success
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers:
+                - command: 'say-hi'
+                  createdAt: 100
+                  days: ['monday']
+                  id: 'trg-1'
+                  isEnabled: false
+                  name: 'Greet'
+                  timeoutMs: 300000
+                  times: ['08:00']
+              waitingSoundId: chime
+        params:
+          - isEnabled: true
+            triggerId: 'trg-1'
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers:
+            - command: 'say-hi'
+              createdAt: 100
+              days: ['monday']
+              id: 'trg-1'
+              isEnabled: true
+              name: 'Greet'
+              timeoutMs: 300000
+              times: ['08:00']
+          waitingSoundId: chime

@@ -17,7 +17,7 @@ import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
 import { errorUtil } from '#src/renderer/src/util/error-util'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo, type SessionSnapshot, type UnreachableHost } from '#src/shared/business/model/session-model'
-import type { AppSettings } from '#src/shared/business/model/settings-model'
+import { SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
 
 const NOW_TICK_INTERVAL_MS = 1000
@@ -118,7 +118,7 @@ export const SessionsPage = (props: {
   const [errorMessage, setErrorMessage] = useState('')
   const [isHostsOpen, setIsHostsOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [nowMs, setNowMs] = useState((): number => {
     return Date.now()
   })
@@ -163,7 +163,9 @@ export const SessionsPage = (props: {
 
     try {
       const nextSettings = await usageClientService.saveSettings({
-        settings: { ...settings, isSessionsAutoRefreshPaused: !settings.isSessionsAutoRefreshPaused },
+        settings: new SettingsModel({
+          settings: { ...settings, isSessionsAutoRefreshPaused: !settings.isSessionsAutoRefreshPaused },
+        }),
       })
 
       setSettings(nextSettings)

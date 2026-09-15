@@ -2,14 +2,16 @@ import { singletonPattern } from '@beecode/msh-util'
 import { app } from 'electron'
 
 import { SchedulingStrategyFactory } from '#src/main/business/component/scheduling-strategy/factory'
+import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
+import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { config } from '#src/main/util/config'
-import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import type { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import type {
   ScheduleTriggerRegistrationHealth,
   SchedulingInfo,
 } from '#src/shared/business/model/schedule-trigger-model'
-import type { AppSettings, DummyTrackerConfig } from '#src/shared/business/model/settings-model'
+import type { SettingsModel } from '#src/shared/business/model/settings-model'
 
 type SchedulableRegistration = {
   days: ScheduleTriggerDayMapper[]
@@ -21,6 +23,16 @@ export class _SchedulingService {
   protected readonly _executablePrefixArgs = this._resolveDefaultExecutablePrefixArgs()
   protected readonly _executablePath = config.appImage ?? process.execPath
   protected readonly _fingerprintsByRegistrationId = new Map<string, string>()
+  protected readonly _settingsRepo = settingsRepoSingleton()
+  protected readonly _settingsSavedSubscription = appEventBusSingleton().subscribe({
+    listener: () => {
+      void this.syncRegistrations().catch(() => {
+        return undefined
+      })
+    },
+    type: AppEventType.SETTINGS_SAVED,
+  })
+
   protected readonly _strategy = new SchedulingStrategyFactory().resolve()
 
   getSchedulingInfo(): SchedulingInfo {
@@ -30,8 +42,8 @@ export class _SchedulingService {
     }
   }
 
-  async inspectRegistrations(params: { settings: AppSettings }): Promise<ScheduleTriggerRegistrationHealth[]> {
-    const { settings } = params
+  async inspectRegistrations(): Promise<ScheduleTriggerRegistrationHealth[]> {
+    const settings = this._settingsRepo.fetch()
     if (!this._strategy.isSupported) {
       return settings.triggers.map((trigger) => {
         return { isRegistered: false, triggerId: trigger.id }
@@ -47,8 +59,8 @@ export class _SchedulingService {
     }, Promise.resolve([]))
   }
 
-  async syncRegistrations(params: { settings: AppSettings }): Promise<void> {
-    const { settings } = params
+  async syncRegistrations(): Promise<void> {
+    const settings = this._settingsRepo.fetch()
     if (!this._strategy.isSupported) {
       return
     }
@@ -83,24 +95,16 @@ export class _SchedulingService {
     return ['--no-sandbox', app.getAppPath()]
   }
 
-  protected _resolveSchedulables(params: { settings: AppSettings }): SchedulableRegistration[] {
+  protected _resolveSchedulables(params: { settings: SettingsModel }): SchedulableRegistration[] {
     const { settings } = params
-    const enabledTriggers = settings.triggers
+
+    return settings.triggers
       .filter((trigger) => {
         return trigger.isEnabled
       })
       .map((trigger) => {
         return { days: trigger.days, id: trigger.id, times: trigger.times }
       })
-    const activeDummyTrackers = settings.trackers
-      .filter((tracker): tracker is DummyTrackerConfig => {
-        return tracker.providerId === ProviderIdMapper.DUMMY && !tracker.isAutoRefreshPaused
-      })
-      .map((tracker) => {
-        return { days: tracker.days, id: tracker.id, times: tracker.times }
-      })
-
-    return [...enabledTriggers, ...activeDummyTrackers]
   }
 
   protected async _removeRegistrations(params: { registrationIds: string[] }): Promise<void> {

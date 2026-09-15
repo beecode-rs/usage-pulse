@@ -3,10 +3,8 @@ import { randomUUID } from 'node:crypto'
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
 import { triggerRunLogRepoSingleton } from '#src/main/business/repo/trigger-run-log-repo-singleton'
 import { TriggerCommandService } from '#src/main/business/service/trigger-command-service'
-import { dummyTriggerPopup } from '#src/main/lib/dummy-trigger-popup'
 import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/main/util/error-util'
-import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import { ScheduleTriggerRunPhaseMapper } from '#src/shared/business/enum/schedule-trigger-run-phase-mapper-enum'
 import { ScheduleTriggerRunSkipReasonMapper } from '#src/shared/business/enum/schedule-trigger-run-skip-reason-mapper-enum'
@@ -15,14 +13,11 @@ import {
   type ScheduleTriggerConfig,
   type ScheduleTriggerRunLogEntry,
 } from '#src/shared/business/model/schedule-trigger-model'
-import { type AppSettings, type DummyTrackerConfig } from '#src/shared/business/model/settings-model'
+import { type SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant as sharedConstant } from '#src/shared/util/constant'
-
-export type DummyTrackerAction = (params: { trackerName: string }) => Promise<void>
 
 export class TriggerRunnerService {
   protected readonly _commandService = new TriggerCommandService()
-  protected readonly _dummyAction: DummyTrackerAction = dummyTriggerPopup.show
   protected readonly _runLogRepo = triggerRunLogRepoSingleton()
   protected readonly _settingsRepo = settingsRepoSingleton()
   protected readonly _staleSkipMs = sharedConstant.scheduleTrigger.staleSkip.defaultMs
@@ -44,21 +39,13 @@ export class TriggerRunnerService {
     const eventId = this._createEventId()
 
     try {
-      const settings = await this._settingsRepo.load()
+      const settings = this._settingsRepo.fetch()
       const trigger = settings.triggers.find((candidate) => {
         return candidate.id === triggerId
       })
 
       if (trigger !== undefined) {
         return await this._runCommandTrigger({ eventId, settings, source, trigger })
-      }
-
-      const dummyTracker = settings.trackers.find((candidate): candidate is DummyTrackerConfig => {
-        return candidate.providerId === ProviderIdMapper.DUMMY && candidate.id === triggerId
-      })
-
-      if (dummyTracker !== undefined) {
-        return await this._runDummyTracker({ eventId, settings, source, tracker: dummyTracker })
       }
 
       return await this._resolveSkipOutcome({
@@ -91,7 +78,7 @@ export class TriggerRunnerService {
 
   protected async _runCommandTrigger(params: {
     eventId: string
-    settings: AppSettings
+    settings: SettingsModel
     source: ScheduleTriggerRunSourceMapper
     trigger: ScheduleTriggerConfig
   }): Promise<{ exitCode: number }> {
@@ -149,66 +136,6 @@ export class TriggerRunnerService {
     })
 
     return { exitCode: result.exitCode }
-  }
-
-  protected async _runDummyTracker(params: {
-    eventId: string
-    settings: AppSettings
-    source: ScheduleTriggerRunSourceMapper
-    tracker: DummyTrackerConfig
-  }): Promise<{ exitCode: number }> {
-    const { eventId, settings, source, tracker } = params
-    const guardOutcome = await this._resolveGuardSkipOutcome({
-      days: tracker.days,
-      eventId,
-      isDisabled: tracker.isAutoRefreshPaused,
-      isSchedulingEnabled: settings.isSchedulingEnabled,
-      source,
-      times: tracker.times,
-      triggerId: tracker.id,
-      triggerName: tracker.name,
-    })
-
-    if (guardOutcome !== undefined) {
-      return guardOutcome
-    }
-
-    const nearestSlot = this._resolveNearestSlot({ times: tracker.times })
-    const startedAtMs = this._now().getTime()
-
-    await this._appendEntry({
-      entry: this._createEntry({
-        durationMs: 0,
-        eventId,
-        exitCode: -1,
-        outputSnippet: '',
-        phase: ScheduleTriggerRunPhaseMapper.STARTED,
-        skipReason: '',
-        slot: nearestSlot.slot,
-        source,
-        triggerId: tracker.id,
-        triggerName: tracker.name,
-      }),
-    })
-
-    await this._dummyAction({ trackerName: tracker.name })
-
-    await this._appendEntry({
-      entry: this._createEntry({
-        durationMs: this._now().getTime() - startedAtMs,
-        eventId,
-        exitCode: 0,
-        outputSnippet: 'dummy popup shown',
-        phase: ScheduleTriggerRunPhaseMapper.FINISHED,
-        skipReason: '',
-        slot: nearestSlot.slot,
-        source,
-        triggerId: tracker.id,
-        triggerName: tracker.name,
-      }),
-    })
-
-    return { exitCode: 0 }
   }
 
   protected async _resolveGuardSkipOutcome(params: {

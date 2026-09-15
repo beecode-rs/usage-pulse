@@ -1,0 +1,144 @@
+# Contract for SettingsDal, the merged settings storage: a CommonMemoryDal
+# instance for the runtime memory plus the settings file on disk. A term can
+# only make a single call while the dal is stateful across calls, so the terms
+# drive the scenario functions in _settings-dal-contract-harness.ts. Every
+# scenario constructs its own dal pinned to a fresh temp file via the
+# settingsFilePath constructor param, so nothing written in one term can leak
+# into another. The CommonMemoryDal and CommonFileDal base classes are exercised
+# through this subclass: they expose no public members of their own beyond the
+# memory read/write surface, so this file is also their coverage.
+subject: settingsDalContractHarness
+module: ./_settings-dal-contract-harness.js
+subjectType: function
+methods:
+  parsedFileContentAfterWrite:
+    terms:
+      # writeSettings persists to disk: parsing the raw file content yields the
+      # written settings, proving the write went through node fs and not just
+      # memory.
+      - params:
+          - settings:
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: chime
+        result:
+          isSchedulingEnabled: true
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 25000
+          sessionFinishedSoundId: ding
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+  readSettingsAfterSecondWrite:
+    terms:
+      # Two writes then a read: the second settings object wins, the first is replaced.
+      - params:
+          - firstSettings:
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: chime
+            secondSettings:
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: true
+              sessionFinishedPulseMs: 60000
+              sessionFinishedSoundId: fanfare
+              sessionsRefreshIntervalMs: 12000
+              soundVolumePercent: 75
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: ping
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: true
+          sessionFinishedPulseMs: 60000
+          sessionFinishedSoundId: fanfare
+          sessionsRefreshIntervalMs: 12000
+          soundVolumePercent: 75
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: ping
+  readSettingsAfterWrite:
+    terms:
+      # writeSettings stores the value in memory: the following sync readSettings
+      # returns it without touching the file.
+      - params:
+          - settings:
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: chime
+        result:
+          isSchedulingEnabled: true
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 25000
+          sessionFinishedSoundId: ding
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+  readSettingsBeforeWrite:
+    terms:
+      # A freshly constructed dal has nothing in memory: the first readSettings
+      # returns undefined.
+      - params: []
+        result: !undefined
+  readSettingsFileAfterWrite:
+    terms:
+      # writeSettings then readSettingsFile round-trips through the file: the
+      # persisted JSON parses back into the written settings.
+      - params:
+          - settings:
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: true
+              sessionFinishedPulseMs: 60000
+              sessionFinishedSoundId: fanfare
+              sessionsRefreshIntervalMs: 12000
+              soundVolumePercent: 75
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: ping
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: true
+          sessionFinishedPulseMs: 60000
+          sessionFinishedSoundId: fanfare
+          sessionsRefreshIntervalMs: 12000
+          soundVolumePercent: 75
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: ping
+  readSettingsFileOnMissingFile:
+    terms:
+      # Reading the settings file before anything was written resolves undefined
+      # (a missing file is not an error), which the repo maps to defaults.
+      - params: []
+        result: !undefined

@@ -1,0 +1,735 @@
+# Contract for _SettingsRepo, the merged settings store: one async init() that
+# reads the settings file into memory, a sync fetch() of the memory value,
+# save() that writes memory plus file and emits SETTINGS_SAVED, and
+# sanitize() that turns raw settings (file content or renderer payload) into
+# valid AppSettings. A term can only make a single call while the repo is
+# stateful across calls, so the terms drive the scenario functions in
+# _settings-repo-contract-harness.ts. Every file-backed scenario pins the dal
+# to its own fresh temp file, so no settings bleed between terms. The
+# SETTINGS_SAVED scenarios subscribe around the action and unsubscribe after:
+# the bus is a plain Subject with no replay, so terms cannot observe each
+# other's emissions. init() stays silent on the bus because at boot no
+# renderer window exists to receive the event.
+#
+# Sanitize: sound selection - a valid sessionFinishedSoundId survives; anything
+# else (absent, unknown string, non-string) falls back to the success default.
+# 'none' is a valid sound id, so a user who disabled the finished sound stays
+# disabled.
+#
+# Sanitize: pulse - sessionFinishedPulseMs is how long (in milliseconds) the
+# finished card keeps pulsing its border. Only a finite number survives;
+# anything else (absent, string, NaN, null) falls back to the 10 second
+# default. Valid numbers clamp into [0, 60000] ms and round to whole
+# milliseconds, so 0 (indicator off) and 60000 are kept as-is while 90000
+# saturates. The sessions refresh ms key clamps the same way.
+#
+# Sanitize: trackers - the providerId discriminated union decides survival
+# first: an unknown or missing providerId drops the whole item. A minimal
+# claude tracker gets every default (name Claude, empty token, MANUAL source,
+# 15 minute refresh). Invalid field values fall back per-field (catch
+# defaults) while valid siblings survive. The zai variant strips
+# accessTokenSource entirely.
+#
+# Sanitize: triggers - command trims and must survive non-empty; days keeps
+# only weekday names, dedupes and re-orders into the canonical
+# monday..sunday order; times keeps only strict HH:mm values, dedupes and
+# sorts; name trims with 'Trigger' as the fallback; isEnabled is strict (only
+# literal true survives as true); timeoutMs clamps into [60000, 3600000];
+# createdAt falls back to the current time. An item failing any required field
+# (blank command, empty days, empty times) drops while siblings survive.
+#
+# Sanitize: ssh hosts - valid entries survive with a trimmed non-empty url, a
+# boolean isEnabled catch(false) and a regenerated id when blank; entries with
+# a blank or missing url drop; a non-array sshHosts value collapses the whole
+# array to [].
+#
+# Sanitize: unique ids - when two trackers, triggers or ssh hosts share an id,
+# the first keeps it and every later duplicate gets a regenerated id.
+#
+# The sanitize scenarios stub crypto.randomUUID to return 'generated-id-<n>'
+# (a per-call counter, so regeneration order is deterministic) and Date.now to
+# return a fixed 1700000000000 through the TempFileSettingsRepo override,
+# restoring both after each call. Every id the schemas or the unique-id passes
+# would otherwise regenerate and the createdAt fallback would otherwise drift,
+# so the pinning below is only stable through the harness.
+#
+# The runner matches results with a full deep equal (no partial matching), so
+# every sanitize term pins the complete sanitized settings object.
+subject: settingsRepoContractHarness
+module: ./_settings-repo-contract-harness.js
+subjectType: function
+methods:
+  fetchAfterInitOnMissingFile:
+    terms:
+      # init() with no settings file on disk stores the default settings in memory.
+      - params: []
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+  fetchAfterInitOnRawFileSettings:
+    terms:
+      # init() sanitizes the raw file content: valid values survive, unknown keys
+      # are dropped and absent fields fall back to their defaults.
+      - params:
+          - rawSettings:
+              isSchedulingEnabled: true
+              junkKey: junk-value
+              sessionFinishedSoundId: fanfare
+              sessionsRefreshIntervalMs: 30000
+              soundVolumePercent: 75
+        result:
+          isSchedulingEnabled: true
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: fanfare
+          sessionsRefreshIntervalMs: 30000
+          soundVolumePercent: 75
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+  fetchAfterSave:
+    terms:
+      # save() refreshes the memory value, so the following sync fetch() returns
+      # exactly the settings object that was saved.
+      - params:
+          - settings:
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: chime
+        result:
+          isSchedulingEnabled: true
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 25000
+          sessionFinishedSoundId: ding
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Non-default settings pass through save/fetch untouched as well.
+      - params:
+          - settings:
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: true
+              sessionFinishedPulseMs: 60000
+              sessionFinishedSoundId: fanfare
+              sessionsRefreshIntervalMs: 12000
+              soundVolumePercent: 75
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: ping
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: true
+          sessionFinishedPulseMs: 60000
+          sessionFinishedSoundId: fanfare
+          sessionsRefreshIntervalMs: 12000
+          soundVolumePercent: 75
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: ping
+  fetchErrorMessageBeforeInit:
+    terms:
+      # fetch() before init() throws: no memory value has been stored yet.
+      - params: []
+        result: settings are not initialized
+  isSameRepoInstanceAcrossSingletonCalls:
+    terms:
+      # Calling the singleton twice hands out the same repo instance, so every
+      # main-process consumer shares one settings store.
+      - params: []
+        result: true
+  sanitizeRawSettings:
+    terms:
+      # A valid sessionFinishedSoundId survives verbatim.
+      - params:
+          - rawSettings:
+              sessionFinishedSoundId: ding
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: ding
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Neither key present (empty record): the success default.
+      - params:
+          - rawSettings: {}
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # An unknown value in the key falls back to the success default.
+      - params:
+          - rawSettings:
+              sessionFinishedSoundId: 42
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # 'none' is a valid sound id: a user who had the finished sound disabled
+      # stays disabled rather than being reset to the default.
+      - params:
+          - rawSettings:
+              sessionFinishedSoundId: none
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: none
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # A whole number of milliseconds inside the range is kept as the pulse duration.
+      - params:
+          - rawSettings:
+              sessionFinishedPulseMs: 25000
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 25000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Zero is a real choice (indicator off), not a missing value.
+      - params:
+          - rawSettings:
+              sessionFinishedPulseMs: 0
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 0
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Below the minimum clamps up to zero.
+      - params:
+          - rawSettings:
+              sessionFinishedPulseMs: -5000
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 0
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Above the maximum clamps down to a minute.
+      - params:
+          - rawSettings:
+              sessionFinishedPulseMs: 90000
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 60000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # A fractional millisecond count rounds to a whole number.
+      - params:
+          - rawSettings:
+              sessionFinishedPulseMs: 7600.6
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 7601
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # A non-number falls back to the default rather than clamping.
+      - params:
+          - rawSettings:
+              sessionFinishedPulseMs: '20000'
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # The sessions refresh ms key clamps like the pulse does: 1000 ms clamps up to the
+      # 2 second minimum.
+      - params:
+          - rawSettings:
+              sessionsRefreshIntervalMs: 1000
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 2000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # A minimal claude tracker fills in every default: empty token, MANUAL source,
+      # generated id, not paused, catalog name and the 15 minute catalog refresh interval.
+      - params:
+          - rawSettings:
+              trackers:
+                - providerId: 'claude'
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers:
+            - accessToken: ''
+              accessTokenSource: 'MANUAL'
+              id: 'generated-id-1'
+              isAutoRefreshPaused: false
+              name: 'Claude'
+              providerId: 'claude'
+              refreshIntervalMs: 900000
+          triggers: []
+          waitingSoundId: chime
+      # The providerId discriminant decides survival: an unknown providerId, a missing
+      # providerId and non-object items all drop; nothing survives.
+      - params:
+          - rawSettings:
+              trackers:
+                - providerId: 'openai'
+                - {}
+                - 42
+                - 'claude'
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Invalid tracker field values fall back per-field: a non-string token becomes
+      # empty, an unknown source becomes MANUAL, a blank id regenerates, a non-boolean
+      # pause flag becomes false, a blank name becomes the catalog default and a too
+      # small refresh clamps up to the one minute minimum.
+      - params:
+          - rawSettings:
+              trackers:
+                - providerId: 'claude'
+                  accessToken: 42
+                  accessTokenSource: 'cli'
+                  id: ''
+                  isAutoRefreshPaused: 'yes'
+                  name: ''
+                  refreshIntervalMs: 1
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers:
+            - accessToken: ''
+              accessTokenSource: 'MANUAL'
+              id: 'generated-id-1'
+              isAutoRefreshPaused: false
+              name: 'Claude'
+              providerId: 'claude'
+              refreshIntervalMs: 60000
+          triggers: []
+          waitingSoundId: chime
+      # A fully valid zai tracker survives verbatim and the unknown accessTokenSource
+      # key is stripped: the zai shape has no such field.
+      - params:
+          - rawSettings:
+              trackers:
+                - providerId: 'zai'
+                  accessToken: 'zai-token'
+                  accessTokenSource: 'SYSTEM'
+                  id: 'zai-1'
+                  isAutoRefreshPaused: true
+                  name: 'GLM'
+                  refreshIntervalMs: 60000
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers:
+            - accessToken: 'zai-token'
+              id: 'zai-1'
+              isAutoRefreshPaused: true
+              name: 'GLM'
+              providerId: 'zai'
+              refreshIntervalMs: 60000
+          triggers: []
+          waitingSoundId: chime
+      # A fully valid trigger canonicalizes: command and name trim, days keep weekday
+      # names deduped into monday..sunday order, times keep strict HH:mm values deduped
+      # and sorted, and timeoutMs clamps up from below the one minute minimum.
+      - params:
+          - rawSettings:
+              triggers:
+                - command: '  diskutil unmount  '
+                  createdAt: 42
+                  days: ['sunday', 'monday', 'monday', 'friday', 'notaday', 7]
+                  id: 'trg-full'
+                  isEnabled: true
+                  name: '  Weekly cleanup  '
+                  timeoutMs: 4500
+                  times: ['23:59', '9:05', '09:05', '24:00', '00:00', '09:5']
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers:
+            - command: 'diskutil unmount'
+              createdAt: 42
+              days: ['monday', 'friday', 'sunday']
+              id: 'trg-full'
+              isEnabled: true
+              name: 'Weekly cleanup'
+              timeoutMs: 60000
+              times: ['00:00', '09:05', '23:59']
+          waitingSoundId: chime
+      # Trigger drop conditions: a whitespace command, empty days and empty (all
+      # invalid) times each drop their item while the minimal valid sibling survives
+      # with every default: 'Trigger' name, false enabled, now-stamped createdAt,
+      # generated id and the 5 minute default timeout.
+      - params:
+          - rawSettings:
+              triggers:
+                - command: '   '
+                  days: ['monday']
+                  times: ['08:00']
+                - command: 'backup'
+                  days: []
+                  times: ['08:00']
+                - command: 'backup'
+                  days: ['monday']
+                  times: ['banana']
+                - command: 'backup'
+                  days: ['monday']
+                  times: ['08:00']
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers:
+            - command: 'backup'
+              createdAt: 1700000000000
+              days: ['monday']
+              id: 'generated-id-1'
+              isEnabled: false
+              name: 'Trigger'
+              timeoutMs: 300000
+              times: ['08:00']
+          waitingSoundId: chime
+      # Trigger strictness: isEnabled 'true' (string) catches to false, a non-number
+      # createdAt catches to the stubbed now, and timeoutMs clamps down to the one
+      # hour maximum.
+      - params:
+          - rawSettings:
+              triggers:
+                - command: 'uptime'
+                  createdAt: 'yesterday'
+                  days: ['saturday']
+                  id: 'trg-strict'
+                  isEnabled: 'true'
+                  times: ['07:15']
+                  timeoutMs: 7200000
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers:
+            - command: 'uptime'
+              createdAt: 1700000000000
+              days: ['saturday']
+              id: 'trg-strict'
+              isEnabled: false
+              name: 'Trigger'
+              timeoutMs: 3600000
+              times: ['07:15']
+          waitingSoundId: chime
+      # Ssh hosts: a valid entry keeps its id, trims its url and keeps isEnabled;
+      # a blank url, a missing url and non-object items drop; an entry without an id
+      # gets one generated and a non-boolean isEnabled catches to false.
+      - params:
+          - rawSettings:
+              sshHosts:
+                - id: 'host-1'
+                  url: '  ssh://one.example  '
+                  isEnabled: true
+                - id: 'host-2'
+                  url: '   '
+                - id: 'host-3'
+                - 42
+                - url: 'ssh://gen'
+                  isEnabled: 'yes'
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts:
+            - id: 'host-1'
+              isEnabled: true
+              url: 'ssh://one.example'
+            - id: 'generated-id-1'
+              isEnabled: false
+              url: 'ssh://gen'
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # A non-array sshHosts value collapses the whole collection to an empty list.
+      - params:
+          - rawSettings:
+              sshHosts:
+                enabled: true
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Duplicate tracker ids: the first tracker keeps the shared id, the second gets
+      # a regenerated one.
+      - params:
+          - rawSettings:
+              trackers:
+                - providerId: 'claude'
+                  id: 'dup'
+                  accessToken: 'first'
+                - providerId: 'zai'
+                  id: 'dup'
+                  accessToken: 'second'
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers:
+            - accessToken: 'first'
+              accessTokenSource: 'MANUAL'
+              id: 'dup'
+              isAutoRefreshPaused: false
+              name: 'Claude'
+              providerId: 'claude'
+              refreshIntervalMs: 900000
+            - accessToken: 'second'
+              id: 'generated-id-1'
+              isAutoRefreshPaused: false
+              name: 'z.ai'
+              providerId: 'zai'
+              refreshIntervalMs: 900000
+          triggers: []
+          waitingSoundId: chime
+      # Duplicate trigger ids: the first trigger keeps the shared id, the second gets
+      # a regenerated one.
+      - params:
+          - rawSettings:
+              triggers:
+                - command: 'a'
+                  createdAt: 1
+                  days: ['monday']
+                  id: 'dup'
+                  times: ['08:00']
+                - command: 'b'
+                  createdAt: 2
+                  days: ['tuesday']
+                  id: 'dup'
+                  times: ['09:00']
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers:
+            - command: 'a'
+              createdAt: 1
+              days: ['monday']
+              id: 'dup'
+              isEnabled: false
+              name: 'Trigger'
+              timeoutMs: 300000
+              times: ['08:00']
+            - command: 'b'
+              createdAt: 2
+              days: ['tuesday']
+              id: 'generated-id-1'
+              isEnabled: false
+              name: 'Trigger'
+              timeoutMs: 300000
+              times: ['09:00']
+          waitingSoundId: chime
+      # Duplicate ssh host ids: the first host keeps the shared id, the second gets
+      # a regenerated one.
+      - params:
+          - rawSettings:
+              sshHosts:
+                - id: 'dup'
+                  url: 'ssh://a'
+                - id: 'dup'
+                  url: 'ssh://b'
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts:
+            - id: 'dup'
+              isEnabled: false
+              url: 'ssh://a'
+            - id: 'generated-id-1'
+              isEnabled: false
+              url: 'ssh://b'
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # A non-object rawSettings value (null) bypasses the schema and returns the
+      # default settings object directly.
+      - params:
+          - rawSettings: null
+        result:
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+  settingsSavedDeliveriesAfterInit:
+    terms:
+      # init() writes memory plus file but must NOT emit SETTINGS_SAVED: the
+      # event is reserved for real saves.
+      - params: []
+        result: []
+  settingsSavedDeliveriesAfterSave:
+    terms:
+      # save() emits the saved settings as SETTINGS_SAVED payload on the app
+      # event bus, exactly once.
+      - params:
+          - settings:
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: chime
+        result:
+          - isSchedulingEnabled: true
+            isSessionsAutoRefreshPaused: false
+            sessionFinishedPulseMs: 25000
+            sessionFinishedSoundId: ding
+            sessionsRefreshIntervalMs: 5000
+            soundVolumePercent: 40
+            sshHosts: []
+            trackers: []
+            triggers: []
+            waitingSoundId: chime

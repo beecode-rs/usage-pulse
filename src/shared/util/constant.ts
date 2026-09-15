@@ -30,17 +30,10 @@ const providerCatalog: ProviderCatalogEntry[] = [
     id: ProviderIdMapper.ZAI,
     name: 'z.ai',
   },
-  {
-    defaultRefreshIntervalMs: 3_600_000,
-    description: 'Dev-only test tracker that shows a native popup when its schedule fires',
-    id: ProviderIdMapper.DUMMY,
-    name: 'Dummy',
-  },
 ]
 
 export const constant = {
   fiveHourWindowMs,
-  legacyClaudeAccessTokenSourceSystem: 'system',
   maxWindowScheduleTriggerPreset,
   planner: {
     dayMs: 86_400_000,
@@ -94,7 +87,6 @@ export const constant = {
   sessionsAutoRefresh: {
     defaultIsPaused: false,
   },
-  sessionSoundIds: Object.values(SoundNameMapper),
   sessionsRefreshInterval: {
     defaultMs: 5_000,
     maxMs: 300_000,

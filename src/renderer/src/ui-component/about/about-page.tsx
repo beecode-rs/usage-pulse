@@ -3,7 +3,7 @@ import { type ReactElement, useEffect, useState } from 'react'
 import appIconUrl from '#resource/icon/app-icon.png'
 import { updateClientService } from '#src/renderer/src/business/service/update-client-service'
 import '#src/renderer/src/ui-component/about/about-page.css'
-import { providerCatalogUtil } from '#src/renderer/src/util/provider-catalog-util'
+import { constant } from '#src/shared/util/constant'
 
 const TITLE_CLICKS_TO_TOGGLE_DEVELOPMENT = 7
 
@@ -72,7 +72,7 @@ export const AboutPage = (props: { onToggleDevelopmentUnlock: () => void }): Rea
       <section className="about-page-section">
         <h2 className="about-page-section-title">Supported providers</h2>
         <ul className="about-page-provider-list">
-          {providerCatalogUtil.resolveVisibleCatalogEntries().map((catalogEntry) => {
+          {constant.providerCatalog.map((catalogEntry) => {
             return (
               <li className="about-page-provider" key={catalogEntry.id}>
                 <span className="about-page-provider-name">{catalogEntry.name}</span>

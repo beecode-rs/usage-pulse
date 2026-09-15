@@ -1,7 +1,7 @@
 import { appendFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 
-export class FileDal {
+export class CommonFileDal {
   protected async _appendTextFile(params: { content: string; filePath: string }): Promise<void> {
     const { content, filePath } = params
     await mkdir(dirname(filePath), { recursive: true })

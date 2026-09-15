@@ -5,7 +5,7 @@ import { TriggerConfigFields } from '#src/renderer/src/ui-component/scheduling/t
 import { errorUtil } from '#src/renderer/src/util/error-util'
 import { triggerValidationUtil } from '#src/renderer/src/util/trigger-validation-util'
 import { type ScheduleTriggerConfig } from '#src/shared/business/model/schedule-trigger-model'
-import { type AppSettings } from '#src/shared/business/model/settings-model'
+import { SettingsModel } from '#src/shared/business/model/settings-model'
 
 export const TriggerSettingsDialog = (props: {
   onClose: () => void
@@ -17,7 +17,7 @@ export const TriggerSettingsDialog = (props: {
   const [isConfirmingRemove, setIsConfirmingRemove] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isTriggerMissing, setIsTriggerMissing] = useState(false)
-  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
@@ -59,16 +59,18 @@ export const TriggerSettingsDialog = (props: {
 
     try {
       await usageClientService.saveSettings({
-        settings: {
-          ...settings,
-          triggers: settings.triggers.map((trigger) => {
-            if (trigger.id !== editedTrigger.id) {
-              return trigger
-            }
+        settings: new SettingsModel({
+          settings: {
+            ...settings,
+            triggers: settings.triggers.map((trigger) => {
+              if (trigger.id !== editedTrigger.id) {
+                return trigger
+              }
 
-            return editedTrigger
-          }),
-        },
+              return editedTrigger
+            }),
+          },
+        }),
       })
     } catch (error) {
       setErrorMessage(errorUtil.resolveMessage(error))
@@ -101,12 +103,14 @@ export const TriggerSettingsDialog = (props: {
 
     try {
       await usageClientService.saveSettings({
-        settings: {
-          ...settings,
-          triggers: settings.triggers.filter((trigger) => {
-            return trigger.id !== editedTrigger.id
-          }),
-        },
+        settings: new SettingsModel({
+          settings: {
+            ...settings,
+            triggers: settings.triggers.filter((trigger) => {
+              return trigger.id !== editedTrigger.id
+            }),
+          },
+        }),
       })
     } catch (error) {
       setErrorMessage(errorUtil.resolveMessage(error))

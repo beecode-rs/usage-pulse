@@ -142,3 +142,84 @@ like this
 - move lifecycle classes (src/main/app-boot/*-life-cycle.ts) into a subfolder life-cycle
 ---
 - EventBusUtil (src/main/util/event-bus-util.ts) looks more like a lib layer code than the util
+---
+- ok we must move the app settings storage to repo layer and have a memory dal layer for it. so creste a common-memory-dal file and reuse it in app-settings-dal which is going to be used in app-settings-repo. so the goal is to extract the appSettings from settings lifecycle (src/main/app-boot/life-cycle/settings-life-cycle.ts). we still need ti setup the appSettings using lifecycle as a first lifecycle. /orchestrating-ts-agents
+- Rename the file Dal and Message Dal to both have common in front of the name. (targets: src/main/dal/file-dal.ts, src/main/dal/memory-dal.ts)
+---
+- there is no need to have two ways of loading settings, it may be confusing. in this case it is ok to have settings in memory and on file, but the flow must be done this way. when the app starts the settings is loaded from file and placed in memory. whanevet the in memory value is changed we must update the file storing the settings. we need to merge appSettings repo and setting repo into one (targets: src/main/business/repo/app-settings-repo-singleton.ts, src/main/business/repo/settings-repo-singleton.ts), that only exposes the memory value. it is fetch synced, the only async call is done from app boot layer as an repo init and it fetches the settings from file. so the file reading is not accrssible from repo or business logic, it must live in the dal layer. /orchestrating-ts-agents
+---
+- Merge the two settings repos in the Electron app at /home/milos/code/usage-pulse (pnpm, not a monorepo) into a single repo with sync in-memory reads, one async init, and write-through file persistence.
+
+## Background (current state, all verified)
+
+- `src/main/business/repo/settings-repo-singleton.ts` — `_SettingsRepo` + `settingsRepoSingleton`. Async `load()` reads file via dal, returns defaults (SettingsService.createDefaultSettings) or sanitizeSettings({rawSettings}); `save()` writes file via dal and emits AppEventType.SETTINGS_SAVED on appEventBusSingleton.
+- `src/main/dal/settings-dal.ts` — `SettingsDal extends CommonFileDal` with `_readJsonFile`/`_writeJsonFile`; file path `join(app.getPath('userData'), 'usage-pulse-settings.json')`, constructor takes optional `{ settingsFilePath }` override.
+- `src/main/business/repo/app-settings-repo-singleton.ts` — `_AppSettingsRepo` + `appSettingsRepoSingleton` over `IAppSettingsDal`; async load() throws 'app settings are not initialized' when empty; save() writes memory.
+- `src/main/dal/app-settings-dal.ts` — `AppSettingsDal extends CommonMemoryDal<AppSettings>` with `_readValue`/`_writeValue`.
+- `src/main/dal/common-memory-dal.ts` and `src/main/dal/common-file-dal.ts` — the two storage base classes (read them first).
+- `src/main/app-boot/life-cycle/settings-life-cycle.ts` — `_createFn` currently: loads from file repo, saves into app-settings repo, saves back to file repo (always rewrites sanitized settings on boot), then `schedulingService.syncRegistrations({ settings }).catch(() => undefined)`.
+- Consumers of `appSettingsRepoSingleton().load()`: `src/main/app-boot/life-cycle/usage-poll-life-cycle.ts`, `src/main/app-boot/life-cycle/sessions-poll-life-cycle.ts` (both read-only).
+- Consumers of `settingsRepoSingleton()`: `src/main/business/use-case/settings-use-case.ts` (load + several saves), `src/main/business/service/trigger-runner-service.ts` (load).
+- The AppSettings model is `src/shared/business/model/settings-model.ts` — keep unchanged.
+
+## Target design (user-mandated, follow exactly)
+
+One repo, one dal; delete the app-settings pair entirely.
+
+**Repo** (`settings-repo-singleton.ts`, keep file/class/singleton names):
+- `init(): Promise<void>` — the ONLY async method, called once from app boot. Reads raw file via dal (`readSettingsFile`), maps undefined → `new SettingsService().createDefaultSettings()`, else `sanitizeSettings({ rawSettings })`, stores the result via dal write (memory + file write-through, which also preserves the current boot behavior of rewriting the sanitized/legacy-migrated value back to the file). Does NOT emit SETTINGS_SAVED (at boot no renderer windows exist; the event is for real saves).
+- `fetch(): AppSettings` — sync read of the memory value; throws if init has not run (keep a message like 'settings are not initialized').
+- `save(params: { settings: AppSettings }): Promise<void>` — write-through via dal (memory + file), then emit `{ payload: settings, type: AppEventType.SETTINGS_SAVED }` on appEventBusSingleton.
+- `ISettingsDal` interface stays declared in the repo file (project convention), now: `readSettingsFile: () => Promise<unknown>`, `readSettings: () => AppSettings | undefined` (sync, memory), `writeSettings: (params: { settings: AppSettings }) => Promise<void>` (memory + file).
+
+**Dal** (`settings-dal.ts`): `SettingsDal` owns both storages — extends `CommonFileDal` for the file and composes a `CommonMemoryDal<AppSettings>` instance for the runtime memory. Keep the optional `{ settingsFilePath }` constructor param (needed by tests). No business logic in the dal (no defaults/sanitize — that stays in the repo via SettingsService).
+
+**Consumer updates**:
+- `settings-life-cycle.ts`: `_createFn` → `await settingsRepoSingleton().init()`, then `const settings = settingsRepoSingleton().fetch()` for the existing `schedulingService.syncRegistrations({ settings }).catch(() => undefined)`. Drop the app-settings repo field and the manual save calls.
+- `usage-poll-life-cycle.ts` + `sessions-poll-life-cycle.ts`: replace `await this._appSettingsRepo.load()` with sync `this._settingsRepo.fetch()`; rename the protected field accordingly.
+- `settings-use-case.ts`: every `await settingsRepoSingleton().load()` becomes sync `settingsRepoSingleton().fetch()`; save calls stay as-is.
+- `trigger-runner-service.ts`: `this._settingsRepo.load()` → `this._settingsRepo.fetch()` (sync).
+
+**Delete**: `src/main/business/repo/app-settings-repo-singleton.ts`, `src/main/dal/app-settings-dal.ts`, `src/main/business/repo/_app-settings-repo-contract-harness.ts`, `src/main/business/repo/app-settings-repo-singleton.contract.yaml`, `src/main/dal/_app-settings-dal-contract-harness.ts`, `src/main/dal/app-settings-dal.contract.yaml`.
+
+**Contract tests** (*.contract.yaml via test-contractor; harness files prefixed `_` live next to the subject; note test-contractor resolves subjects flat so non-callable/class subjects need a `_*-contract-harness.ts` adapter exposing callable wrappers — the deleted app-settings contracts are good templates, git show them if useful):
+- Create `src/main/business/repo/settings-repo-singleton.contract.yaml` (+ harness if needed): singleton identity, fetch before init throws, fetch after init returns sanitized value, save updates fetched value and emits SETTINGS_SAVED (event bus is a singleton — assert via subscribe or reset appEventBusSingleton state between terms if it supports that; if untestable cleanly, cover save-then-fetch only and say so).
+- Create `src/main/dal/settings-dal.contract.yaml` (+ harness): writeSettings then readSettings returns the value (memory), readSettings undefined before any write, readSettingsFile/writeSettings round-trip against a temp file path via the `settingsFilePath` constructor param (node fs tmp file), and writeSettings persists to the file.
+
+## Project constraints (decided, beyond your skills' defaults)
+- Repo layer speaks business words (load/save/fetch/init), dal speaks storage words (read/write); dal owns fs; repo holds no paths.
+- Destructure params on the first body line (`const { settings } = params`), never `params.x` dot-reads in bodies.
+- No constructor DI: protected field initializers only (`= new SettingsDal()` etc.); constructors take config values only.
+- One dal per repo, IXxxDal interface declared in the repo file.
+
+## Out of scope
+Do not touch usage-snapshot / trigger-run-log repo+dal, the AppSettings model, life-cycle registration order, renderer code, or anything else that merely imports settings — only the files named above plus whatever breaks typecheck.
+
+## Verification (run these, report real output)
+`pnpm typecheck`, then `pnpm test:contract`, then `pnpm lint`. All must pass.
+
+## Return
+Files created/changed/deleted; the final public API of the merged repo and dal (method signatures); contract terms covered; the actual result lines of the three verification commands; anything you deliberately skipped or could not test cleanly.
+
+---
+- scheduling service (src/main/business/service/scheduling-service-singleton.ts) can fetch setting on its own, we dont need to pass it now
+- check if other services also expect the settings to be passed by parameter, and fix them
+
+---
+- in ipc controller (src/main/controller/ipc-controller.ts) we are using rawRecord and have a primitive way od validating. use zod for validation of record in ipc.
+- use a util validation wrappet from how we do in the @../visualiser/ project, check the common lib or common node lib i think you will find it there, or check the node core controllet handlers, we are using it there (src/main/controller/ipc-controller.ts)
+- do the recomendation, use /orchestrating-ts-agents skill (src/main/dal/trigger-run-log-dal.ts, src/main/business/service/settings-service.ts, src/main/business/repo/usage-snapshot-repo.ts)
+
+---
+- if we finished migrating can we remove the legacy cide then, if we dont need it anymore (src/main/business/service/settings-service.ts)
+- you can ignore this machine and settings
+---
+- remove the dummy provider for usage (@src/main/business/service/usage-provider/dummy.ts)
+---
+- go with schema folder (src/main/business/service/settings-service.ts)
+---
+- in settingsService (src/main/business/service/settings-service.ts) we have three almost identical functions, ensure unique id. make a util function out of it
+---
+- can we rethink how the setting code [src/main/business/service/settings-service.ts, src/main/business/repo/settings-repo-singleton.ts, src/main/business/use-case/settings-use-case.ts, src/shared/business/model/settings-model.ts] is structured. the idea is for the settings to be editable and fetch it and save to file, and to save it any time something changes. so we dont need service. the repo layer is enough the logic from the service layer for default settings can go in to the model constructor for the settings model
+---
+- we neet to merg settings model (@src/shared/business/model/settings-model.ts) and appsettngs model (@src/shared/business/model/app-settings-model.ts) into one settimgs model (@src/shared/business/model/settings-model.ts). the settings model must be a class

@@ -22,7 +22,7 @@ import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
 import { sideMenuPrefsUtil } from '#src/renderer/src/util/side-menu-prefs-util'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import type { SessionInfo, SessionSnapshot } from '#src/shared/business/model/session-model'
-import type { AppSettings } from '#src/shared/business/model/settings-model'
+import type { SettingsModel } from '#src/shared/business/model/settings-model'
 import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
 import { constant } from '#src/shared/util/constant'
 
@@ -197,7 +197,7 @@ const resolveFooterMenuItems = (params: {
   ]
 }
 
-const resolveIsUsageLive = (params: { settings?: AppSettings }): boolean => {
+const resolveIsUsageLive = (params: { settings?: SettingsModel }): boolean => {
   const { settings } = params
   const trackers = settings?.trackers ?? []
 
@@ -206,13 +206,13 @@ const resolveIsUsageLive = (params: { settings?: AppSettings }): boolean => {
   })
 }
 
-const resolveIsSchedulingLive = (params: { settings?: AppSettings }): boolean => {
+const resolveIsSchedulingLive = (params: { settings?: SettingsModel }): boolean => {
   const { settings } = params
 
   return settings?.isSchedulingEnabled === true
 }
 
-const resolveIsSessionsLive = (params: { settings?: AppSettings }): boolean => {
+const resolveIsSessionsLive = (params: { settings?: SettingsModel }): boolean => {
   const { settings } = params
 
   return settings?.isSessionsAutoRefreshPaused === false
@@ -229,11 +229,11 @@ export const AppShell = (): ReactElement => {
   })
   const [sessionSnapshot, setSessionSnapshot] = useState<SessionSnapshot | undefined>(undefined)
   const [sessionsErrorMessage, setSessionsErrorMessage] = useState('')
-  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [usageSnapshot, setUsageSnapshot] = useState<UsageSnapshot | undefined>(undefined)
   const [usedPercent, setUsedPercent] = useState<number>(DEFAULT_USED_PERCENT)
   const previousSessionsRef = useRef<SessionInfo[] | undefined>(undefined)
-  const settingsRef = useRef<AppSettings | undefined>(undefined)
+  const settingsRef = useRef<SettingsModel | undefined>(undefined)
 
   useEffect(() => {
     const loadSettings = async (): Promise<void> => {

@@ -1,8 +1,8 @@
-import type { AppSettings } from '#src/shared/business/model/settings-model'
+import type { SettingsModel } from '#src/shared/business/model/settings-model'
 import type { SettingsUpdateListener, UsageSnapshot, UsageUpdateListener } from '#src/shared/business/model/usage-model'
 
 export const usageClientService = {
-  getSettings: (): Promise<AppSettings> => {
+  getSettings: (): Promise<SettingsModel> => {
     return window.usageApi.getSettings()
   },
   getSnapshot: (): Promise<UsageSnapshot> => {
@@ -16,12 +16,12 @@ export const usageClientService = {
 
     return window.usageApi.refreshTracker({ trackerId })
   },
-  saveSettings: (params: { settings: AppSettings }): Promise<AppSettings> => {
+  saveSettings: (params: { settings: SettingsModel }): Promise<SettingsModel> => {
     const { settings } = params
 
     return window.usageApi.saveSettings(settings)
   },
-  setTrackerPaused: (params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<AppSettings> => {
+  setTrackerPaused: (params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<SettingsModel> => {
     const { isAutoRefreshPaused, trackerId } = params
 
     return window.usageApi.setTrackerPaused({

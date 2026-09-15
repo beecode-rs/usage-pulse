@@ -28,7 +28,7 @@ import type {
   ScheduleTriggerRunLogEntry,
   SchedulingInfo,
 } from '#src/shared/business/model/schedule-trigger-model'
-import { type AppSettings } from '#src/shared/business/model/settings-model'
+import { type SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
 
 const TRIGGER_DAY_LABELS: Record<ScheduleTriggerDayMapper, string> = {
@@ -281,7 +281,7 @@ const renderTrashIcon = (): ReactElement => {
 }
 
 export const SchedulingPage = (): ReactElement => {
-  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [schedulingInfo, setSchedulingInfo] = useState<SchedulingInfo | undefined>(undefined)
   const [healthByTriggerId, setHealthByTriggerId] = useState<Record<string, ScheduleTriggerRegistrationHealth>>({})
   const [healthErrorMessage, setHealthErrorMessage] = useState('')

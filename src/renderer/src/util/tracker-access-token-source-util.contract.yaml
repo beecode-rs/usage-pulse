@@ -70,24 +70,20 @@ methods:
       # Non-claude trackers pass through untouched.
       - params:
           - config:
-              accessToken: ''
-              days: [friday]
-              id: tracker-dummy
+              accessToken: 'zai-token'
+              id: tracker-zai
               isAutoRefreshPaused: false
-              name: Dummy
-              providerId: dummy
+              name: z.ai
+              providerId: zai
               refreshIntervalMs: 300000
-              times: ['09:00']
             osPlatform: WINDOWS
         result:
-          accessToken: ''
-          days: [friday]
-          id: tracker-dummy
+          accessToken: 'zai-token'
+          id: tracker-zai
           isAutoRefreshPaused: false
-          name: Dummy
-          providerId: dummy
+          name: z.ai
+          providerId: zai
           refreshIntervalMs: 300000
-          times: ['09:00']
   resolveSelection:
     terms:
       # Linux offers the logged-in Claude Code system access token option and keeps the stored source.
@@ -141,13 +137,11 @@ methods:
       - params:
           - config:
               accessToken: ''
-              days: [friday]
-              id: tracker-dummy
+              id: tracker-zai
               isAutoRefreshPaused: false
-              name: Dummy
-              providerId: dummy
+              name: z.ai
+              providerId: zai
               refreshIntervalMs: 300000
-              times: ['09:00']
             osPlatform: LINUX
         result:
           selectedAccessTokenSource: MANUAL

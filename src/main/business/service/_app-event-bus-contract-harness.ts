@@ -1,7 +1,7 @@
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
 import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { type SessionSnapshot } from '#src/shared/business/model/session-model'
-import { type AppSettings } from '#src/shared/business/model/settings-model'
+import { type SettingsModel } from '#src/shared/business/model/settings-model'
 import { type UpdateStatus } from '#src/shared/business/model/update-model'
 import { type UsageSnapshot } from '#src/shared/business/model/usage-model'
 
@@ -37,9 +37,9 @@ export const appEventBusContractHarness = {
 
     return deliveries
   },
-  settingsSavedRoundTrip: (params: { message: AppSettings }): AppSettings[] => {
+  settingsSavedRoundTrip: (params: { message: SettingsModel }): SettingsModel[] => {
     const { message } = params
-    const deliveries: AppSettings[] = []
+    const deliveries: SettingsModel[] = []
     const subscription = appEventBusSingleton().subscribe({
       listener: (settings) => {
         deliveries.push(settings)

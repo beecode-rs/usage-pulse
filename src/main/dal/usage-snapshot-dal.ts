@@ -2,10 +2,10 @@ import { app } from 'electron'
 import { join } from 'node:path'
 
 import { type IUsageSnapshotDal } from '#src/main/business/repo/usage-snapshot-repo'
-import { FileDal } from '#src/main/dal/file-dal'
+import { CommonFileDal } from '#src/main/dal/common-file-dal'
 import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
 
-export class UsageSnapshotDal extends FileDal implements IUsageSnapshotDal {
+export class UsageSnapshotDal extends CommonFileDal implements IUsageSnapshotDal {
   protected readonly _snapshotFilePath: string
 
   constructor(params?: { snapshotFilePath?: string }) {

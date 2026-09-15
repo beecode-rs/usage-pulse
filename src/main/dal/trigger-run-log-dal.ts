@@ -1,12 +1,30 @@
 import { app } from 'electron'
 import { join } from 'node:path'
+import { z } from 'zod'
 
 import { type ITriggerRunLogDal } from '#src/main/business/repo/trigger-run-log-repo-singleton'
-import { FileDal } from '#src/main/dal/file-dal'
+import { CommonFileDal } from '#src/main/dal/common-file-dal'
+import { ScheduleTriggerRunPhaseMapper } from '#src/shared/business/enum/schedule-trigger-run-phase-mapper-enum'
+import { ScheduleTriggerRunSkipReasonMapper } from '#src/shared/business/enum/schedule-trigger-run-skip-reason-mapper-enum'
+import { ScheduleTriggerRunSourceMapper } from '#src/shared/business/enum/schedule-trigger-run-source-mapper-enum'
 import { type ScheduleTriggerRunLogEntry } from '#src/shared/business/model/schedule-trigger-model'
 import { constant } from '#src/shared/util/constant'
 
-export class TriggerRunLogDal extends FileDal implements ITriggerRunLogDal {
+const scheduleTriggerRunLogEntrySchema = z.object({
+  durationMs: z.number(),
+  eventId: z.string(),
+  exitCode: z.number(),
+  outputSnippet: z.string(),
+  phase: z.enum(ScheduleTriggerRunPhaseMapper),
+  skipReason: z.union([z.enum(ScheduleTriggerRunSkipReasonMapper), z.literal('')]),
+  slot: z.string(),
+  timestamp: z.string(),
+  trigger: z.enum(ScheduleTriggerRunSourceMapper),
+  triggerId: z.string(),
+  triggerName: z.string(),
+})
+
+export class TriggerRunLogDal extends CommonFileDal implements ITriggerRunLogDal {
   protected readonly _logFilePath: string
   protected readonly _rotateKeepLineCount: number
   protected readonly _rotateMaxBytes: number
@@ -49,7 +67,13 @@ export class TriggerRunLogDal extends FileDal implements ITriggerRunLogDal {
     }
 
     try {
-      return [JSON.parse(line) as ScheduleTriggerRunLogEntry]
+      const parsedEntry = scheduleTriggerRunLogEntrySchema.safeParse(JSON.parse(line))
+
+      if (parsedEntry.success) {
+        return [parsedEntry.data]
+      }
+
+      return []
     } catch {
       return []
     }

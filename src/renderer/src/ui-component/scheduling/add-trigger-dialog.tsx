@@ -8,7 +8,7 @@ import {
   type ScheduleTriggerConfig,
   type ScheduleTriggerPreset,
 } from '#src/shared/business/model/schedule-trigger-model'
-import { type AppSettings } from '#src/shared/business/model/settings-model'
+import { SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
 
 const DEFAULT_TRIGGER_COMMAND = 'claude -p "what is your name, only name"'
@@ -19,7 +19,7 @@ export const AddTriggerDialog = (props: {
   onSaved: () => void
 }): ReactElement => {
   const { initialPreset = constant.maxWindowScheduleTriggerPreset, onClose, onSaved } = props
-  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [newTrigger, setNewTrigger] = useState<ScheduleTriggerConfig>((): ScheduleTriggerConfig => {
     return {
       command: DEFAULT_TRIGGER_COMMAND,
@@ -63,7 +63,7 @@ export const AddTriggerDialog = (props: {
 
     try {
       await usageClientService.saveSettings({
-        settings: { ...settings, triggers: [...settings.triggers, newTrigger] },
+        settings: new SettingsModel({ settings: { ...settings, triggers: [...settings.triggers, newTrigger] } }),
       })
     } catch (error) {
       setErrorMessage(errorUtil.resolveMessage(error))

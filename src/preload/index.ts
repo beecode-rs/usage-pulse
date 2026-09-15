@@ -9,7 +9,7 @@ import {
   type SchedulingInfo,
 } from '#src/shared/business/model/schedule-trigger-model'
 import { type SessionSnapshot, type SessionsUpdateListener } from '#src/shared/business/model/session-model'
-import { type AppSettings } from '#src/shared/business/model/settings-model'
+import { type SettingsModel } from '#src/shared/business/model/settings-model'
 import { type UpdateStatus, type UpdateStatusListener } from '#src/shared/business/model/update-model'
 import {
   type SettingsUpdateListener,
@@ -33,7 +33,7 @@ const usageApi: UsageApiClient = {
   getSessionsSnapshot: (): Promise<SessionSnapshot | undefined> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_GET_SNAPSHOT)
   },
-  getSettings: (): Promise<AppSettings> => {
+  getSettings: (): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.SETTINGS_GET)
   },
   getSnapshot: (): Promise<UsageSnapshot> => {
@@ -69,7 +69,7 @@ const usageApi: UsageApiClient = {
     }
   },
   onSettingsUpdate: (listener: SettingsUpdateListener): (() => void) => {
-    const settingsUpdateListener = (_event: Electron.IpcRendererEvent, settings: AppSettings): void => {
+    const settingsUpdateListener = (_event: Electron.IpcRendererEvent, settings: SettingsModel): void => {
       listener(settings)
     }
 
@@ -112,16 +112,16 @@ const usageApi: UsageApiClient = {
 
     return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH_TRACKER, trackerId)
   },
-  saveSettings: (settings: AppSettings): Promise<AppSettings> => {
+  saveSettings: (settings: SettingsModel): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.SETTINGS_SAVE, settings)
   },
-  setSchedulingEnabled: (params: { isEnabled: boolean }): Promise<AppSettings> => {
+  setSchedulingEnabled: (params: { isEnabled: boolean }): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.SCHEDULING_SET_ENABLED, params)
   },
-  setTrackerPaused: (params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<AppSettings> => {
+  setTrackerPaused: (params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.USAGE_SET_TRACKER_PAUSED, params)
   },
-  setTriggerEnabled: (params: { isEnabled: boolean; triggerId: string }): Promise<AppSettings> => {
+  setTriggerEnabled: (params: { isEnabled: boolean; triggerId: string }): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.TRIGGER_SET_ENABLED, params)
   },
   testSshHost: (params: { url: string }): Promise<void> => {

@@ -3,7 +3,7 @@ import { type ReactElement, useEffect, useState } from 'react'
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { errorUtil } from '#src/renderer/src/util/error-util'
-import { type AppSettings, type SshHostConfig } from '#src/shared/business/model/settings-model'
+import { SettingsModel, type SshHostConfig } from '#src/shared/business/model/settings-model'
 
 const resolveTestMessageClassName = (hasError: boolean): string => {
   if (hasError) {
@@ -89,7 +89,7 @@ const renderRemoveIcon = (): ReactElement => {
 
 export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void }): ReactElement => {
   const { onClose, onSaved } = props
-  const [settings, setSettings] = useState<AppSettings | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [urlDraft, setUrlDraft] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
@@ -120,7 +120,7 @@ export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void
 
     try {
       const nextSettings = await usageClientService.saveSettings({
-        settings: { ...settings, sshHosts },
+        settings: new SettingsModel({ settings: { ...settings, sshHosts } }),
       })
 
       setSettings(nextSettings)

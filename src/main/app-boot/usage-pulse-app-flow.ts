@@ -10,12 +10,10 @@ import { UsagePollLifeCycle } from '#src/main/app-boot/life-cycle/usage-poll-lif
 
 export class UsagePulseAppFlow extends AppFlow {
   constructor() {
-    const settingsLifeCycle = new SettingsLifeCycle()
-
-    super(settingsLifeCycle, new AppWindowLifeCycle(), new IpcRegistrationLifeCycle(), new RxjsBusLifeCycle(), [
-      new SessionsPollLifeCycle({ settingsLifeCycle }),
+    super(new SettingsLifeCycle(), new AppWindowLifeCycle(), new IpcRegistrationLifeCycle(), new RxjsBusLifeCycle(), [
+      new SessionsPollLifeCycle(),
       new UpdateCheckLifeCycle(),
-      new UsagePollLifeCycle({ settingsLifeCycle }),
+      new UsagePollLifeCycle(),
     ])
   }
 }

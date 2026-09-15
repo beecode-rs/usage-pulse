@@ -1,28 +1,37 @@
 import { singletonPattern } from '@beecode/msh-util'
 
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
+import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
 import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { SessionTranscriptService } from '#src/main/business/service/session-transcript-service'
 import { sessionsServiceSingleton } from '#src/main/business/service/sessions-service-singleton'
 import { sshSessionsServiceSingleton } from '#src/main/business/service/ssh-sessions-service-singleton'
 import { errorUtil } from '#src/main/util/error-util'
 import { type SessionSnapshot } from '#src/shared/business/model/session-model'
-import { type AppSettings } from '#src/shared/business/model/settings-model'
+import { type SettingsModel } from '#src/shared/business/model/settings-model'
 
 export class _SessionsPollService {
   protected _isWindowVisible = false
   protected _refreshInFlight: Promise<SessionSnapshot> | undefined
-  protected _settings: AppSettings | undefined
+  protected _settings: SettingsModel | undefined
   protected _snapshot: SessionSnapshot | undefined
   protected _timer: NodeJS.Timeout | undefined
   protected readonly _sessionTranscriptService = new SessionTranscriptService()
   protected readonly _sessionsService = sessionsServiceSingleton()
+  protected readonly _settingsRepo = settingsRepoSingleton()
+  protected readonly _settingsSavedSubscription = appEventBusSingleton().subscribe({
+    listener: () => {
+      void this.restart().catch(() => {
+        return undefined
+      })
+    },
+    type: AppEventType.SETTINGS_SAVED,
+  })
+
   protected readonly _sshSessionsService = sshSessionsServiceSingleton()
 
-  async start(params: { settings: AppSettings }): Promise<void> {
-    const { settings } = params
-
-    this._settings = settings
+  async start(): Promise<void> {
+    this._settings = this._settingsRepo.fetch()
 
     if (!this._isWindowVisible) {
       return
@@ -31,11 +40,9 @@ export class _SessionsPollService {
     await this._resumeAutoRefresh()
   }
 
-  async restart(params: { settings: AppSettings }): Promise<void> {
-    const { settings } = params
-
+  async restart(): Promise<void> {
     this.stop()
-    this._settings = settings
+    this._settings = this._settingsRepo.fetch()
     await this.refreshNow()
   }
 
@@ -149,7 +156,7 @@ export class _SessionsPollService {
     }
   }
 
-  protected async _fetchSnapshot(params: { settings: AppSettings }): Promise<SessionSnapshot> {
+  protected async _fetchSnapshot(params: { settings: SettingsModel }): Promise<SessionSnapshot> {
     const { settings } = params
     const [localSnapshot, remoteResults] = await Promise.all([
       this._sessionsService.listSessions(),
