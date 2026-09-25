@@ -1,6 +1,6 @@
 import { LifeCycle } from '@beecode/msh-app-boot'
 
-import { ipcRouterSingleton } from '#src/main/controller/ipc/router'
+import { IpcRouter } from '#src/main/controller/ipc/router'
 
 export class IpcRegistrationLifeCycle extends LifeCycle<void> {
   constructor() {
@@ -8,7 +8,7 @@ export class IpcRegistrationLifeCycle extends LifeCycle<void> {
   }
 
   protected _createFn(): Promise<void> {
-    ipcRouterSingleton().register()
+    new IpcRouter().register()
 
     return Promise.resolve()
   }

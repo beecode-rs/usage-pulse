@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
-import { triggerRunLogRepoSingleton } from '#src/main/business/repo/trigger-run-log-repo-singleton'
+import { TriggerRunLogRepo } from '#src/main/business/repo/trigger-run-log-repo'
 import { TriggerCommandService } from '#src/main/business/service/trigger-command-service'
 import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/main/util/error-util'
@@ -18,7 +18,7 @@ import { constant as sharedConstant } from '#src/shared/util/constant'
 
 export class TriggerRunnerService {
   protected readonly _commandService = new TriggerCommandService()
-  protected readonly _runLogRepo = triggerRunLogRepoSingleton()
+  protected readonly _runLogRepo = new TriggerRunLogRepo()
   protected readonly _settingsRepo = settingsRepoSingleton()
   protected readonly _staleSkipMs = sharedConstant.scheduleTrigger.staleSkip.defaultMs
   protected readonly _triggerDayByWeekdayIndex: readonly ScheduleTriggerDayMapper[] = [

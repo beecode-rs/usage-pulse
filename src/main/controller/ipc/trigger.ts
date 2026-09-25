@@ -2,7 +2,7 @@ import { type IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
-import { triggerRunLogRepoSingleton } from '#src/main/business/repo/trigger-run-log-repo-singleton'
+import { TriggerRunLogRepo } from '#src/main/business/repo/trigger-run-log-repo'
 import { schedulingServiceSingleton } from '#src/main/business/service/scheduling-service-singleton'
 import { validationUtil } from '#src/main/util/validation-util'
 import {
@@ -18,13 +18,13 @@ export const ipcTrigger = {
   clearRunLogs: async (_event: IpcMainInvokeEvent, rawParams: unknown): Promise<void> => {
     const { triggerId } = validationUtil.parse(rawParams, triggerRunLogsParamsSchema)
 
-    await triggerRunLogRepoSingleton().removeByTriggerId({ triggerId })
+    await new TriggerRunLogRepo().removeByTriggerId({ triggerId })
   },
 
   getRunLogs: async (_event: IpcMainInvokeEvent, rawParams: unknown): Promise<ScheduleTriggerRunLogEntry[]> => {
     const { triggerId } = validationUtil.parse(rawParams, triggerRunLogsParamsSchema)
 
-    return await triggerRunLogRepoSingleton().listByTriggerId({ triggerId })
+    return await new TriggerRunLogRepo().listByTriggerId({ triggerId })
   },
 
   inspectRegistrations: async (): Promise<ScheduleTriggerRegistrationHealth[]> => {

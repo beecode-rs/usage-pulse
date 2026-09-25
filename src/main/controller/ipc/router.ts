@@ -1,4 +1,3 @@
-import { singletonPattern } from '@beecode/msh-util'
 import { ipcMain } from 'electron'
 
 import { ipcOs } from '#src/main/controller/ipc/os'
@@ -48,7 +47,3 @@ export class IpcRouter {
     ipcMain.handle(IpcChannelMapper.USAGE_SET_TRACKER_PAUSED, ipcUsage.setTrackerPaused)
   }
 }
-
-export const ipcRouterSingleton = singletonPattern(() => {
-  return new IpcRouter()
-})

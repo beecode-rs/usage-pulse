@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { join } from 'node:path'
 import { z } from 'zod'
 
-import { type ITriggerRunLogDal } from '#src/main/business/repo/trigger-run-log-repo-singleton'
+import { type ITriggerRunLogDal } from '#src/main/business/repo/trigger-run-log-repo'
 import { CommonFileDal } from '#src/main/dal/common-file-dal'
 import { ScheduleTriggerRunPhaseMapper } from '#src/shared/business/enum/schedule-trigger-run-phase-mapper-enum'
 import { ScheduleTriggerRunSkipReasonMapper } from '#src/shared/business/enum/schedule-trigger-run-skip-reason-mapper-enum'

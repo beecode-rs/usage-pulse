@@ -1,5 +1,3 @@
-import { singletonPattern } from '@beecode/msh-util'
-
 import { TriggerRunLogDal } from '#src/main/dal/trigger-run-log-dal'
 import { type ScheduleTriggerRunLogEntry } from '#src/shared/business/model/schedule-trigger-model'
 import { constant } from '#src/shared/util/constant'
@@ -10,7 +8,7 @@ export interface ITriggerRunLogDal {
   writeLogEntries: (params: { entries: ScheduleTriggerRunLogEntry[] }) => Promise<void>
 }
 
-export class _TriggerRunLogRepo {
+export class TriggerRunLogRepo {
   protected readonly _dal: ITriggerRunLogDal = new TriggerRunLogDal()
   protected readonly _readEntryLimit = constant.scheduleTrigger.run.log.readEntryLimit
 
@@ -40,7 +38,3 @@ export class _TriggerRunLogRepo {
     await this._dal.writeLogEntries({ entries: keptEntries })
   }
 }
-
-export const triggerRunLogRepoSingleton = singletonPattern(() => {
-  return new _TriggerRunLogRepo()
-})
