@@ -223,3 +223,10 @@ Files created/changed/deleted; the final public API of the merged repo and dal (
 - can we rethink how the setting code [src/main/business/service/settings-service.ts, src/main/business/repo/settings-repo-singleton.ts, src/main/business/use-case/settings-use-case.ts, src/shared/business/model/settings-model.ts] is structured. the idea is for the settings to be editable and fetch it and save to file, and to save it any time something changes. so we dont need service. the repo layer is enough the logic from the service layer for default settings can go in to the model constructor for the settings model
 ---
 - we neet to merg settings model (@src/shared/business/model/settings-model.ts) and appsettngs model (@src/shared/business/model/app-settings-model.ts) into one settimgs model (@src/shared/business/model/settings-model.ts). the settings model must be a class
+---
+- in the @src/main/controller/ipc-controller.ts we can move all handler calls into single function register, they can still be grouped toghether and add comment as a title which is currently used for a function register name.
+- move handlers into grouped files for update.ts put all handlers and on functions into file
+- no, i ment to leave the part
+ipcMain.handle(IpcChannelMapper.USAGE_REFRESH_TRACKER, 
+in the register, and only move the handler, the callback function
+- move @src/main/controller/ipc-controller.ts in @controller/ipc/ folder and call it router
