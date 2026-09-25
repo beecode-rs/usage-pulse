@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { SchedulingStrategyLinuxContractHarness } from '#src/main/business/component/scheduling-strategy/_linux-contract-harness'
+import { SchedulingStrategyLinuxContractHarness } from '#src/main/business/component/scheduling-strategy/__tests__/_linux-contract-harness'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import { osUtil } from '#src/main/util/os-util'

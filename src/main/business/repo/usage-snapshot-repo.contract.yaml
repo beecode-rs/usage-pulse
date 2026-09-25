@@ -8,11 +8,11 @@
 # always OK on output, and trackerName falls back to the catalog entry name
 # when the persisted value is not a non-empty string. A term can only make a
 # single call while the repo reads a file, so the terms drive the scenario
-# functions in _usage-snapshot-repo-contract-harness.ts. Every scenario pins
+# functions in __tests__/_usage-snapshot-repo-contract-harness.ts. Every scenario pins
 # the repo's dal to its own fresh temp file via the repo's snapshotFilePath
 # constructor param, so no snapshots bleed between terms.
 subject: usageSnapshotRepoContractHarness
-module: ./_usage-snapshot-repo-contract-harness.js
+module: ./__tests__/_usage-snapshot-repo-contract-harness.js
 subjectType: function
 methods:
   loadAfterSave:

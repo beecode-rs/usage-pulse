@@ -1,6 +1,6 @@
 # Contract for UsageProviderZai.fetchUsage, the zod validation boundary over
 # the z.ai quota limit response. The only network point is httpUtil.fetchJson,
-# mocked in _usage-provider-zai-contract-harness.ts via vi.mock plus a mutable
+# mocked in __tests__/_usage-provider-zai-contract-harness.ts via vi.mock plus a mutable
 # response holder so each term injects the raw response shape the provider
 # must parse. The data object and its limits array are mandatory and throw
 # when missing, while individual limit records are safeParsed with
@@ -14,7 +14,7 @@
 # try/catch so rejections surface as errorMessage markers instead of failing
 # the runner.
 subject: usageProviderZaiContractHarness
-module: ./_usage-provider-zai-contract-harness.js
+module: ./__tests__/_usage-provider-zai-contract-harness.js
 subjectType: function
 methods:
   fetchUsage:

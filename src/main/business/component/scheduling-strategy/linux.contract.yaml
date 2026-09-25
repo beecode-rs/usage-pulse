@@ -1,10 +1,10 @@
 # Contract for the systemd user timer scheduling strategy.
-# The subject is a harness subclass living in _linux-contract-harness.ts whose only change is a
+# The subject is a harness subclass living in __tests__/_linux-contract-harness.ts whose only change is a
 # no-op _assertLinuxOsPlatform override, so the strategy can be constructed on any dev OS.
 # Protected members are addressed directly: the runner resolves them by name at runtime.
 # configDir values for the impure terms are relative to the package root (vitest's working directory).
 subject: SchedulingStrategyLinuxContractHarness
-module: ./_linux-contract-harness.js
+module: ./__tests__/_linux-contract-harness.js
 subjectType: class
 constructor:
   # Constructor terms must compare the whole serialized instance (vitest also rejects an empty

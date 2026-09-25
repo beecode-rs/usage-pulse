@@ -7,11 +7,11 @@
 # unknown. Leading and trailing junk around the JSON array is recovered by
 # slicing from the first '[' to the last ']', while output with no recoverable
 # array slice or a non-array JSON root throws. The terms drive
-# _sessions-parser-service-contract-harness.ts, which wraps the call in a
+# __tests__/_sessions-parser-service-contract-harness.ts, which wraps the call in a
 # try/catch so thrown messages surface as errorMessage markers instead of
 # failing the runner.
 subject: sessionsParserServiceContractHarness
-module: ./_sessions-parser-service-contract-harness.js
+module: ./__tests__/_sessions-parser-service-contract-harness.js
 subjectType: function
 methods:
   parseSessionEntries:

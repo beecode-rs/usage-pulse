@@ -3,14 +3,14 @@
 # safeParses every line against the ScheduleTriggerRunLogEntry zod schema,
 # dropping blank lines, JSON-invalid lines and schema-invalid lines. A term
 # can only make a single call while the dal is stateful across calls, so the
-# terms drive the scenario functions in _trigger-run-log-dal-contract-harness.ts.
+# terms drive the scenario functions in __tests__/_trigger-run-log-dal-contract-harness.ts.
 # Every scenario constructs its own dal pinned to a fresh temp file via the
 # logFilePath constructor param, so nothing written in one term can leak into
 # another. readEntriesOnRawLines pre-writes arbitrary lines (string lines land
 # verbatim, entry objects are serialized) to reach the parser with input the
 # dal itself would never produce.
 subject: triggerRunLogDalContractHarness
-module: ./_trigger-run-log-dal-contract-harness.js
+module: ./__tests__/_trigger-run-log-dal-contract-harness.js
 subjectType: function
 methods:
   readEntriesAfterAppend:

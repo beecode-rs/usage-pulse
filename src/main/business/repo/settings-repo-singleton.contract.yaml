@@ -4,7 +4,7 @@
 # sanitize() that turns raw settings (file content or renderer payload) into
 # valid AppSettings. A term can only make a single call while the repo is
 # stateful across calls, so the terms drive the scenario functions in
-# _settings-repo-contract-harness.ts. Every file-backed scenario pins the dal
+# __tests__/_settings-repo-contract-harness.ts. Every file-backed scenario pins the dal
 # to its own fresh temp file, so no settings bleed between terms. The
 # SETTINGS_SAVED scenarios subscribe around the action and unsubscribe after:
 # the bus is a plain Subject with no replay, so terms cannot observe each
@@ -56,7 +56,7 @@
 # The runner matches results with a full deep equal (no partial matching), so
 # every sanitize term pins the complete sanitized settings object.
 subject: settingsRepoContractHarness
-module: ./_settings-repo-contract-harness.js
+module: ./__tests__/_settings-repo-contract-harness.js
 subjectType: function
 methods:
   fetchAfterInitOnMissingFile:

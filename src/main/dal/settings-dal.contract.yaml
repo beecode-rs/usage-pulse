@@ -1,14 +1,14 @@
 # Contract for SettingsDal, the merged settings storage: a CommonMemoryDal
 # instance for the runtime memory plus the settings file on disk. A term can
 # only make a single call while the dal is stateful across calls, so the terms
-# drive the scenario functions in _settings-dal-contract-harness.ts. Every
+# drive the scenario functions in __tests__/_settings-dal-contract-harness.ts. Every
 # scenario constructs its own dal pinned to a fresh temp file via the
 # settingsFilePath constructor param, so nothing written in one term can leak
 # into another. The CommonMemoryDal and CommonFileDal base classes are exercised
 # through this subclass: they expose no public members of their own beyond the
 # memory read/write surface, so this file is also their coverage.
 subject: settingsDalContractHarness
-module: ./_settings-dal-contract-harness.js
+module: ./__tests__/_settings-dal-contract-harness.js
 subjectType: function
 methods:
   parsedFileContentAfterWrite:

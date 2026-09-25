@@ -1,6 +1,6 @@
 # Contract for UsageProviderClaude.fetchUsage, the zod validation boundary
 # over the Anthropic oauth usage response. The only network point is
-# httpUtil.fetchJson, mocked in _usage-provider-claude-contract-harness.ts via
+# httpUtil.fetchJson, mocked in __tests__/_usage-provider-claude-contract-harness.ts via
 # vi.mock plus a mutable response holder so each term injects the raw response
 # shape the provider must parse. A usable five_hour section with a numeric
 # utilization is mandatory: it is missing or unusable the provider throws,
@@ -10,7 +10,7 @@
 # call in a try/catch so rejections surface as errorMessage markers instead of
 # failing the runner.
 subject: usageProviderClaudeContractHarness
-module: ./_usage-provider-claude-contract-harness.js
+module: ./__tests__/_usage-provider-claude-contract-harness.js
 subjectType: function
 methods:
   fetchUsage:

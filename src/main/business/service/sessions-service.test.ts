@@ -22,7 +22,7 @@ import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { SessionsServiceContractHarness } from '#src/main/business/service/_sessions-service-contract-harness'
+import { SessionsServiceContractHarness } from '#src/main/business/service/__tests__/_sessions-service-contract-harness'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus-outcome-mapper-enum'

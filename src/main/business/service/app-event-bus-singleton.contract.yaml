@@ -1,6 +1,6 @@
 # Contract for the appEventBusSingleton typed message map.
 # The contractor resolves only flat callable subjects, so the terms drive the
-# scenario functions in _app-event-bus-contract-harness.ts. Each round-trip
+# scenario functions in __tests__/_app-event-bus-contract-harness.ts. Each round-trip
 # term subscribes to one event type, emits that type's own payload, and
 # expects the identical payload back (deep equal), pinning both delivery and
 # the per-type payload wiring. The remaining terms pin that repeated singleton
@@ -9,7 +9,7 @@
 # shared by every term in this file, so each scenario unsubscribes before
 # returning.
 subject: appEventBusContractHarness
-module: ./_app-event-bus-contract-harness.js
+module: ./__tests__/_app-event-bus-contract-harness.js
 subjectType: function
 methods:
   isSameBusInstanceAcrossSingletonCalls:
