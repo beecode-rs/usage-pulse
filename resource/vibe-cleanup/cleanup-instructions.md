@@ -232,3 +232,5 @@ in the register, and only move the handler, the callback function
 - move @src/main/controller/ipc-controller.ts in @controller/ipc/ folder and call it router
 ---
 - check all the singleton classes that we use by using singletonPattern, if the class doesn't need to be a singleton, if it has no memory that new instance will not have, then we can remove the singleton pattern. if you are not sure ask me (@src/main/business/repo/settings-repo-singleton.ts, @src/main/business/repo/trigger-run-log-repo-singleton.ts, @src/main/business/service/app-event-bus-singleton.ts, @src/main/business/service/scheduling-service-singleton.ts, @src/main/business/service/sessions-poll-service-singleton.ts, @src/main/business/service/sessions-service-singleton.ts, @src/main/business/service/ssh-sessions-service-singleton.ts, @src/main/business/service/update-service-singleton.ts, @src/main/business/service/usage-poll-service-singleton.ts, @src/main/controller/ipc/router.ts, @src/main/controller/rxjs-bus/router.ts, @src/main/lib/app-window-store-singleton.ts)
+---
+- rename @src/main/app-boot/usage-pulse-app-flow.ts into desktop-app.ts

@@ -8,7 +8,7 @@ import { SettingsLifeCycle } from '#src/main/app-boot/life-cycle/settings-life-c
 import { UpdateCheckLifeCycle } from '#src/main/app-boot/life-cycle/update-check-life-cycle'
 import { UsagePollLifeCycle } from '#src/main/app-boot/life-cycle/usage-poll-life-cycle'
 
-export class UsagePulseAppFlow extends AppFlow {
+export class DesktopApp extends AppFlow {
   constructor() {
     super(new SettingsLifeCycle(), new AppWindowLifeCycle(), new IpcRegistrationLifeCycle(), new RxjsBusLifeCycle(), [
       new SessionsPollLifeCycle(),

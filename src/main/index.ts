@@ -1,6 +1,6 @@
 import { app, dialog } from 'electron'
 
-import { UsagePulseAppFlow } from '#src/main/app-boot/usage-pulse-app-flow'
+import { DesktopApp } from '#src/main/app-boot/desktop-app'
 import { TriggerRunnerService } from '#src/main/business/service/trigger-runner-service'
 import { devDesktopEntry } from '#src/main/lib/dev-desktop-entry'
 import { errorUtil } from '#src/main/util/error-util'
@@ -57,7 +57,7 @@ const bootstrapApp = async (): Promise<void> => {
 
   devDesktopEntry.install()
 
-  await new UsagePulseAppFlow().create()
+  await new DesktopApp().create()
 }
 
 const handleBootstrapError = (error: unknown): void => {
