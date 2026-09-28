@@ -4,7 +4,7 @@ import { app } from 'electron'
 import { SchedulingStrategyFactory } from '#src/main/business/component/scheduling-strategy/factory'
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
-import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
+import { appEventBusSingleton } from '#src/main/util/app-event-bus-singleton'
 import { config } from '#src/main/util/config'
 import type { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import type {

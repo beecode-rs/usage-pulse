@@ -2,7 +2,7 @@ import { singletonPattern } from '@beecode/msh-util'
 import { app } from 'electron'
 
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
-import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
+import { appEventBusSingleton } from '#src/main/util/app-event-bus-singleton'
 import { objectUtil } from '#src/main/util/object-util'
 import { VersionCompareUtil } from '#src/main/util/version-compare-util'
 import { type UpdateStatus } from '#src/shared/business/model/update-model'

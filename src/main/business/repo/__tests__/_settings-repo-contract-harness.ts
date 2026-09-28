@@ -8,8 +8,8 @@ import {
   _SettingsRepo,
   settingsRepoSingleton,
 } from '#src/main/business/repo/settings-repo-singleton'
-import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { SettingsDal } from '#src/main/dal/settings-dal'
+import { appEventBusSingleton } from '#src/main/util/app-event-bus-singleton'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'
 
 const deterministicNowMs = 1_700_000_000_000
