@@ -238,3 +238,5 @@ in the register, and only move the handler, the callback function
 - any code that has only to do with testing, except contract.ts and unit tests which must live next to the file, move them to the folder in the same level tha file exists __tests__
 ---
 - move this singleton (@src/main/business/service/app-event-bus-singleton.ts) to @src/main/util do not add suffix util to it, this is known util app event bus, and we are moving it to util, because it doesn't have any businss logic, it is used to emmit or subsrcibe to events.
+---
+- move the CACHE_ENTRY_LIMIT (@src/main/business/service/session-transcript-service.ts) to constant, five it a good name so we know that it belongs to session transcript service

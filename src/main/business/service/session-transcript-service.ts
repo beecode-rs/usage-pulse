@@ -3,9 +3,8 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 
 import { ClaudeTranscriptParserService } from '#src/main/lib/claude-transcript-parser/service'
+import { constant } from '#src/main/util/constant'
 import { type SessionInfo, type SessionTranscriptStats } from '#src/shared/business/model/session-model'
-
-const CACHE_ENTRY_LIMIT = 500
 
 type TranscriptCacheEntry = {
   mtimeMs: number
@@ -104,7 +103,7 @@ export class SessionTranscriptService {
     transcript: SessionTranscriptStats | undefined
   }): void {
     const { filePath, mtimeMs, transcript } = params
-    if (this._cacheByPath.size >= CACHE_ENTRY_LIMIT) {
+    if (this._cacheByPath.size >= constant.sessionTranscriptCacheEntryLimit) {
       this._cacheByPath.clear()
     }
 
