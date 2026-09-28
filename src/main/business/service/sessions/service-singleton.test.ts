@@ -1,5 +1,6 @@
-// Supplements: ./sessions-service.contract.yaml
-// Covers what contract.yaml cannot express:
+// Supplements: the per-service contract yamls next to the sessions services
+// (focus/linux-service, focus/macos-service, focus/ghostty-service, focus/vscode-service,
+// process-service, parser-service). Covers what they cannot express:
 // - async rejections of the focus path: the windows platform dispatch error and the Linux
 //   window-not-found, Wayland and xdotool-install errors (the contract runner's error
 //   strategy catches synchronous throws only)
@@ -22,7 +23,7 @@ import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { SessionsServiceContractHarness } from '#src/main/business/service/__tests__/_sessions-service-contract-harness'
+import { SessionsServiceContractHarness } from '#src/main/business/service/sessions/__tests__/_service-singleton-contract-harness'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus-outcome-mapper-enum'

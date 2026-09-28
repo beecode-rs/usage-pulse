@@ -1,6 +1,6 @@
 import { LifeCycle } from '@beecode/msh-app-boot'
 
-import { sessionsPollServiceSingleton } from '#src/main/business/service/sessions-poll-service-singleton'
+import { sessionsPollServiceSingleton } from '#src/main/business/service/sessions/poll-service-singleton'
 
 export class SessionsPollLifeCycle extends LifeCycle<void> {
   protected readonly _sessionsPollService = sessionsPollServiceSingleton()

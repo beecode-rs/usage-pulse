@@ -1,4 +1,4 @@
-import { SessionsParserService } from '#src/main/business/service/sessions-parser-service'
+import { SessionsParserService } from '#src/main/business/service/sessions/parser-service'
 import { errorUtil } from '#src/main/util/error-util'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
 

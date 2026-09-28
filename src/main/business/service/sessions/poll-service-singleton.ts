@@ -3,8 +3,8 @@ import { singletonPattern } from '@beecode/msh-util'
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
 import { SessionTranscriptService } from '#src/main/business/service/session-transcript-service'
-import { sessionsServiceSingleton } from '#src/main/business/service/sessions-service-singleton'
-import { sshSessionsServiceSingleton } from '#src/main/business/service/ssh-sessions-service-singleton'
+import { sessionsServiceSingleton } from '#src/main/business/service/sessions/service-singleton'
+import { sessionsSshServiceSingleton } from '#src/main/business/service/sessions/ssh-service-singleton'
 import { appEventBusSingleton } from '#src/main/util/app-event-bus-singleton'
 import { errorUtil } from '#src/main/util/error-util'
 import { type SessionSnapshot } from '#src/shared/business/model/session-model'
@@ -28,7 +28,7 @@ export class _SessionsPollService {
     type: AppEventType.SETTINGS_SAVED,
   })
 
-  protected readonly _sshSessionsService = sshSessionsServiceSingleton()
+  protected readonly _sshSessionsService = sessionsSshServiceSingleton()
 
   async start(): Promise<void> {
     this._settings = this._settingsRepo.fetch()

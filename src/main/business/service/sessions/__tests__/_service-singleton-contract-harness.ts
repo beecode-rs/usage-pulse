@@ -1,5 +1,6 @@
 import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus-outcome-mapper-enum'
-import { type GhosttyFocusPeer, _SessionsService } from '#src/main/business/service/sessions-service-singleton'
+import { type GhosttyFocusPeer } from '#src/main/business/service/sessions/focus/ghostty-service'
+import { _SessionsService } from '#src/main/business/service/sessions/service-singleton'
 import { type OS } from '#src/shared/business/enum/os-enum'
 
 export class SessionsServiceContractHarness extends _SessionsService {

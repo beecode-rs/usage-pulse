@@ -1,9 +1,9 @@
 import { type IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 
-import { sessionsPollServiceSingleton } from '#src/main/business/service/sessions-poll-service-singleton'
-import { sessionsServiceSingleton } from '#src/main/business/service/sessions-service-singleton'
-import { sshSessionsServiceSingleton } from '#src/main/business/service/ssh-sessions-service-singleton'
+import { sessionsPollServiceSingleton } from '#src/main/business/service/sessions/poll-service-singleton'
+import { sessionsServiceSingleton } from '#src/main/business/service/sessions/service-singleton'
+import { sessionsSshServiceSingleton } from '#src/main/business/service/sessions/ssh-service-singleton'
 import { validationUtil } from '#src/main/util/validation-util'
 import { type SessionSnapshot } from '#src/shared/business/model/session-model'
 
@@ -38,6 +38,6 @@ export const ipcSessions = {
   testSshHost: async (_event: IpcMainInvokeEvent, rawParams: unknown): Promise<void> => {
     const { url } = validationUtil.parse(rawParams, sessionsTestSshHostParamsSchema)
 
-    await sshSessionsServiceSingleton().testHost({ url })
+    await sessionsSshServiceSingleton().testHost({ url })
   },
 }

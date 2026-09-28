@@ -1,0 +1,128 @@
+# Contract for the pure members of SessionsFocusVsCodeService: the osascript window
+# title parser, the workspace-name extraction from VS Code window titles, the cwd
+# workspace candidates, the window index resolution, and the permission-denial error
+# classification.
+subject: SessionsFocusVsCodeService
+module: ./vscode-service.js
+subjectType: class
+constructor:
+  terms:
+    # A fresh instance holds no state beyond the composed query and osascript services.
+    - params: []
+      result:
+        _claudeQueryService: {}
+        _osascriptService:
+          _claudeQueryService: {}
+methods:
+  _parseWindowTitles:
+    terms:
+      # One title per linefeed-separated line, surrounding whitespace trimmed.
+      - constructorParams: []
+        params:
+          - stdout: "◐ app.tsx — claude-code-helper\nemotify\n"
+        result: ["◐ app.tsx — claude-code-helper", emotify]
+      # A single title without a trailing newline.
+      - constructorParams: []
+        params:
+          - stdout: emotify
+        result: [emotify]
+      # Empty stdout means no windows.
+      - constructorParams: []
+        params:
+          - stdout: ""
+        result: []
+      # Whitespace-only stdout means no windows.
+      - constructorParams: []
+        params:
+          - stdout: " \n \n"
+        result: []
+  _resolveWorkspaceName:
+    terms:
+      # The workspace name is the text after the last em-dash separator.
+      - constructorParams: []
+        params:
+          - windowTitle: "◐ session-focus-button.tsx — claude-code-helper"
+        result: claude-code-helper
+      # A window without an editor shows the workspace name alone.
+      - constructorParams: []
+        params:
+          - windowTitle: emotify
+        result: emotify
+      # Only the last segment counts when the editor title itself contains separators.
+      - constructorParams: []
+        params:
+          - windowTitle: "a — b — c"
+        result: c
+  _resolveWorkspaceNameCandidates:
+    terms:
+      # Candidates are the last three path parts, deepest first.
+      - constructorParams: []
+        params:
+          - cwd: /Users/milos/code/claude-code-helper
+        result: [claude-code-helper, code, milos]
+      # Longer paths are capped at three candidates.
+      - constructorParams: []
+        params:
+          - cwd: /a/b/c/d/e
+        result: [e, d, c]
+      # A relative cwd yields its single segment.
+      - constructorParams: []
+        params:
+          - cwd: claude-code-helper
+        result: [claude-code-helper]
+      # The filesystem root yields no candidates.
+      - constructorParams: []
+        params:
+          - cwd: /
+        result: []
+  _resolveWindowIndex:
+    terms:
+      # A window whose workspace name equals the cwd basename resolves to its one-based position.
+      - constructorParams: []
+        params:
+          - cwd: /Users/milos/code/claude-code-helper
+            windowTitles:
+              - "◐ app.tsx — claude-code-helper"
+              - emotify
+        result: 1
+      # A later window resolves to its own position.
+      - constructorParams: []
+        params:
+          - cwd: /Users/milos/code/emotify
+            windowTitles:
+              - "◐ app.tsx — claude-code-helper"
+              - emotify
+        result: 2
+      # A subdir cwd matches on the second candidate when no window matches the first.
+      - constructorParams: []
+        params:
+          - cwd: /Users/milos/code/claude-code-helper/src
+            windowTitles:
+              - emotify
+              - "Git Graph — bm (Workspace)"
+              - "◐ app.tsx — claude-code-helper"
+        result: 3
+      # No candidate matching any window means no window to raise.
+      - constructorParams: []
+        params:
+          - cwd: /Users/milos/code/claude-code-helper
+            windowTitles:
+              - emotify
+        result: !undefined
+  _resolvePermissionDeniedMessage:
+    terms:
+      # The System Events automation denial maps to its Automation-pane hint.
+      - constructorParams: []
+        params:
+          - error: new Error("Not authorized to send Apple events to System Events (-1743)")
+        result: "to focus the exact VS Code window, allow this app to control System Events in System Settings > Privacy & Security > Automation"
+      # The assistive-access denial maps to its Accessibility-pane hint.
+      - constructorParams: []
+        params:
+          - error: new Error("osascript is not allowed assistive access (-1719)")
+        result: "to focus the exact VS Code window, allow this app to control your computer in System Settings > Privacy & Security > Accessibility"
+      # Any other failure is not a permission denial.
+      - constructorParams: []
+        params:
+          - error: new Error("window index out of range")
+        result: !undefined

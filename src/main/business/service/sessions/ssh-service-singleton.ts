@@ -2,7 +2,7 @@ import { singletonPattern } from '@beecode/msh-util'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
-import { SessionsParserService } from '#src/main/business/service/sessions-parser-service'
+import { SessionsParserService } from '#src/main/business/service/sessions/parser-service'
 import { errorUtil } from '#src/main/util/error-util'
 import { type SessionInfo, type SessionSnapshot, type UnreachableHost } from '#src/shared/business/model/session-model'
 import { type SshHostConfig } from '#src/shared/business/model/settings-model'
@@ -39,7 +39,7 @@ type SshHostCacheEntry = {
   result: SshHostFetchResult
 }
 
-export class _SshSessionsService {
+export class _SessionsSshService {
   protected readonly _cacheById = new Map<string, SshHostCacheEntry>()
 
   protected readonly _inFlightById = new Map<string, Promise<SshHostFetchResult>>()
@@ -347,6 +347,6 @@ export class _SshSessionsService {
   }
 }
 
-export const sshSessionsServiceSingleton = singletonPattern(() => {
-  return new _SshSessionsService()
+export const sessionsSshServiceSingleton = singletonPattern(() => {
+  return new _SessionsSshService()
 })
