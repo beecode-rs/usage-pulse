@@ -242,3 +242,5 @@ in the register, and only move the handler, the callback function
 - move the CACHE_ENTRY_LIMIT (@src/main/business/service/session-transcript-service.ts) to constant, five it a good name so we know that it belongs to session transcript service
 ---
 - do it (implement the agreed plan from this session: break src/main/business/service/sessions-service-singleton.ts into multiple services under src/main/business/service/sessions/ with a focus/ subfolder, all named services, only the sessions service stays a singleton; move all sessions-* files into the folder with the sessions- prefix stripped from file names but kept in class/object names; include ssh-sessions-service-singleton.ts renamed to sessions-ssh word order as sessions/ssh-service-singleton.ts)
+---
+- move event bus (@src/main/util/app-event-bus-singleton.ts) to @src/main/lib/

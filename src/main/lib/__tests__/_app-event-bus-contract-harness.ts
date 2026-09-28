@@ -1,5 +1,5 @@
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
-import { appEventBusSingleton } from '#src/main/util/app-event-bus-singleton'
+import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { type SessionSnapshot } from '#src/shared/business/model/session-model'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'
 import { type UpdateStatus } from '#src/shared/business/model/update-model'

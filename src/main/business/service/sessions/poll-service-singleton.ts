@@ -5,7 +5,7 @@ import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-sin
 import { SessionTranscriptService } from '#src/main/business/service/session-transcript-service'
 import { sessionsServiceSingleton } from '#src/main/business/service/sessions/service-singleton'
 import { sessionsSshServiceSingleton } from '#src/main/business/service/sessions/ssh-service-singleton'
-import { appEventBusSingleton } from '#src/main/util/app-event-bus-singleton'
+import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { errorUtil } from '#src/main/util/error-util'
 import { type SessionSnapshot } from '#src/shared/business/model/session-model'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'

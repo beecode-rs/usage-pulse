@@ -7,7 +7,7 @@ import { ClaudeSystemAccessTokenService } from '#src/main/business/service/claud
 import { UsageProviderClaude } from '#src/main/business/service/usage-provider/claude'
 import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
 import { UsageProviderZai } from '#src/main/business/service/usage-provider/zai'
-import { appEventBusSingleton } from '#src/main/util/app-event-bus-singleton'
+import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { errorUtil } from '#src/main/util/error-util'
 import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
