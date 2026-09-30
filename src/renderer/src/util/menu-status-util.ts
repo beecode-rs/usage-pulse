@@ -1,5 +1,6 @@
 import { MenuStatusDotMapper } from '#src/renderer/src/business/enum/menu-status-dot-mapper-enum'
 import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
+import { UsageStalenessUtil } from '#src/renderer/src/util/usage-staleness-util'
 import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
@@ -127,6 +128,29 @@ export class MenuStatusUtil {
 
     if (isAnySessionWaiting) {
       return MenuStatusDotMapper.WAITING
+    }
+
+    return undefined
+  }
+
+  resolveStaleStatusDot(params: {
+    now: number
+    refreshIntervalMsByTrackerId?: Record<string, number>
+    snapshot?: UsageSnapshot
+  }): MenuStatusDotMapper | undefined {
+    const { now, refreshIntervalMsByTrackerId, snapshot } = params
+    const stalenessUtil = new UsageStalenessUtil()
+
+    const isAnyProviderStale = (snapshot?.providers ?? []).some((provider) => {
+      return stalenessUtil.isSnapshotStale({
+        nowMs: now,
+        providerSnapshot: provider,
+        refreshIntervalMs: refreshIntervalMsByTrackerId?.[provider.trackerId],
+      })
+    })
+
+    if (isAnyProviderStale) {
+      return MenuStatusDotMapper.WARNING
     }
 
     return undefined

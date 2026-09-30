@@ -112,6 +112,11 @@
   border-color: color-mix(in srgb, var(--meter-warning) 50%, var(--hairline));
 }
 
+.dashboard-usage-box.is-stale {
+  background: color-mix(in srgb, var(--meter-warning) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--meter-warning) 50%, var(--hairline));
+}
+
 .dashboard-peak-pill {
   align-items: center;
   background: color-mix(in srgb, var(--meter-warning) 10%, transparent);
@@ -144,6 +149,40 @@
 }
 
 .dashboard-peak-pill:hover::after {
+  background: var(--page);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  bottom: calc(100% + 8px);
+  color: var(--ink-primary);
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 400;
+  left: 0;
+  line-height: 1.5;
+  max-width: 280px;
+  padding: 6px 10px;
+  position: absolute;
+  white-space: pre-line;
+  width: max-content;
+  z-index: 2;
+}
+
+.dashboard-stale-pill {
+  align-items: center;
+  background: color-mix(in srgb, var(--meter-warning) 10%, transparent);
+  border-radius: 999px;
+  color: var(--meter-warning);
+  cursor: default;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 5px;
+  padding: 3px 10px;
+  position: relative;
+}
+
+.dashboard-stale-pill:hover::after {
   background: var(--page);
   border: 1px solid var(--hairline);
   border-radius: 6px;

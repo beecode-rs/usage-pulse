@@ -1,4 +1,6 @@
 export enum IpcChannelMapper {
+  MOBILE_DEVICES_UPDATE = 'mobile:devices-update',
+  MOBILE_GET_DEVICES = 'mobile:get-devices',
   OS_GET_PLATFORM = 'os:get-platform',
   SCHEDULING_GET_INFO = 'scheduling:get-info',
   SCHEDULING_SET_ENABLED = 'scheduling:set-enabled',

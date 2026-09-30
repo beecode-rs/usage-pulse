@@ -1,0 +1,48 @@
+# Contract for the sessions poll service background-polling gate.
+# The contractor resolves flat callable subjects, so the terms drive the scenario
+# functions in __tests__/_poll-service-contract-harness.ts. Each scenario spies
+# the settings repo singleton, installs fake timers, and drives one service
+# instance through window-visibility and mobile-server-flag transitions,
+# returning the snapshot refresh count at every checkpoint. The refreshes
+# themselves are stubbed, so only the scheduling decisions are under test.
+subject: sessionsPollServiceContractHarness
+module: ./__tests__/_poll-service-contract-harness.js
+subjectType: function
+methods:
+  windowVisibilityMatrixRefreshCounts:
+    terms:
+      # Mobile server disabled: a hidden window at start refreshes nothing,
+      # showing the window refreshes once immediately and keeps scheduling every
+      # interval, and hiding the window again stops all scheduling.
+      - params:
+          - intervalMs: 1000
+        result:
+          - 0
+          - 1
+          - 3
+          - 3
+  serverEnabledHiddenMatrixRefreshCounts:
+    terms:
+      # Mobile server enabled with the window hidden the whole time: start
+      # refreshes immediately, refreshing keeps scheduling on the interval, and
+      # hiding an already hidden window changes nothing.
+      - params:
+          - intervalMs: 1000
+        result:
+          - 1
+          - 3
+          - 5
+  serverToggleMatrixRefreshCounts:
+    terms:
+      # Toggling the setting while hidden: disabled start refreshes nothing, the
+      # restart after enabling resumes refreshing on the interval, and the
+      # restart after disabling performs the single save-triggered refresh and
+      # then stops scheduling.
+      - params:
+          - intervalMs: 1000
+        result:
+          - 0
+          - 1
+          - 3
+          - 4
+          - 4

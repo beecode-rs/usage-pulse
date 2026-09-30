@@ -4,6 +4,10 @@ import type { UsageApiClient } from '#src/renderer/src/business/service/usage-ap
 import { IpcChannelMapper } from '#src/shared/business/enum/ipc-channel-mapper-enum'
 import type { OS } from '#src/shared/business/enum/os-enum'
 import {
+  type MobileConnectedDevice,
+  type MobileDevicesUpdateListener,
+} from '#src/shared/business/model/mobile-api-model'
+import {
   type ScheduleTriggerRegistrationHealth,
   type ScheduleTriggerRunLogEntry,
   type SchedulingInfo,
@@ -23,6 +27,9 @@ const usageApi: UsageApiClient = {
   },
   focusSession: (params: { cwd: string; pid: number }): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_FOCUS, params)
+  },
+  getMobileDevices: (): Promise<MobileConnectedDevice[]> => {
+    return ipcRenderer.invoke(IpcChannelMapper.MOBILE_GET_DEVICES)
   },
   getPlatform: (): Promise<OS> => {
     return ipcRenderer.invoke(IpcChannelMapper.OS_GET_PLATFORM)
@@ -56,6 +63,17 @@ const usageApi: UsageApiClient = {
   },
   listSessions: (): Promise<SessionSnapshot> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_LIST)
+  },
+  onMobileDevicesUpdate: (listener: MobileDevicesUpdateListener): (() => void) => {
+    const mobileDevicesUpdateListener = (_event: Electron.IpcRendererEvent, devices: MobileConnectedDevice[]): void => {
+      listener(devices)
+    }
+
+    ipcRenderer.on(IpcChannelMapper.MOBILE_DEVICES_UPDATE, mobileDevicesUpdateListener)
+
+    return () => {
+      ipcRenderer.removeListener(IpcChannelMapper.MOBILE_DEVICES_UPDATE, mobileDevicesUpdateListener)
+    }
   },
   onSessionsUpdate: (listener: SessionsUpdateListener): (() => void) => {
     const sessionsUpdateListener = (_event: Electron.IpcRendererEvent, snapshot: SessionSnapshot): void => {

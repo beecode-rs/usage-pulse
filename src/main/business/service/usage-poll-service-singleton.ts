@@ -45,7 +45,7 @@ export class _UsagePollService {
 
     await this._hydratePersistedSnapshots()
 
-    if (!this._isWindowVisible) {
+    if (!this._isPollingEnabled()) {
       return
     }
 
@@ -73,13 +73,15 @@ export class _UsagePollService {
 
     this._isWindowVisible = isVisible
 
-    if (!isVisible) {
+    if (!isVisible && !this._isPollingEnabled()) {
       this.stop()
 
       return
     }
 
-    void this._resumeTrackers()
+    if (isVisible) {
+      void this._resumeTrackers()
+    }
   }
 
   async refreshNow(): Promise<void> {
@@ -117,6 +119,10 @@ export class _UsagePollService {
 
   getSnapshot(): UsageSnapshot {
     return this._buildSnapshot()
+  }
+
+  protected _isPollingEnabled(): boolean {
+    return this._isWindowVisible || (this._settings?.isMobileServerEnabled ?? false)
   }
 
   protected _resolveTracker(params: { trackerId: string }): TrackerConfig | undefined {
@@ -278,12 +284,14 @@ export class _UsagePollService {
       return {
         ...existingSnapshot,
         nextRefreshAt,
+        refreshIntervalMs: tracker.refreshIntervalMs,
       }
     }
 
     return {
       nextRefreshAt,
       providerId: tracker.providerId,
+      refreshIntervalMs: tracker.refreshIntervalMs,
       status: UsageActivityStatus.PENDING,
       trackerId: tracker.id,
       trackerName: tracker.name,
@@ -354,7 +362,7 @@ export class _UsagePollService {
       return
     }
 
-    if (!this._isWindowVisible) {
+    if (!this._isPollingEnabled()) {
       return
     }
 

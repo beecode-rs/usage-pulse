@@ -1,4 +1,5 @@
 import type { OS } from '#src/shared/business/enum/os-enum'
+import type { MobileConnectedDevice, MobileDevicesUpdateListener } from '#src/shared/business/model/mobile-api-model'
 import type {
   ScheduleTriggerRegistrationHealth,
   ScheduleTriggerRunLogEntry,
@@ -12,6 +13,7 @@ import type { SettingsUpdateListener, UsageSnapshot, UsageUpdateListener } from 
 export type UsageApiClient = {
   clearTriggerRunLogs: (params: { triggerId: string }) => Promise<void>
   focusSession: (params: { cwd: string; pid: number }) => Promise<void>
+  getMobileDevices: () => Promise<MobileConnectedDevice[]>
   getPlatform: () => Promise<OS>
   getSessionsSnapshot: () => Promise<SessionSnapshot | undefined>
   getSettings: () => Promise<SettingsModel>
@@ -23,6 +25,7 @@ export type UsageApiClient = {
   installSessionFocusTool: () => Promise<void>
   isSessionFocusSupported: () => Promise<boolean>
   listSessions: () => Promise<SessionSnapshot>
+  onMobileDevicesUpdate: (listener: MobileDevicesUpdateListener) => () => void
   onSessionsUpdate: (listener: SessionsUpdateListener) => () => void
   onSettingsUpdate: (listener: SettingsUpdateListener) => () => void
   onUpdateStatus: (listener: UpdateStatusListener) => () => void

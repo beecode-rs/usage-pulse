@@ -201,8 +201,15 @@ const triggersSchema = z
   })
 
 export const appSettingsSchema = z.object({
+  isMobileServerEnabled: z.boolean().catch(constant.mobileServer.defaultIsEnabled),
   isSchedulingEnabled: z.boolean().catch(constant.scheduling.defaultIsEnabled),
   isSessionsAutoRefreshPaused: z.boolean().catch(constant.sessionsAutoRefresh.defaultIsPaused),
+  mobileServerPort: clampedNumberSchema({
+    fallback: constant.mobileServer.defaultPort,
+    max: constant.mobileServer.maxPort,
+    min: constant.mobileServer.minPort,
+  }),
+  mobileServerToken: z.string().catch(''),
   sessionFinishedPulseMs: clampedNumberSchema({
     fallback: constant.sessionFinishedPulse.defaultMs,
     max: constant.sessionFinishedPulse.maxMs,

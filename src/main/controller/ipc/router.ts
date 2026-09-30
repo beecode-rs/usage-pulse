@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 
+import { ipcMobile } from '#src/main/controller/ipc/mobile'
 import { ipcOs } from '#src/main/controller/ipc/os'
 import { ipcScheduling } from '#src/main/controller/ipc/scheduling'
 import { ipcSessions } from '#src/main/controller/ipc/sessions'
@@ -11,6 +12,9 @@ import { IpcChannelMapper } from '#src/shared/business/enum/ipc-channel-mapper-e
 
 export class IpcRouter {
   register(): void {
+    // mobile
+    ipcMain.handle(IpcChannelMapper.MOBILE_GET_DEVICES, ipcMobile.getConnectedDevices)
+
     // os
     ipcMain.handle(IpcChannelMapper.OS_GET_PLATFORM, ipcOs.getPlatform)
 

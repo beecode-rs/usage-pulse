@@ -7,6 +7,15 @@ export const rxjsBusIpcForwarder = {
   register: (): { unsubscribe: () => void }[] => {
     return [
       appEventBusSingleton().subscribe({
+        listener: (devices) => {
+          appWindowStoreSingleton().sendToRenderer({
+            channel: IpcChannelMapper.MOBILE_DEVICES_UPDATE,
+            payload: devices,
+          })
+        },
+        type: AppEventType.MOBILE_DEVICES_CHANGED,
+      }),
+      appEventBusSingleton().subscribe({
         listener: (snapshot) => {
           appWindowStoreSingleton().sendToRenderer({ channel: IpcChannelMapper.SESSIONS_UPDATE, payload: snapshot })
         },

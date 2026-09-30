@@ -22,12 +22,12 @@ const scopedSrcAliasPlugin = (): Plugin => {
 
 export default defineConfig({
   main: {
-    build: { externalizeDeps: true },
-    resolve: { alias: [{ find: '#src', replacement: resolve('src') }] },
+    build: { externalizeDeps: false },
+    plugins: [scopedSrcAliasPlugin()],
   },
   preload: {
-    build: { externalizeDeps: true },
-    resolve: { alias: [{ find: '#src', replacement: resolve('src') }] },
+    build: { externalizeDeps: false },
+    plugins: [scopedSrcAliasPlugin()],
   },
   renderer: {
     plugins: [react(), scopedSrcAliasPlugin()],

@@ -1,0 +1,48 @@
+# Contract for the usage poll service background-polling gate.
+# The contractor resolves flat callable subjects, so the terms drive the scenario
+# functions in __tests__/_usage-poll-service-contract-harness.ts. Each scenario
+# spies the settings repo singleton, installs fake timers, and drives one service
+# instance through window-visibility and mobile-server-flag transitions,
+# returning the provider poll count at every checkpoint. The polls themselves are
+# stubbed, so only the scheduling decisions are under test.
+subject: usagePollServiceContractHarness
+module: ./__tests__/_usage-poll-service-contract-harness.js
+subjectType: function
+methods:
+  windowVisibilityMatrixPollCounts:
+    terms:
+      # Mobile server disabled: a hidden window at start polls nothing, showing
+      # the window polls once immediately and keeps scheduling every interval,
+      # and hiding the window again stops all scheduling.
+      - params:
+          - intervalMs: 1000
+        result:
+          - 0
+          - 1
+          - 3
+          - 3
+  serverEnabledHiddenMatrixPollCounts:
+    terms:
+      # Mobile server enabled with the window hidden the whole time: start polls
+      # immediately, polling keeps scheduling on the interval, and hiding an
+      # already hidden window changes nothing.
+      - params:
+          - intervalMs: 1000
+        result:
+          - 1
+          - 3
+          - 5
+  serverToggleMatrixPollCounts:
+    terms:
+      # Toggling the setting while hidden: disabled start polls nothing, the
+      # restart after enabling resumes polling on the interval, and the restart
+      # after disabling performs the single save-triggered poll and then stops
+      # scheduling.
+      - params:
+          - intervalMs: 1000
+        result:
+          - 0
+          - 1
+          - 3
+          - 4
+          - 4

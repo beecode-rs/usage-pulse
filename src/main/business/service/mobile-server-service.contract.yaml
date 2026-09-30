@@ -1,0 +1,140 @@
+# Contract for the mobile HTTP + WebSocket server service.
+# The contractor resolves flat callable subjects, so the terms drive the
+# scenario functions in __tests__/_mobile-server-service-contract-harness.ts.
+# Each scenario starts a fresh server instance on an ephemeral port (settings
+# mobileServerPort 0) with a fixed pairing token, drives a real HTTP fetch or
+# a real ws client against it, and stops the server before returning. Electron
+# is module-mocked in the harness (app.getVersion, app.getPath) and the
+# settings repo fetch is spied to a scenario SettingsModel, so no desktop
+# environment is needed.
+subject: mobileServerServiceContractHarness
+module: ./__tests__/_mobile-server-service-contract-harness.js
+subjectType: function
+methods:
+  connectedDevicesAfterConnect:
+    terms:
+      # An authenticated client that completed the upgrade is listed as a
+      # connected device with address, connectedAt, id and user agent.
+      - params:
+          - token: test-token
+        result:
+          - hasAddress: true
+            hasConnectedAt: true
+            hasId: true
+            hasUserAgent: true
+  connectedDevicesAfterDisconnect:
+    terms:
+      # Closing the client socket removes its device from the list.
+      - params:
+          - token: test-token
+        result: 0
+  devicesChangedEventCounts:
+    terms:
+      # Each connect and disconnect emits MOBILE_DEVICES_CHANGED on the app
+      # event bus with the new device counts (1 after connect, 0 after close).
+      - params:
+          - token: test-token
+        result:
+          - 1
+          - 0
+  firstWsMessage:
+    terms:
+      # An authenticated client receives the full state message immediately
+      # after the upgrade completes; sessions is null before the first poll
+      # and usage comes from the poll service snapshot.
+      - params:
+          - token: test-token
+        result:
+          sessions: null
+          type: state
+          usage:
+            providers: []
+  healthResponse:
+    terms:
+      # Health without a token is rejected with 401 unauthorized.
+      - params:
+          - tokenVia: none
+        result:
+          body:
+            error: unauthorized
+          status: 401
+      # Health with a bearer token returns ok with the app version.
+      - params:
+          - tokenVia: bearer
+        result:
+          body:
+            appVersion: '0.6.1-test'
+            ok: true
+          status: 200
+      # Health also accepts the token as a query parameter.
+      - params:
+          - tokenVia: query
+        result:
+          body:
+            appVersion: '0.6.1-test'
+            ok: true
+          status: 200
+  sessionWaitingMessage:
+    terms:
+      # Emitting SESSION_WAITING on the app event bus delivers a session-waiting
+      # message with the full session to the connected socket after the initial
+      # state push.
+      - params:
+          - token: test-token
+        result:
+          session:
+            cwd: /home/user/proj-a
+            kind: claude-code
+            name: session-a
+            pid: 1234
+            sessionId: s-a
+            startedAt: 1726000000000
+            status: waiting
+          type: session-waiting
+  stateResponse:
+    terms:
+      # State with a valid token returns both sections; usage is the poll
+      # service snapshot and sessions is null before the first sessions poll.
+      - params:
+          - tokenVia: bearer
+        result:
+          body:
+            sessions: null
+            usage:
+              providers: []
+          status: 200
+  unknownRouteResponse:
+    terms:
+      # An authenticated request to an unknown route is a 404.
+      - params:
+          - tokenVia: bearer
+        result:
+          body:
+            error: not found
+          status: 404
+  usageSnapshotMessage:
+    terms:
+      # Emitting USAGE_SNAPSHOT on the app event bus delivers a
+      # usage-snapshot message to the connected socket after the initial
+      # state push.
+      - params:
+          - token: test-token
+        result:
+          type: usage-snapshot
+          usage:
+            providers:
+              - fetchedAt: 1726000000000
+                providerId: claude
+                status: OK
+                trackerId: tracker-main
+                trackerName: Claude
+                usage:
+                  - label: 5h window
+                    usedPercent: 50
+  wrongTokenUpgradeClosed:
+    terms:
+      # A WebSocket upgrade with a wrong token is destroyed before the
+      # handshake completes, so the client receives no message at all.
+      - params:
+          - token: wrong-token
+        result: true
