@@ -140,6 +140,7 @@ const MENU_ICONS: Record<AppViewIdMapper, ReactElement> = {
 
 const resolveMenuItems = (params: {
   dashboardStatusDot: MenuStatusDotMapper | undefined
+  isMobileServerLive: boolean
   isSchedulingLive: boolean
   isSessionsLive: boolean
   isUsageLive: boolean
@@ -148,6 +149,7 @@ const resolveMenuItems = (params: {
 }): SideMenuItem<AppViewIdMapper>[] => {
   const {
     dashboardStatusDot,
+    isMobileServerLive,
     isSchedulingLive,
     isSessionsLive,
     isUsageLive,
@@ -187,6 +189,7 @@ const resolveMenuItems = (params: {
     {
       icon: MENU_ICONS[AppViewIdMapper.MOBILE],
       id: AppViewIdMapper.MOBILE,
+      isLive: isMobileServerLive,
       label: 'Mobile',
     },
   ]
@@ -235,6 +238,12 @@ const resolveIsSessionsLive = (params: { settings?: SettingsModel }): boolean =>
   const { settings } = params
 
   return settings?.isSessionsAutoRefreshPaused === false
+}
+
+const isMobileServerLive = (params: { settings?: SettingsModel }): boolean => {
+  const { settings } = params
+
+  return settings?.isMobileServerEnabled === true
 }
 
 export const AppShell = (): ReactElement => {
@@ -397,6 +406,7 @@ export const AppShell = (): ReactElement => {
   const developmentStatusDot = menuStatusUtil.resolveDevelopmentStatusDot({ elapsedMinutes, now: nowMs, usedPercent })
   const menuItems = resolveMenuItems({
     dashboardStatusDot,
+    isMobileServerLive: isMobileServerLive({ settings }),
     isSchedulingLive: resolveIsSchedulingLive({ settings }),
     isSessionsLive: resolveIsSessionsLive({ settings }),
     isUsageLive: resolveIsUsageLive({ settings }),
