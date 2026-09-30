@@ -18,7 +18,7 @@
 #
 # Sanitize: pulse - sessionFinishedPulseMs is how long (in milliseconds) the
 # finished card keeps pulsing its border. Only a finite number survives;
-# anything else (absent, string, NaN, null) falls back to the 10 second
+# anything else (absent, string, NaN, null) falls back to the 30 second
 # default. Valid numbers clamp into [0, 60000] ms and round to whole
 # milliseconds, so 0 (indicator off) and 60000 are kept as-is while 90000
 # saturates. The sessions refresh ms key clamps the same way.
@@ -81,7 +81,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: ''
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -106,7 +106,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: fanfare
           sessionsRefreshIntervalMs: 30000
           soundVolumePercent: 75
@@ -198,7 +198,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: ding
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -215,7 +215,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -233,7 +233,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -252,7 +252,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: none
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -360,7 +360,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -379,7 +379,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 2000
           soundVolumePercent: 40
@@ -399,7 +399,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -429,7 +429,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -457,7 +457,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -490,7 +490,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -524,7 +524,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -565,7 +565,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -600,7 +600,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -637,7 +637,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -662,7 +662,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -687,7 +687,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -729,7 +729,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -768,7 +768,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -793,7 +793,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: ''
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -814,7 +814,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 9000
           mobileServerToken: 'pairing-token'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -833,7 +833,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -851,7 +851,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -869,7 +869,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 1024
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -887,7 +887,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 65535
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -905,7 +905,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 9001
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -925,7 +925,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: '001122334455667700112233445566770011223344556677'
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40

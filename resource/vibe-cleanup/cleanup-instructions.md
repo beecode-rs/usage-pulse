@@ -256,3 +256,5 @@ in the register, and only move the handler, the callback function
 - Task 9 (Desktop Mobile settings page): src/renderer/src/business/enum/app-view-id-mapper-enum.ts, src/renderer/src/ui-component/app-shell/app-shell.tsx, src/renderer/src/ui-component/mobile/mobile-page.tsx, src/renderer/src/ui-component/mobile/mobile-server-toggle.tsx, src/renderer/src/ui-component/mobile/mobile-server-port-field.tsx, src/renderer/src/ui-component/mobile/mobile-pairing-token-field.tsx, src/renderer/src/ui-component/mobile/mobile-connect-hint.tsx, src/renderer/src/ui-component/mobile/mobile.css
 ---
 - new mobile menu (@src/renderer/src/ui-component/app-shell/app-shell.tsx) must also bee gree when the mobile connect is on
+---
+- set default value for `Session finished indicator (seconds)` to be 30s (@src/shared/util/constant.ts)

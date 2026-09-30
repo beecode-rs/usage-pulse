@@ -84,7 +84,7 @@ export const constant = {
     defaultIsEnabled: false,
   },
   sessionFinishedPulse: {
-    defaultMs: 10_000,
+    defaultMs: 30_000,
     maxMs: 60_000,
     minMs: 0,
   },

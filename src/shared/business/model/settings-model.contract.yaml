@@ -18,7 +18,7 @@ constructor:
         isSessionsAutoRefreshPaused: false
         mobileServerPort: 8787
         mobileServerToken: ''
-        sessionFinishedPulseMs: 10000
+        sessionFinishedPulseMs: 30000
         sessionFinishedSoundId: success
         sessionsRefreshIntervalMs: 5000
         soundVolumePercent: 40
@@ -49,7 +49,7 @@ constructor:
         isSessionsAutoRefreshPaused: false
         mobileServerPort: 9100
         mobileServerToken: 'pairing-token'
-        sessionFinishedPulseMs: 10000
+        sessionFinishedPulseMs: 30000
         sessionFinishedSoundId: ding
         sessionsRefreshIntervalMs: 5000
         soundVolumePercent: 40
@@ -72,7 +72,7 @@ methods:
           - settings:
               isSchedulingEnabled: false
               isSessionsAutoRefreshPaused: false
-              sessionFinishedPulseMs: 10000
+              sessionFinishedPulseMs: 30000
               sessionFinishedSoundId: success
               sessionsRefreshIntervalMs: 5000
               soundVolumePercent: 40
@@ -88,7 +88,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: ''
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -104,7 +104,7 @@ methods:
           - settings:
               isSchedulingEnabled: false
               isSessionsAutoRefreshPaused: false
-              sessionFinishedPulseMs: 10000
+              sessionFinishedPulseMs: 30000
               sessionFinishedSoundId: success
               sessionsRefreshIntervalMs: 5000
               soundVolumePercent: 40
@@ -134,7 +134,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: ''
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -162,7 +162,7 @@ methods:
           - settings:
               isSchedulingEnabled: false
               isSessionsAutoRefreshPaused: false
-              sessionFinishedPulseMs: 10000
+              sessionFinishedPulseMs: 30000
               sessionFinishedSoundId: success
               sessionsRefreshIntervalMs: 5000
               soundVolumePercent: 40
@@ -187,7 +187,7 @@ methods:
           isSessionsAutoRefreshPaused: false
           mobileServerPort: 8787
           mobileServerToken: ''
-          sessionFinishedPulseMs: 10000
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
