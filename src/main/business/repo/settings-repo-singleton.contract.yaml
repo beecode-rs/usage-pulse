@@ -46,12 +46,21 @@
 # Sanitize: unique ids - when two trackers, triggers or ssh hosts share an id,
 # the first keeps it and every later duplicate gets a regenerated id.
 #
+# Sanitize: mobile server - the enabled flag is a strict boolean catch(false),
+# the port clamps into [1024, 65535] with the 8787 default for non-numbers,
+# and the pairing token survives verbatim when non-empty; an empty (or
+# non-string) token is replaced with a generated 48-char hex token so every
+# parsed settings record carries one. The bare-defaults bypass (null or
+# missing raw settings) skips the schema parse and therefore skips token
+# generation: the empty token materializes on the next parsed sanitize.
+#
 # The sanitize scenarios stub crypto.randomUUID to return 'generated-id-<n>'
 # (a per-call counter, so regeneration order is deterministic) and Date.now to
 # return a fixed 1700000000000 through the TempFileSettingsRepo override,
-# restoring both after each call. Every id the schemas or the unique-id passes
-# would otherwise regenerate and the createdAt fallback would otherwise drift,
-# so the pinning below is only stable through the harness.
+# restoring both after each call. The same override pins the pairing token
+# generator to a fixed 48-char hex stub. Every id the schemas or the unique-id
+# passes would otherwise regenerate and the createdAt fallback would otherwise
+# drift, so the pinning below is only stable through the harness.
 #
 # The runner matches results with a full deep equal (no partial matching), so
 # every sanitize term pins the complete sanitized settings object.
@@ -62,10 +71,16 @@ methods:
   fetchAfterInitOnMissingFile:
     terms:
       # init() with no settings file on disk stores the default settings in memory.
+      # The raw value is undefined, so sanitize returns the bare defaults without
+      # reaching the schema parse: no pairing token is generated yet (the token
+      # materializes on the next sanitize that parses a record).
       - params: []
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: ''
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -86,8 +101,11 @@ methods:
               sessionsRefreshIntervalMs: 30000
               soundVolumePercent: 75
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: true
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: fanfare
           sessionsRefreshIntervalMs: 30000
@@ -99,11 +117,15 @@ methods:
   fetchAfterSave:
     terms:
       # save() refreshes the memory value, so the following sync fetch() returns
-      # exactly the settings object that was saved.
+      # exactly the settings object that was saved. save() does not sanitize, so
+      # the mobile server fields round-trip verbatim without token regeneration.
       - params:
           - settings:
+              isMobileServerEnabled: true
               isSchedulingEnabled: true
               isSessionsAutoRefreshPaused: false
+              mobileServerPort: 9100
+              mobileServerToken: 'saved-token'
               sessionFinishedPulseMs: 25000
               sessionFinishedSoundId: ding
               sessionsRefreshIntervalMs: 5000
@@ -113,8 +135,11 @@ methods:
               triggers: []
               waitingSoundId: chime
         result:
+          isMobileServerEnabled: true
           isSchedulingEnabled: true
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 9100
+          mobileServerToken: 'saved-token'
           sessionFinishedPulseMs: 25000
           sessionFinishedSoundId: ding
           sessionsRefreshIntervalMs: 5000
@@ -137,8 +162,11 @@ methods:
               triggers: []
               waitingSoundId: ping
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: true
+          mobileServerPort: 8787
+          mobileServerToken: ''
           sessionFinishedPulseMs: 60000
           sessionFinishedSoundId: fanfare
           sessionsRefreshIntervalMs: 12000
@@ -165,8 +193,11 @@ methods:
           - rawSettings:
               sessionFinishedSoundId: ding
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: ding
           sessionsRefreshIntervalMs: 5000
@@ -179,8 +210,11 @@ methods:
       - params:
           - rawSettings: {}
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -194,8 +228,11 @@ methods:
           - rawSettings:
               sessionFinishedSoundId: 42
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -210,8 +247,11 @@ methods:
           - rawSettings:
               sessionFinishedSoundId: none
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: none
           sessionsRefreshIntervalMs: 5000
@@ -225,8 +265,11 @@ methods:
           - rawSettings:
               sessionFinishedPulseMs: 25000
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 25000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -240,8 +283,11 @@ methods:
           - rawSettings:
               sessionFinishedPulseMs: 0
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 0
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -255,8 +301,11 @@ methods:
           - rawSettings:
               sessionFinishedPulseMs: -5000
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 0
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -270,8 +319,11 @@ methods:
           - rawSettings:
               sessionFinishedPulseMs: 90000
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 60000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -285,8 +337,11 @@ methods:
           - rawSettings:
               sessionFinishedPulseMs: 7600.6
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 7601
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -300,8 +355,11 @@ methods:
           - rawSettings:
               sessionFinishedPulseMs: '20000'
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -316,8 +374,11 @@ methods:
           - rawSettings:
               sessionsRefreshIntervalMs: 1000
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 2000
@@ -333,8 +394,11 @@ methods:
               trackers:
                 - providerId: 'claude'
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -360,8 +424,11 @@ methods:
                 - 42
                 - 'claude'
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -385,8 +452,11 @@ methods:
                   name: ''
                   refreshIntervalMs: 1
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -415,8 +485,11 @@ methods:
                   name: 'GLM'
                   refreshIntervalMs: 60000
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -446,8 +519,11 @@ methods:
                   timeoutMs: 4500
                   times: ['23:59', '9:05', '09:05', '24:00', '00:00', '09:5']
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -484,8 +560,11 @@ methods:
                   days: ['monday']
                   times: ['08:00']
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -516,8 +595,11 @@ methods:
                   times: ['07:15']
                   timeoutMs: 7200000
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -550,8 +632,11 @@ methods:
                 - url: 'ssh://gen'
                   isEnabled: 'yes'
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -572,8 +657,11 @@ methods:
               sshHosts:
                 enabled: true
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -594,8 +682,11 @@ methods:
                   id: 'dup'
                   accessToken: 'second'
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -633,8 +724,11 @@ methods:
                   id: 'dup'
                   times: ['09:00']
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -669,8 +763,11 @@ methods:
                 - id: 'dup'
                   url: 'ssh://b'
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -686,12 +783,148 @@ methods:
           triggers: []
           waitingSoundId: chime
       # A non-object rawSettings value (null) bypasses the schema and returns the
-      # default settings object directly.
+      # default settings object directly: no pairing token is generated on the
+      # bypass path either.
       - params:
           - rawSettings: null
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: ''
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Sanitize: mobile server - valid mobile server fields survive verbatim:
+      # the enabled flag, the in-range port and the non-empty pairing token.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: true
+              mobileServerPort: 9000
+              mobileServerToken: 'pairing-token'
+        result:
+          isMobileServerEnabled: true
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          mobileServerPort: 9000
+          mobileServerToken: 'pairing-token'
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # An empty stored token is replaced with a generated 48-char hex token
+      # (the deterministic stub through the harness).
+      - params:
+          - rawSettings:
+              mobileServerToken: ''
+        result:
+          isMobileServerEnabled: false
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # A non-string token catches to the empty string first, then regenerates.
+      - params:
+          - rawSettings:
+              mobileServerToken: 42
+        result:
+          isMobileServerEnabled: false
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Ports outside the range clamp into it: below the minimum clamps up to 1024.
+      - params:
+          - rawSettings:
+              mobileServerPort: 80
+        result:
+          isMobileServerEnabled: false
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          mobileServerPort: 1024
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Above the maximum clamps down to 65535.
+      - params:
+          - rawSettings:
+              mobileServerPort: 70000
+        result:
+          isMobileServerEnabled: false
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          mobileServerPort: 65535
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # A fractional port rounds to a whole number inside the range.
+      - params:
+          - rawSettings:
+              mobileServerPort: 9000.6
+        result:
+          isMobileServerEnabled: false
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          mobileServerPort: 9001
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
+          sessionFinishedPulseMs: 10000
+          sessionFinishedSoundId: success
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # A non-number port falls back to the 8787 default rather than clamping,
+      # and a non-boolean enabled flag catches to false.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: 'yes'
+              mobileServerPort: '9000'
+        result:
+          isMobileServerEnabled: false
+          isSchedulingEnabled: false
+          isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -709,11 +942,14 @@ methods:
   settingsSavedDeliveriesAfterSave:
     terms:
       # save() emits the saved settings as SETTINGS_SAVED payload on the app
-      # event bus, exactly once.
+      # event bus, exactly once, with the mobile server fields carried through.
       - params:
           - settings:
+              isMobileServerEnabled: true
               isSchedulingEnabled: true
               isSessionsAutoRefreshPaused: false
+              mobileServerPort: 9100
+              mobileServerToken: 'saved-token'
               sessionFinishedPulseMs: 25000
               sessionFinishedSoundId: ding
               sessionsRefreshIntervalMs: 5000
@@ -723,8 +959,11 @@ methods:
               triggers: []
               waitingSoundId: chime
         result:
-          - isSchedulingEnabled: true
+          - isMobileServerEnabled: true
+            isSchedulingEnabled: true
             isSessionsAutoRefreshPaused: false
+            mobileServerPort: 9100
+            mobileServerToken: 'saved-token'
             sessionFinishedPulseMs: 25000
             sessionFinishedSoundId: ding
             sessionsRefreshIntervalMs: 5000

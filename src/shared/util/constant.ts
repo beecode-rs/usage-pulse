@@ -35,6 +35,13 @@ const providerCatalog: ProviderCatalogEntry[] = [
 export const constant = {
   fiveHourWindowMs,
   maxWindowScheduleTriggerPreset,
+  mobileServer: {
+    defaultIsEnabled: false,
+    defaultPort: 8787,
+    heartbeatIntervalMs: 30_000,
+    maxPort: 65_535,
+    minPort: 1024,
+  },
   planner: {
     dayMs: 86_400_000,
     firstTrigger: {
@@ -104,6 +111,11 @@ export const constant = {
     minMs: 60_000,
   },
   twentyFourHourTimeRegex: /^([01]\d|2[0-3]):[0-5]\d$/,
+  usageSeverityThresholds: {
+    fillingUpPercent: 70,
+    highUsagePercent: 85,
+    limitReachedPercent: 95,
+  },
   waitingSound: {
     defaultId: SoundNameMapper.CHIME,
   },

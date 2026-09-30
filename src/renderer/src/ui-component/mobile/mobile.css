@@ -1,0 +1,100 @@
+.mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 100%;
+  padding: 24px 28px;
+}
+
+.mobile-card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 560px;
+  padding: 16px 20px;
+}
+
+.mobile-hint {
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.mobile-saving {
+  color: var(--ink-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.mobile-token-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.mobile-token-value {
+  color: var(--ink-primary);
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-toggle {
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.mobile-toggle input {
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.mobile-toggle input:focus-visible ~ .mobile-toggle-track {
+  outline: 2px solid var(--meter-accent);
+  outline-offset: 2px;
+}
+
+.mobile-toggle input:checked ~ .mobile-toggle-track {
+  background: var(--meter-accent);
+}
+
+.mobile-toggle input:checked ~ .mobile-toggle-track .mobile-toggle-knob {
+  background: var(--ink-primary);
+  transform: translateX(16px);
+}
+
+.mobile-toggle-knob {
+  background: var(--ink-muted);
+  border-radius: 999px;
+  display: block;
+  height: 14px;
+  left: 3px;
+  position: absolute;
+  top: 3px;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+  width: 14px;
+}
+
+.mobile-toggle-track {
+  background: var(--meter-track);
+  border-radius: 999px;
+  display: block;
+  height: 20px;
+  position: relative;
+  transition: background 0.2s ease;
+  width: 36px;
+}

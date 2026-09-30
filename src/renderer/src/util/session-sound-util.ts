@@ -2,6 +2,7 @@ import { type SessionStatusMapper } from '#src/shared/business/enum/session-stat
 import { SoundNameMapper } from '#src/shared/business/enum/sound-name-mapper-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
 import { constant } from '#src/shared/util/constant'
+import { sessionStatusTransitionUtil } from '#src/shared/util/session-status-transition-util'
 
 const TONE_ATTACK_SECONDS = 0.01
 const TONE_MAX_GAIN = 0.4
@@ -115,28 +116,7 @@ export class SessionSoundUtil {
     previousSessions?: SessionInfo[]
     toStatus: SessionStatusMapper
   }): string[] {
-    const { currentSessions, fromStatus, previousSessions, toStatus } = params
-    if (previousSessions === undefined) {
-      return []
-    }
-
-    const fromStatusSessionIds = new Set(
-      previousSessions
-        .filter((session) => {
-          return session.status === fromStatus
-        })
-        .map((session) => {
-          return session.sessionId
-        }),
-    )
-
-    return currentSessions
-      .filter((session) => {
-        return session.status === toStatus && fromStatusSessionIds.has(session.sessionId)
-      })
-      .map((session) => {
-        return session.sessionId
-      })
+    return sessionStatusTransitionUtil.resolveStatusTransitionSessionIds(params)
   }
 
   protected _playTone(params: { audioContext: AudioContext; gain: number; tone: SessionSoundTone }): void {

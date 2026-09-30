@@ -13,8 +13,11 @@ constructor:
     # No params: every field comes back as its default.
     - params: []
       result:
+        isMobileServerEnabled: false
         isSchedulingEnabled: false
         isSessionsAutoRefreshPaused: false
+        mobileServerPort: 8787
+        mobileServerToken: ''
         sessionFinishedPulseMs: 10000
         sessionFinishedSoundId: success
         sessionsRefreshIntervalMs: 5000
@@ -27,7 +30,10 @@ constructor:
     # wholesale) and absent fields fall back to their defaults.
     - params:
         - settings:
+            isMobileServerEnabled: true
             isSchedulingEnabled: true
+            mobileServerPort: 9100
+            mobileServerToken: 'pairing-token'
             sessionFinishedSoundId: ding
             trackers:
               - accessToken: 'tok'
@@ -38,8 +44,11 @@ constructor:
                 providerId: 'claude'
                 refreshIntervalMs: 900000
       result:
+        isMobileServerEnabled: true
         isSchedulingEnabled: true
         isSessionsAutoRefreshPaused: false
+        mobileServerPort: 9100
+        mobileServerToken: 'pairing-token'
         sessionFinishedPulseMs: 10000
         sessionFinishedSoundId: ding
         sessionsRefreshIntervalMs: 5000
@@ -74,8 +83,11 @@ methods:
         params:
           - isEnabled: true
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: true
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: ''
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -117,8 +129,11 @@ methods:
           - isAutoRefreshPaused: true
             trackerId: 't-1'
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: ''
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
@@ -167,8 +182,11 @@ methods:
           - isEnabled: true
             triggerId: 'trg-1'
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
+          mobileServerPort: 8787
+          mobileServerToken: ''
           sessionFinishedPulseMs: 10000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000

@@ -36,8 +36,11 @@ export type SettingsData = {
 }
 
 export class SettingsModel {
+  isMobileServerEnabled = constant.mobileServer.defaultIsEnabled
   isSchedulingEnabled = constant.scheduling.defaultIsEnabled
   isSessionsAutoRefreshPaused = constant.sessionsAutoRefresh.defaultIsPaused
+  mobileServerPort = constant.mobileServer.defaultPort
+  mobileServerToken = ''
   sessionFinishedPulseMs = constant.sessionFinishedPulse.defaultMs
   sessionFinishedSoundId = constant.sessionFinishedSound.defaultId
   sessionsRefreshIntervalMs = constant.sessionsRefreshInterval.defaultMs

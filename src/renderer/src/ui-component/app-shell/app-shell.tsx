@@ -10,6 +10,7 @@ import { AppFooter } from '#src/renderer/src/ui-component/app-shell/app-footer'
 import '#src/renderer/src/ui-component/app-shell/app-shell.css'
 import { DashboardPage } from '#src/renderer/src/ui-component/dashboard/dashboard-page'
 import { DevelopmentPage } from '#src/renderer/src/ui-component/development/development-page'
+import { MobilePage } from '#src/renderer/src/ui-component/mobile/mobile-page'
 import { SchedulingPage } from '#src/renderer/src/ui-component/scheduling/scheduling-page'
 import { SessionsPage } from '#src/renderer/src/ui-component/sessions/sessions-page'
 import { SideMenu, type SideMenuItem } from '#src/renderer/src/ui-component/side-menu/side-menu'
@@ -81,6 +82,19 @@ const MENU_ICONS: Record<AppViewIdMapper, ReactElement> = {
     >
       <polyline points="4 17 10 11 4 5" />
       <line x1="12" x2="20" y1="19" y2="19" />
+    </svg>
+  ),
+  [AppViewIdMapper.MOBILE]: (
+    <svg
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.8}
+      viewBox="0 0 24 24"
+    >
+      <rect height="18" rx="2" width="12" x="6" y="3" />
+      <line x1="10" x2="14" y1="18" y2="18" />
     </svg>
   ),
   [AppViewIdMapper.SCHEDULING]: (
@@ -169,6 +183,11 @@ const resolveMenuItems = (params: {
       id: AppViewIdMapper.SCHEDULING,
       isLive: isSchedulingLive,
       label: 'Scheduling',
+    },
+    {
+      icon: MENU_ICONS[AppViewIdMapper.MOBILE],
+      id: AppViewIdMapper.MOBILE,
+      label: 'Mobile',
     },
   ]
 }
@@ -437,6 +456,10 @@ export const AppShell = (): ReactElement => {
             usedPercent={usedPercent}
           />
         )
+      }
+
+      case AppViewIdMapper.MOBILE: {
+        return <MobilePage />
       }
 
       case AppViewIdMapper.SCHEDULING: {
