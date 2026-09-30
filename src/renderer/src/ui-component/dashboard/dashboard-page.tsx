@@ -10,7 +10,9 @@ import '#src/renderer/src/ui-component/dashboard/dashboard.css'
 import '#src/renderer/src/ui-component/sessions/sessions.css'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
 import { errorUtil } from '#src/renderer/src/util/error-util'
+import { UsageStalenessUtil } from '#src/renderer/src/util/usage-staleness-util'
 import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
+import type { SettingsModel } from '#src/shared/business/model/settings-model'
 import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
 
 const resolveSessionKey = (session: SessionInfo): string => {
@@ -28,6 +30,7 @@ export const DashboardPage = (props: {
 
   const [usageSnapshot, setUsageSnapshot] = useState<UsageSnapshot | undefined>(undefined)
   const [sessionSnapshot, setSessionSnapshot] = useState<SessionSnapshot | undefined>(undefined)
+  const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [focusErrorMessage, setFocusErrorMessage] = useState('')
   const [sessionsErrorMessage, setSessionsErrorMessage] = useState('')
 
@@ -78,6 +81,24 @@ export const DashboardPage = (props: {
   }, [])
 
   useEffect(() => {
+    const loadSettings = async (): Promise<void> => {
+      try {
+        setSettings(await usageClientService.getSettings())
+      } catch {
+        return
+      }
+    }
+
+    void loadSettings()
+
+    return usageClientService.subscribeToSettingsUpdates({
+      onUpdate: (nextSettings) => {
+        setSettings(nextSettings)
+      },
+    })
+  }, [])
+
+  useEffect(() => {
     void loadSessionsSnapshot()
   }, [])
 
@@ -90,6 +111,9 @@ export const DashboardPage = (props: {
   }, [])
 
   const providerSnapshots = usageSnapshot?.providers ?? []
+  const refreshIntervalMsByTrackerId = new UsageStalenessUtil().resolveRefreshIntervalMsByTrackerId({
+    trackers: settings?.trackers ?? [],
+  })
   const sessions = sessionSnapshot?.sessions ?? []
   const isLoading = usageSnapshot === undefined && sessionSnapshot === undefined && sessionsErrorMessage === ''
   const isUsageEmpty = usageSnapshot !== undefined && providerSnapshots.length === 0
@@ -108,7 +132,13 @@ export const DashboardPage = (props: {
       <main className="dashboard-grid">
         {isLoading && <p className="dashboard-empty">Loading…</p>}
         {providerSnapshots.map((providerSnapshot) => {
-          return <DashboardUsageBox key={providerSnapshot.trackerId} providerSnapshot={providerSnapshot} />
+          return (
+            <DashboardUsageBox
+              key={providerSnapshot.trackerId}
+              providerSnapshot={providerSnapshot}
+              refreshIntervalMs={refreshIntervalMsByTrackerId[providerSnapshot.trackerId]}
+            />
+          )
         })}
         {isUsageEmpty && (
           <DashboardEmptyBox

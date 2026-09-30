@@ -21,6 +21,7 @@ import { MenuStatusUtil } from '#src/renderer/src/util/menu-status-util'
 import { sessionFinishedPulseUtil } from '#src/renderer/src/util/session-finished-pulse-util'
 import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
 import { sideMenuPrefsUtil } from '#src/renderer/src/util/side-menu-prefs-util'
+import { UsageStalenessUtil } from '#src/renderer/src/util/usage-staleness-util'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import type { SessionInfo, SessionSnapshot } from '#src/shared/business/model/session-model'
 import type { SettingsModel } from '#src/shared/business/model/settings-model'
@@ -31,11 +32,16 @@ const DEFAULT_ELAPSED_MINUTES = 60
 const DEFAULT_USED_PERCENT = 45
 const NOW_TICK_INTERVAL_MS = 30_000
 const PEAK_STATUS_DOT_TITLE = 'z.ai peak hours: premium models bill at 3× credits (weekdays 14:00–18:00 UTC+8)'
+const WARNING_STATUS_DOT_TITLE = 'Usage warning: tracker data is stale or usage is outpacing the reset window'
 
 const resolveStatusDotTitle = (params: { statusDot?: MenuStatusDotMapper }): string | undefined => {
   const { statusDot } = params
   if (statusDot === MenuStatusDotMapper.PEAK) {
     return PEAK_STATUS_DOT_TITLE
+  }
+
+  if (statusDot === MenuStatusDotMapper.WARNING) {
+    return WARNING_STATUS_DOT_TITLE
   }
 
   return undefined
@@ -392,13 +398,25 @@ export const AppShell = (): ReactElement => {
 
   const finishedPulseMs = settings?.sessionFinishedPulseMs ?? constant.sessionFinishedPulse.defaultMs
   const menuStatusUtil = new MenuStatusUtil()
+  const refreshIntervalMsByTrackerId = new UsageStalenessUtil().resolveRefreshIntervalMsByTrackerId({
+    trackers: settings?.trackers ?? [],
+  })
   const peakStatusDot = menuStatusUtil.resolvePeakStatusDot({ now: nowMs, snapshot: usageSnapshot })
   const sessionsStatusDot = menuStatusUtil.resolveSessionsStatusDot({
     hasLoadError: sessionsErrorMessage !== '',
     snapshot: sessionSnapshot,
   })
+  const staleStatusDot = menuStatusUtil.resolveStaleStatusDot({
+    now: nowMs,
+    refreshIntervalMsByTrackerId,
+    snapshot: usageSnapshot,
+  })
   const usageActivityStatusDot = menuStatusUtil.resolveCombinedStatusDot({
-    dots: [menuStatusUtil.resolveUsageActivityStatusDot({ now: nowMs, snapshot: usageSnapshot }), peakStatusDot],
+    dots: [
+      menuStatusUtil.resolveUsageActivityStatusDot({ now: nowMs, snapshot: usageSnapshot }),
+      peakStatusDot,
+      staleStatusDot,
+    ],
   })
   const dashboardStatusDot = menuStatusUtil.resolveCombinedStatusDot({
     dots: [usageActivityStatusDot, sessionsStatusDot],

@@ -7,6 +7,7 @@ import { MenuStatusUtil } from '#src/renderer/src/util/menu-status-util'
 import { usageActivityStatusUtil } from '#src/renderer/src/util/usage-activity-status-util'
 import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
+import { UsageStalenessUtil } from '#src/renderer/src/util/usage-staleness-util'
 import { usageWindowUtil } from '#src/renderer/src/util/usage-window-util'
 import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
@@ -35,8 +36,11 @@ const resolveStatusMessage = (params: { providerSnapshot: ProviderSnapshot }): s
   }
 }
 
-export const DashboardUsageBox = (props: { providerSnapshot: ProviderSnapshot }): ReactElement => {
-  const { providerSnapshot } = props
+export const DashboardUsageBox = (props: {
+  providerSnapshot: ProviderSnapshot
+  refreshIntervalMs?: number
+}): ReactElement => {
+  const { providerSnapshot, refreshIntervalMs } = props
   const [now, setNow] = useState((): number => {
     return Date.now()
   })
@@ -69,6 +73,11 @@ export const DashboardUsageBox = (props: { providerSnapshot: ProviderSnapshot })
     usedPercent: fiveHourWindow?.usedPercent ?? 0,
     windowMs: fiveHourWindow?.windowMs ?? usageResetUtil.fiveHourWindowMs,
   })
+  const isSnapshotStale = new UsageStalenessUtil().isSnapshotStale({
+    nowMs: now,
+    providerSnapshot,
+    refreshIntervalMs,
+  })
 
   const resolveBoxClassName = (): string => {
     const classNames = ['dashboard-usage-box']
@@ -79,6 +88,10 @@ export const DashboardUsageBox = (props: { providerSnapshot: ProviderSnapshot })
 
     if (isWindowWarning) {
       classNames.push('is-warning')
+    }
+
+    if (isSnapshotStale) {
+      classNames.push('is-stale')
     }
 
     return classNames.join(' ')
@@ -112,6 +125,42 @@ export const DashboardUsageBox = (props: { providerSnapshot: ProviderSnapshot })
         />
         <PeakIcon />
         <span className="dashboard-peak-pill-text">{peakRemainingText ?? 'under 1m'}</span>
+      </span>
+    )
+  }
+
+  const resolveStaleTooltipText = (): string => {
+    if (providerSnapshot.fetchedAt === undefined) {
+      return 'Usage data is stale — older than the tracker refresh interval.'
+    }
+
+    return `Usage data is stale — last fetched ${dateUtil.formatDateTime(providerSnapshot.fetchedAt)}, older than the tracker refresh interval.`
+  }
+
+  const renderStalePill = (): ReactElement | undefined => {
+    if (!isSnapshotStale) {
+      return undefined
+    }
+
+    const tooltipText = resolveStaleTooltipText()
+
+    return (
+      <span aria-label={tooltipText} className="dashboard-stale-pill" data-tooltip={tooltipText}>
+        <svg
+          fill="none"
+          height="13"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+          width="13"
+        >
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" x2="12" y1="9" y2="13" />
+          <line x1="12" x2="12.01" y1="17" y2="17" />
+        </svg>
+        Stale
       </span>
     )
   }
@@ -192,6 +241,7 @@ export const DashboardUsageBox = (props: { providerSnapshot: ProviderSnapshot })
       <header className="dashboard-usage-box-header">
         <div className="dashboard-usage-box-heading">
           <h2 className="dashboard-usage-box-title">{providerSnapshot.trackerName}</h2>
+          {renderStalePill()}
           {renderPeakPill()}
         </div>
         {fiveHourWindow !== undefined && <span className="dashboard-usage-box-window">{fiveHourWindow.label}</span>}

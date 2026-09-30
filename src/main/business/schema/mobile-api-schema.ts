@@ -18,6 +18,7 @@ const providerSnapshotSchema = z.object({
   fetchedAt: z.number().optional(),
   nextRefreshAt: z.number().optional(),
   providerId: z.enum(ProviderIdMapper),
+  refreshIntervalMs: z.number().optional(),
   status: z.enum(UsageActivityStatus),
   trackerId: z.string(),
   trackerName: z.string(),

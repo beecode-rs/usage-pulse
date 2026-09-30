@@ -284,12 +284,14 @@ export class _UsagePollService {
       return {
         ...existingSnapshot,
         nextRefreshAt,
+        refreshIntervalMs: tracker.refreshIntervalMs,
       }
     }
 
     return {
       nextRefreshAt,
       providerId: tracker.providerId,
+      refreshIntervalMs: tracker.refreshIntervalMs,
       status: UsageActivityStatus.PENDING,
       trackerId: tracker.id,
       trackerName: tracker.name,

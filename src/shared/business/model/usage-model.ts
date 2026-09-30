@@ -16,6 +16,7 @@ export type ProviderSnapshot = {
   fetchedAt?: number
   nextRefreshAt?: number
   providerId: ProviderIdMapper
+  refreshIntervalMs?: number
   status: UsageActivityStatus
   trackerId: string
   trackerName: string

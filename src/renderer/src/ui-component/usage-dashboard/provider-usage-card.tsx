@@ -8,6 +8,7 @@ import { UsageWindowBox } from '#src/renderer/src/ui-component/usage-dashboard/u
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { usageActivityStatusUtil } from '#src/renderer/src/util/usage-activity-status-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
+import { UsageStalenessUtil } from '#src/renderer/src/util/usage-staleness-util'
 import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
@@ -42,13 +43,24 @@ export const ProviderUsageCard = (props: {
     providerId: providerSnapshot.providerId,
   })
   const peakRemainingText = zaiPeakUtil.resolvePeakRemainingText({ nowMs, providerId: providerSnapshot.providerId })
+  const isSnapshotStale = new UsageStalenessUtil().isSnapshotStale({
+    nowMs,
+    providerSnapshot,
+    refreshIntervalMs,
+  })
 
   const resolveCardClassName = (): string => {
+    const classNames = ['provider-card']
+
     if (peakInfo?.isPeakHour === true) {
-      return 'provider-card is-peak-hour'
+      classNames.push('is-peak-hour')
     }
 
-    return 'provider-card'
+    if (isSnapshotStale) {
+      classNames.push('is-stale')
+    }
+
+    return classNames.join(' ')
   }
 
   const resolveRefreshButtonClassName = (): string => {
@@ -162,14 +174,6 @@ export const ProviderUsageCard = (props: {
     )
   }
 
-  const resolveIsSnapshotStale = (): boolean => {
-    if (refreshIntervalMs === undefined || providerSnapshot.fetchedAt === undefined) {
-      return false
-    }
-
-    return nowMs - providerSnapshot.fetchedAt > refreshIntervalMs
-  }
-
   const renderLastFetchedItem = (): ReactElement | undefined => {
     if (providerSnapshot.fetchedAt === undefined) {
       return undefined
@@ -177,7 +181,7 @@ export const ProviderUsageCard = (props: {
 
     const tooltipText = `Last fetched at ${dateUtil.formatDateTime(providerSnapshot.fetchedAt)}`
 
-    if (resolveIsSnapshotStale()) {
+    if (isSnapshotStale) {
       return (
         <span aria-label={tooltipText} className="provider-card-footer-item is-stale" data-tooltip={tooltipText}>
           <svg

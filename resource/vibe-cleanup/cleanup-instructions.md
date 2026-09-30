@@ -267,3 +267,5 @@ make the component full width.
 - in the mobile screen (@src/renderer/src/ui-component/mobile/mobile-page.tsx) display the info about connected mobile devices, there can be mutliple devices so display a small block (component) per device connected
 - the text ok and http are a bit jammed toghether (@src/renderer/src/ui-component/mobile/mobile-device-card.tsx). fix the desing a bit
 - the okhttp is the issue (@src/renderer/src/ui-component/mobile/mobile-device-card.tsx), why is this without a space between ok and http
+---
+- when the usage value tracking is stale, make the whole block border yellowis color, like the warning stale label in the footer is (@src/renderer/src/ui-component/usage-dashboard/provider-usage-card.tsx) (like we do it when the peak hour is in z.ai provider). and promote that signal as the worning in the left menu (@src/renderer/src/ui-component/app-shell/app-shell.tsx) that affects the dashboard as well. also add the border color in the dahsboard (@src/renderer/src/ui-component/dashboard/dashboard-usage-box.tsx) and the warning Stale label with icon
