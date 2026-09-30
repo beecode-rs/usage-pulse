@@ -41,6 +41,7 @@ export const constant = {
     heartbeatIntervalMs: 30_000,
     maxPort: 65_535,
     minPort: 1024,
+    unknownUserAgent: 'unknown',
   },
   planner: {
     dayMs: 86_400_000,

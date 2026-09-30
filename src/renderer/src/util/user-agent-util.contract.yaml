@@ -1,0 +1,81 @@
+# Contract for userAgentUtil.
+# Terms cover the user-agent to device-name mapping shown on the mobile page
+# connected-devices card: known mobile client libraries map to a readable
+# device name, browsers map to the browser name (chrome checked before safari
+# because chrome user agents also contain the safari token), and anything
+# unrecognized passes through unchanged. The agent label terms cover the
+# secondary raw-agent line: known lowercase library tokens get their proper
+# spelling (okhttp becomes OkHttp) and the name/version slash becomes a space.
+subject: userAgentUtil
+module: ./user-agent-util.js
+subjectType: function
+methods:
+  resolveAgentLabel:
+    terms:
+      # The android client library token gets its proper spelling and the
+      # version splits from the name.
+      - params:
+          - userAgent: 'okhttp/4.9.2'
+        result: OkHttp 4.9.2
+      # Every token of a multi-part agent is prettified in place.
+      - params:
+          - userAgent: 'UsagePulse/1.0 CFNetwork/1410 darwin/23.0.0'
+        result: UsagePulse 1.0 CFNetwork 1410 Darwin 23.0.0
+      - params:
+          - userAgent: 'expo/2.0.0'
+        result: Expo 2.0.0
+      # Unknown names keep their original spelling, only the slash becomes a
+      # space.
+      - params:
+          - userAgent: 'MyCustomClient/1.0'
+        result: MyCustomClient 1.0
+      # A token without a version passes through with no trailing space.
+      - params:
+          - userAgent: plainclient
+        result: plainclient
+  resolveDeviceName:
+    terms:
+      # The expo client user agent maps to the expo device name.
+      - params:
+          - userAgent: 'expo/2.0.0'
+        result: Expo client
+      # okhttp is the library behind android websocket clients, the common
+      # case for the usage pulse mobile app on android.
+      - params:
+          - userAgent: 'okhttp/4.12.0'
+        result: Android device
+      # ios networking stacks report a darwin user agent.
+      - params:
+          - userAgent: 'UsagePulse/1.0 CFNetwork/1410 darwin/23.0.0'
+        result: Apple device
+      # Device names win over the generic android match.
+      - params:
+          - userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1'
+        result: iPhone
+      - params:
+          - userAgent: 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) Safari/604.1'
+        result: iPad
+      # A browser user agent that also contains the safari token still maps to
+      # chrome because chrome is checked first.
+      - params:
+          - userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+        result: Chrome
+      # Chrome on android reports the device platform, so the android match
+      # wins over the browser name.
+      - params:
+          - userAgent: 'Mozilla/5.0 (Linux; Android 13) Chrome/120.0 Safari/537.36'
+        result: Android device
+      - params:
+          - userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15'
+        result: Safari
+      - params:
+          - userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15) Firefox/121.0'
+        result: Firefox
+      # The placeholder used when no user agent header was sent.
+      - params:
+          - userAgent: unknown
+        result: Unknown device
+      # An unrecognized custom client string passes through unchanged.
+      - params:
+          - userAgent: 'MyCustomClient/1.0'
+        result: MyCustomClient/1.0

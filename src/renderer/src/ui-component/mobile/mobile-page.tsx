@@ -1,17 +1,21 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
+import { mobileClientService } from '#src/renderer/src/business/service/mobile-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { MobileConnectHint } from '#src/renderer/src/ui-component/mobile/mobile-connect-hint'
+import { MobileDeviceList } from '#src/renderer/src/ui-component/mobile/mobile-device-list'
 import { MobilePairingTokenField } from '#src/renderer/src/ui-component/mobile/mobile-pairing-token-field'
 import { MobileServerPortField } from '#src/renderer/src/ui-component/mobile/mobile-server-port-field'
 import { MobileServerToggle } from '#src/renderer/src/ui-component/mobile/mobile-server-toggle'
 import '#src/renderer/src/ui-component/mobile/mobile.css'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
 import { errorUtil } from '#src/renderer/src/util/error-util'
+import { type MobileConnectedDevice } from '#src/shared/business/model/mobile-api-model'
 import { type SettingsData, SettingsModel } from '#src/shared/business/model/settings-model'
 
 export const MobilePage = (): ReactElement => {
   const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
+  const [devices, setDevices] = useState<MobileConnectedDevice[]>([])
   const [portText, setPortText] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -29,6 +33,24 @@ export const MobilePage = (): ReactElement => {
     }
 
     void loadSettings()
+  }, [])
+
+  useEffect(() => {
+    const loadDevices = async (): Promise<void> => {
+      try {
+        setDevices(await mobileClientService.getConnectedDevices())
+      } catch {
+        return
+      }
+    }
+
+    void loadDevices()
+
+    return mobileClientService.subscribeToDeviceUpdates({
+      onUpdate: (nextDevices) => {
+        setDevices(nextDevices)
+      },
+    })
   }, [])
 
   const saveUpdatedSettings = async (params: {
@@ -128,6 +150,10 @@ export const MobilePage = (): ReactElement => {
         <MobileConnectHint />
         {isSaving && <p className="mobile-saving">Saving…</p>}
         {errorMessage !== '' && <p className="settings-error">{errorMessage}</p>}
+      </section>
+      <section className="mobile-card">
+        <h2 className="mobile-section-title">Connected devices</h2>
+        <MobileDeviceList devices={devices} />
       </section>
     </div>
   )

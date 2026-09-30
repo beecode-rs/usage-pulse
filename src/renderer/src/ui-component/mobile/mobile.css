@@ -13,8 +13,75 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 560px;
   padding: 16px 20px;
+}
+
+.mobile-device-card {
+  background: var(--page);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+}
+
+.mobile-device-card-agent {
+  color: var(--ink-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-device-card-dot {
+  --mobile-device-dot-pulse: rgba(12, 163, 12, 0.45);
+
+  animation: mobile-device-dot-pulse 2.6s ease-in-out infinite;
+  background: var(--meter-good);
+  border-radius: 999px;
+  flex-shrink: 0;
+  height: 8px;
+  width: 8px;
+}
+
+.mobile-device-card-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mobile-device-card-meta {
+  color: var(--ink-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.mobile-device-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-devices-empty {
+  color: var(--ink-muted);
+  font-size: 12px;
+  margin: 0;
 }
 
 .mobile-hint {
@@ -30,6 +97,12 @@
   margin: 0;
 }
 
+.mobile-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
 .mobile-token-row {
   align-items: center;
   display: flex;
@@ -37,14 +110,20 @@
 }
 
 .mobile-token-value {
+  background: var(--page);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
   color: var(--ink-primary);
   flex: 1;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 6px 10px;
+}
+
+.mobile-token-value:focus {
+  border-color: var(--meter-accent);
+  outline: none;
 }
 
 .mobile-toggle {
@@ -97,4 +176,18 @@
   position: relative;
   transition: background 0.2s ease;
   width: 36px;
+}
+
+@keyframes mobile-device-dot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--mobile-device-dot-pulse);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
 }

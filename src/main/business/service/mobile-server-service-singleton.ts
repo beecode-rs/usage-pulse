@@ -11,6 +11,7 @@ import { httpRequestHandler } from '#src/main/controller/mobile-server/http-requ
 import { WsBroadcaster } from '#src/main/controller/mobile-server/ws-broadcaster'
 import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { errorUtil } from '#src/main/util/error-util'
+import { type MobileConnectedDevice } from '#src/shared/business/model/mobile-api-model'
 
 export class _MobileServerService {
   protected _broadcaster: WsBroadcaster | undefined
@@ -61,6 +62,10 @@ export class _MobileServerService {
     return address.port
   }
 
+  getConnectedDevices(): MobileConnectedDevice[] {
+    return this._broadcaster?.getConnectedDevices() ?? []
+  }
+
   isFailed(): boolean {
     return this._isFailed
   }
@@ -71,9 +76,19 @@ export class _MobileServerService {
       onClientConnected: (params) => {
         this._sendStateMessage({ broadcaster, ws: params.ws })
       },
+      onClientsChanged: () => {
+        this._emitConnectedDevicesChanged()
+      },
     })
 
     return broadcaster
+  }
+
+  protected _emitConnectedDevicesChanged(): void {
+    appEventBusSingleton().emit({
+      payload: this.getConnectedDevices(),
+      type: AppEventType.MOBILE_DEVICES_CHANGED,
+    })
   }
 
   protected _sendStateMessage(params: { broadcaster: WsBroadcaster; ws: WebSocket }): void {

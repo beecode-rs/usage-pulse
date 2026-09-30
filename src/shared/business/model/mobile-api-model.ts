@@ -55,6 +55,15 @@ export type MobileWsMessage =
   | MobileUsageSnapshotMessage
   | MobileUsageWarningMessage
 
+export type MobileConnectedDevice = {
+  address: string
+  connectedAt: number
+  id: string
+  userAgent: string
+}
+
+export type MobileDevicesUpdateListener = (devices: MobileConnectedDevice[]) => void
+
 export type MobileHealthResponse = {
   appVersion: string
   ok: boolean

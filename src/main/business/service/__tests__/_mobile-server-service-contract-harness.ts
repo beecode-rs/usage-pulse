@@ -118,7 +118,99 @@ const collectWsMessages = (params: {
   })
 }
 
+const waitForConnectedDeviceCount = (params: { count: number; service: _MobileServerService }): Promise<number> => {
+  return new Promise((resolve) => {
+    const intervalId = setInterval(() => {
+      if (params.service.getConnectedDevices().length !== params.count) {
+        return
+      }
+
+      cleanup()
+      resolve(params.count)
+    }, 20)
+    const timeoutId = setTimeout(() => {
+      cleanup()
+      resolve(params.service.getConnectedDevices().length)
+    }, 2_000)
+    const cleanup = (): void => {
+      clearInterval(intervalId)
+      clearTimeout(timeoutId)
+    }
+  })
+}
+
 export const mobileServerServiceContractHarness = {
+  async connectedDevicesAfterConnect(params: { token: string }): Promise<unknown[]> {
+    const { token } = params
+
+    return await withStartedService({
+      run: async ({ service }) => {
+        await collectWsMessages({
+          count: 1,
+          onOpen: () => undefined,
+          port: service.getPort() ?? 0,
+          token,
+        })
+
+        return service.getConnectedDevices().map((device) => {
+          return {
+            hasAddress: device.address !== '',
+            hasConnectedAt: device.connectedAt > 0,
+            hasId: device.id !== '',
+            hasUserAgent: device.userAgent !== '',
+          }
+        })
+      },
+    })
+  },
+
+  async connectedDevicesAfterDisconnect(params: { token: string }): Promise<number> {
+    const { token } = params
+
+    return await withStartedService({
+      run: async ({ service }) => {
+        await collectWsMessages({
+          count: 1,
+          onOpen: () => undefined,
+          port: service.getPort() ?? 0,
+          token,
+        })
+
+        return await waitForConnectedDeviceCount({ count: 0, service })
+      },
+    })
+  },
+
+  async devicesChangedEventCounts(params: { token: string }): Promise<number[]> {
+    const { token } = params
+
+    return await withStartedService({
+      run: async ({ service }) => {
+        const capturedDeviceCounts: number[] = []
+        const subscription = appEventBusSingleton().subscribe({
+          listener: (devices) => {
+            capturedDeviceCounts.push(devices.length)
+          },
+          type: AppEventType.MOBILE_DEVICES_CHANGED,
+        })
+
+        try {
+          await collectWsMessages({
+            count: 1,
+            onOpen: () => undefined,
+            port: service.getPort() ?? 0,
+            token,
+          })
+          await waitForConnectedDeviceCount({ count: 0, service })
+
+          return capturedDeviceCounts
+        } finally {
+          subscription.unsubscribe()
+        }
+      },
+    })
+  },
+
   async firstWsMessage(params: { token: string }): Promise<unknown> {
     const { token } = params
 

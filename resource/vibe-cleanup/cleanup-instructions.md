@@ -258,3 +258,12 @@ in the register, and only move the handler, the callback function
 - new mobile menu (@src/renderer/src/ui-component/app-shell/app-shell.tsx) must also bee gree when the mobile connect is on
 ---
 - set default value for `Session finished indicator (seconds)` to be 30s (@src/shared/util/constant.ts)
+---
+- in the mobile screen, hide the pairing token (@src/renderer/src/ui-component/mobile/mobile-pairing-token-field.tsx), display as ***, add show hide button.
+make the component full width.
+- add icons to the buttons show,copy, regenerate (@src/renderer/src/ui-component/mobile/mobile-pairing-token-field.tsx). for show/hide and copy remove the text and add tool tip on hover
+- the pairing token (@src/renderer/src/ui-component/mobile/mobile-pairing-token-field.tsx) should be read only input field, not an label (where we display the actual value of the token)
+---
+- in the mobile screen (@src/renderer/src/ui-component/mobile/mobile-page.tsx) display the info about connected mobile devices, there can be mutliple devices so display a small block (component) per device connected
+- the text ok and http are a bit jammed toghether (@src/renderer/src/ui-component/mobile/mobile-device-card.tsx). fix the desing a bit
+- the okhttp is the issue (@src/renderer/src/ui-component/mobile/mobile-device-card.tsx), why is this without a space between ok and http

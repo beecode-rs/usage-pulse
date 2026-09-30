@@ -11,6 +11,32 @@ subject: mobileServerServiceContractHarness
 module: ./__tests__/_mobile-server-service-contract-harness.js
 subjectType: function
 methods:
+  connectedDevicesAfterConnect:
+    terms:
+      # An authenticated client that completed the upgrade is listed as a
+      # connected device with address, connectedAt, id and user agent.
+      - params:
+          - token: test-token
+        result:
+          - hasAddress: true
+            hasConnectedAt: true
+            hasId: true
+            hasUserAgent: true
+  connectedDevicesAfterDisconnect:
+    terms:
+      # Closing the client socket removes its device from the list.
+      - params:
+          - token: test-token
+        result: 0
+  devicesChangedEventCounts:
+    terms:
+      # Each connect and disconnect emits MOBILE_DEVICES_CHANGED on the app
+      # event bus with the new device counts (1 after connect, 0 after close).
+      - params:
+          - token: test-token
+        result:
+          - 1
+          - 0
   firstWsMessage:
     terms:
       # An authenticated client receives the full state message immediately
