@@ -10,6 +10,7 @@ import { AppFooter } from '#src/renderer/src/ui-component/app-shell/app-footer'
 import '#src/renderer/src/ui-component/app-shell/app-shell.css'
 import { DashboardPage } from '#src/renderer/src/ui-component/dashboard/dashboard-page'
 import { DevelopmentPage } from '#src/renderer/src/ui-component/development/development-page'
+import { MobilePage } from '#src/renderer/src/ui-component/mobile/mobile-page'
 import { SchedulingPage } from '#src/renderer/src/ui-component/scheduling/scheduling-page'
 import { SessionsPage } from '#src/renderer/src/ui-component/sessions/sessions-page'
 import { SideMenu, type SideMenuItem } from '#src/renderer/src/ui-component/side-menu/side-menu'
@@ -20,6 +21,7 @@ import { MenuStatusUtil } from '#src/renderer/src/util/menu-status-util'
 import { sessionFinishedPulseUtil } from '#src/renderer/src/util/session-finished-pulse-util'
 import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
 import { sideMenuPrefsUtil } from '#src/renderer/src/util/side-menu-prefs-util'
+import { UsageStalenessUtil } from '#src/renderer/src/util/usage-staleness-util'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import type { SessionInfo, SessionSnapshot } from '#src/shared/business/model/session-model'
 import type { SettingsModel } from '#src/shared/business/model/settings-model'
@@ -30,11 +32,16 @@ const DEFAULT_ELAPSED_MINUTES = 60
 const DEFAULT_USED_PERCENT = 45
 const NOW_TICK_INTERVAL_MS = 30_000
 const PEAK_STATUS_DOT_TITLE = 'z.ai peak hours: premium models bill at 3× credits (weekdays 14:00–18:00 UTC+8)'
+const WARNING_STATUS_DOT_TITLE = 'Usage warning: tracker data is stale or usage is outpacing the reset window'
 
 const resolveStatusDotTitle = (params: { statusDot?: MenuStatusDotMapper }): string | undefined => {
   const { statusDot } = params
   if (statusDot === MenuStatusDotMapper.PEAK) {
     return PEAK_STATUS_DOT_TITLE
+  }
+
+  if (statusDot === MenuStatusDotMapper.WARNING) {
+    return WARNING_STATUS_DOT_TITLE
   }
 
   return undefined
@@ -83,6 +90,19 @@ const MENU_ICONS: Record<AppViewIdMapper, ReactElement> = {
       <line x1="12" x2="20" y1="19" y2="19" />
     </svg>
   ),
+  [AppViewIdMapper.MOBILE]: (
+    <svg
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.8}
+      viewBox="0 0 24 24"
+    >
+      <rect height="18" rx="2" width="12" x="6" y="3" />
+      <line x1="10" x2="14" y1="18" y2="18" />
+    </svg>
+  ),
   [AppViewIdMapper.SCHEDULING]: (
     <svg
       fill="none"
@@ -126,6 +146,7 @@ const MENU_ICONS: Record<AppViewIdMapper, ReactElement> = {
 
 const resolveMenuItems = (params: {
   dashboardStatusDot: MenuStatusDotMapper | undefined
+  isMobileServerLive: boolean
   isSchedulingLive: boolean
   isSessionsLive: boolean
   isUsageLive: boolean
@@ -134,6 +155,7 @@ const resolveMenuItems = (params: {
 }): SideMenuItem<AppViewIdMapper>[] => {
   const {
     dashboardStatusDot,
+    isMobileServerLive,
     isSchedulingLive,
     isSessionsLive,
     isUsageLive,
@@ -169,6 +191,12 @@ const resolveMenuItems = (params: {
       id: AppViewIdMapper.SCHEDULING,
       isLive: isSchedulingLive,
       label: 'Scheduling',
+    },
+    {
+      icon: MENU_ICONS[AppViewIdMapper.MOBILE],
+      id: AppViewIdMapper.MOBILE,
+      isLive: isMobileServerLive,
+      label: 'Mobile',
     },
   ]
 }
@@ -216,6 +244,12 @@ const resolveIsSessionsLive = (params: { settings?: SettingsModel }): boolean =>
   const { settings } = params
 
   return settings?.isSessionsAutoRefreshPaused === false
+}
+
+const isMobileServerLive = (params: { settings?: SettingsModel }): boolean => {
+  const { settings } = params
+
+  return settings?.isMobileServerEnabled === true
 }
 
 export const AppShell = (): ReactElement => {
@@ -364,13 +398,25 @@ export const AppShell = (): ReactElement => {
 
   const finishedPulseMs = settings?.sessionFinishedPulseMs ?? constant.sessionFinishedPulse.defaultMs
   const menuStatusUtil = new MenuStatusUtil()
+  const refreshIntervalMsByTrackerId = new UsageStalenessUtil().resolveRefreshIntervalMsByTrackerId({
+    trackers: settings?.trackers ?? [],
+  })
   const peakStatusDot = menuStatusUtil.resolvePeakStatusDot({ now: nowMs, snapshot: usageSnapshot })
   const sessionsStatusDot = menuStatusUtil.resolveSessionsStatusDot({
     hasLoadError: sessionsErrorMessage !== '',
     snapshot: sessionSnapshot,
   })
+  const staleStatusDot = menuStatusUtil.resolveStaleStatusDot({
+    now: nowMs,
+    refreshIntervalMsByTrackerId,
+    snapshot: usageSnapshot,
+  })
   const usageActivityStatusDot = menuStatusUtil.resolveCombinedStatusDot({
-    dots: [menuStatusUtil.resolveUsageActivityStatusDot({ now: nowMs, snapshot: usageSnapshot }), peakStatusDot],
+    dots: [
+      menuStatusUtil.resolveUsageActivityStatusDot({ now: nowMs, snapshot: usageSnapshot }),
+      peakStatusDot,
+      staleStatusDot,
+    ],
   })
   const dashboardStatusDot = menuStatusUtil.resolveCombinedStatusDot({
     dots: [usageActivityStatusDot, sessionsStatusDot],
@@ -378,6 +424,7 @@ export const AppShell = (): ReactElement => {
   const developmentStatusDot = menuStatusUtil.resolveDevelopmentStatusDot({ elapsedMinutes, now: nowMs, usedPercent })
   const menuItems = resolveMenuItems({
     dashboardStatusDot,
+    isMobileServerLive: isMobileServerLive({ settings }),
     isSchedulingLive: resolveIsSchedulingLive({ settings }),
     isSessionsLive: resolveIsSessionsLive({ settings }),
     isUsageLive: resolveIsUsageLive({ settings }),
@@ -437,6 +484,10 @@ export const AppShell = (): ReactElement => {
             usedPercent={usedPercent}
           />
         )
+      }
+
+      case AppViewIdMapper.MOBILE: {
+        return <MobilePage />
       }
 
       case AppViewIdMapper.SCHEDULING: {

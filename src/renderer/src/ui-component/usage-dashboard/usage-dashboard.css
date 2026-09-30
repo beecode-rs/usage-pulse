@@ -650,6 +650,11 @@ body {
   border-color: color-mix(in srgb, var(--meter-warning) 50%, var(--hairline));
 }
 
+.provider-card.is-stale {
+  background: color-mix(in srgb, var(--meter-warning) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--meter-warning) 50%, var(--hairline));
+}
+
 .provider-card-peak-banner {
   align-items: center;
   background: rgba(255, 255, 255, 0.04);

@@ -1,0 +1,384 @@
+# Contract for sessionStatusTransitionUtil.
+# resolveStatusTransitionSessionIds answers "which sessions moved from one exact
+# status to another" (the finished-session transition is busy to idle): a session
+# matches only when the same sessionId had fromStatus in the previous snapshot and
+# has toStatus now. A session absent from the previous snapshot never matches, and
+# the first poll (no previous snapshot) returns nobody. fromStatus/toStatus are
+# parameters, so the same resolver answers other transitions (e.g. idle to busy).
+# resolveNewlyStatusSessionIds answers "which sessions have the status now without
+# having it before": any previous status (including absent from the previous
+# snapshot) counts, so a brand-new waiting session matches. The renderer
+# SessionSoundUtil delegates here, so its contract pins the same behavior end to
+# end.
+subject: sessionStatusTransitionUtil
+module: ./session-status-transition-util.js
+subjectType: function
+methods:
+  resolveStatusTransitionSessionIds:
+    terms:
+      # First snapshot (no previous sessions yet): nobody transitioned, even when a
+      # session is already idle.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: idle
+            fromStatus: busy
+            previousSessions: !undefined
+            toStatus: idle
+        result: []
+      # The finished-session transition itself: busy becomes idle.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: idle
+            fromStatus: busy
+            previousSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: busy
+            toStatus: idle
+        result:
+          - sid-1
+      # Already idle before: staying idle is not a transition.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: idle
+            fromStatus: busy
+            previousSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: idle
+            toStatus: idle
+        result: []
+      # Unrelated transition: waiting becomes idle does not count as busy to idle.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: idle
+            fromStatus: busy
+            previousSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: waiting
+            toStatus: idle
+        result: []
+      # An empty previous snapshot is the same as nobody being busy before.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: idle
+            fromStatus: busy
+            previousSessions: []
+            toStatus: idle
+        result: []
+      # A session absent from the previous snapshot never matches, whatever the
+      # previous snapshot holds for other sessions.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: idle
+            fromStatus: busy
+            previousSessions:
+              - cwd: /b
+                kind: claude
+                name: s2
+                pid: 2
+                sessionId: sid-2
+                startedAt: 0
+                status: busy
+            toStatus: idle
+        result: []
+      # The mixed snapshot: only the busy to idle sessions come back. sid-2 came
+      # from waiting, sid-3 stays idle, sid-4 is busy now (was idle), sid-5 is new.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: idle
+              - cwd: /b
+                kind: claude
+                name: s2
+                pid: 2
+                sessionId: sid-2
+                startedAt: 0
+                status: idle
+              - cwd: /c
+                kind: claude
+                name: s3
+                pid: 3
+                sessionId: sid-3
+                startedAt: 0
+                status: idle
+              - cwd: /d
+                kind: claude
+                name: s4
+                pid: 4
+                sessionId: sid-4
+                startedAt: 0
+                status: busy
+              - cwd: /e
+                kind: claude
+                name: s5
+                pid: 5
+                sessionId: sid-5
+                startedAt: 0
+                status: idle
+            fromStatus: busy
+            previousSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: busy
+              - cwd: /b
+                kind: claude
+                name: s2
+                pid: 2
+                sessionId: sid-2
+                startedAt: 0
+                status: waiting
+              - cwd: /c
+                kind: claude
+                name: s3
+                pid: 3
+                sessionId: sid-3
+                startedAt: 0
+                status: idle
+              - cwd: /d
+                kind: claude
+                name: s4
+                pid: 4
+                sessionId: sid-4
+                startedAt: 0
+                status: idle
+            toStatus: idle
+        result:
+          - sid-1
+      # fromStatus/toStatus are parameters, not a hardcoded busy/idle pair: the
+      # resumed-work transition idle to busy triggers with the pair swapped.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: busy
+            fromStatus: idle
+            previousSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: idle
+            toStatus: busy
+        result:
+          - sid-1
+  resolveNewlyStatusSessionIds:
+    terms:
+      # First snapshot (no previous sessions yet): nobody is newly anything, even
+      # when a session is already waiting.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: waiting
+            previousSessions: !undefined
+            status: waiting
+        result: []
+      # A busy session becoming waiting is newly waiting.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: waiting
+            previousSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: busy
+            status: waiting
+        result:
+          - sid-1
+      # A session absent from the previous snapshot is newly waiting, so a session
+      # that first appears while waiting for input matches.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: waiting
+            previousSessions: []
+            status: waiting
+        result:
+          - sid-1
+      # Staying in the status is not new.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: waiting
+            previousSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: waiting
+            status: waiting
+        result: []
+      # Leaving the status is not new either.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: busy
+            previousSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: waiting
+            status: waiting
+        result: []
+      # The mixed snapshot: only the sessions waiting now without waiting before
+      # come back. sid-2 stays waiting, sid-3 just went busy, sid-4 is new but idle.
+      - params:
+          - currentSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: waiting
+              - cwd: /b
+                kind: claude
+                name: s2
+                pid: 2
+                sessionId: sid-2
+                startedAt: 0
+                status: waiting
+              - cwd: /c
+                kind: claude
+                name: s3
+                pid: 3
+                sessionId: sid-3
+                startedAt: 0
+                status: busy
+              - cwd: /d
+                kind: claude
+                name: s4
+                pid: 4
+                sessionId: sid-4
+                startedAt: 0
+                status: idle
+            previousSessions:
+              - cwd: /a
+                kind: claude
+                name: s1
+                pid: 1
+                sessionId: sid-1
+                startedAt: 0
+                status: busy
+              - cwd: /b
+                kind: claude
+                name: s2
+                pid: 2
+                sessionId: sid-2
+                startedAt: 0
+                status: waiting
+              - cwd: /c
+                kind: claude
+                name: s3
+                pid: 3
+                sessionId: sid-3
+                startedAt: 0
+                status: waiting
+              - cwd: /e
+                kind: claude
+                name: s5
+                pid: 5
+                sessionId: sid-5
+                startedAt: 0
+                status: busy
+            status: waiting
+        result:
+          - sid-1

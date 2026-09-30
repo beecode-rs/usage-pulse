@@ -1,0 +1,327 @@
+# Contract for the mobile API zod schemas: the wire shapes the mobile server
+# sends and the mobile app parses. Every method wraps safeParse and returns
+# { data, success: true } with the parsed value or { success: false }, so the
+# terms pin both acceptance of each JSON form and rejection of wrong shapes.
+# The ws message schema is a discriminated union on `type`: each of the six
+# variants parses from its JSON form (state carries usage plus sessions, with
+# sessions null before the first sessions poll completes; usage-warning carries
+# either the percent pair for the two percent reasons or errorMessage for
+# provider-error). Anything else fails: an unknown type never matches a
+# discriminator literal, a missing required section fails, a wrong primitive
+# for `at` fails, and enum fields (session status, warning reason) reject
+# values outside the enums. The state response mirrors the state message
+# payload; the health response is the fixed { ok, appVersion } pair.
+subject: mobileApiSchemaContractHarness
+module: ./__tests__/_mobile-api-schema-contract-harness.js
+subjectType: function
+methods:
+  parseWsMessage:
+    terms:
+      # --- state variant, full payload ---
+      - params:
+          - message:
+              sessions:
+                fetchedAt: 1700000000000
+                sessions:
+                  - cwd: /home/user/project
+                    kind: claude-code
+                    name: fix-login
+                    pid: 123
+                    sessionId: session-1
+                    startedAt: 1699999000000
+                    status: idle
+                unreachableHosts: []
+              type: state
+              usage:
+                providers:
+                  - providerId: claude
+                    status: OK
+                    trackerId: tracker-1
+                    trackerName: Claude
+                    usage:
+                      - label: 5h
+                        resetAt: 1700001000000
+                        usedPercent: 42.5
+        result:
+          data:
+            sessions:
+              fetchedAt: 1700000000000
+              sessions:
+                - cwd: /home/user/project
+                  kind: claude-code
+                  name: fix-login
+                  pid: 123
+                  sessionId: session-1
+                  startedAt: 1699999000000
+                  status: idle
+              unreachableHosts: []
+            type: state
+            usage:
+              providers:
+                - providerId: claude
+                  status: OK
+                  trackerId: tracker-1
+                  trackerName: Claude
+                  usage:
+                    - label: 5h
+                      resetAt: 1700001000000
+                      usedPercent: 42.5
+          success: true
+      # --- state variant, sessions null before the first sessions poll ---
+      - params:
+          - message:
+              sessions: null
+              type: state
+              usage:
+                providers: []
+        result:
+          data:
+            sessions: null
+            type: state
+            usage:
+              providers: []
+          success: true
+      # --- usage-snapshot variant ---
+      - params:
+          - message:
+              type: usage-snapshot
+              usage:
+                providers:
+                  - providerId: zai
+                    status: PENDING
+                    trackerId: tracker-2
+                    trackerName: z.ai
+        result:
+          data:
+            type: usage-snapshot
+            usage:
+              providers:
+                - providerId: zai
+                  status: PENDING
+                  trackerId: tracker-2
+                  trackerName: z.ai
+          success: true
+      # --- sessions-snapshot variant ---
+      - params:
+          - message:
+              sessions:
+                fetchedAt: 1700000000001
+                sessions: []
+                unreachableHosts:
+                  - errorMessage: connection refused
+                    hostId: host-1
+                    hostLabel: ssh://box
+              type: sessions-snapshot
+        result:
+          data:
+            sessions:
+              fetchedAt: 1700000000001
+              sessions: []
+              unreachableHosts:
+                - errorMessage: connection refused
+                  hostId: host-1
+                  hostLabel: ssh://box
+            type: sessions-snapshot
+          success: true
+      # --- session-finished variant ---
+      - params:
+          - message:
+              session:
+                cwd: /home/user/other
+                hostId: host-1
+                hostLabel: ssh://box
+                kind: claude-code
+                name: refactor
+                pid: 456
+                sessionId: session-2
+                startedAt: 1699998000000
+                status: idle
+                transcript:
+                  aiTitle: Refactor parser
+                  cacheCreationTokens: 100
+                  cacheReadTokens: 200
+                  gitBranch: main
+                  inputTokens: 1
+                  lastPrompt: go
+                  model: glm-5
+                  outputTokens: 2
+                  thinkingTokens: 3
+                  userTurnsCount: 4
+                  version: '1.0'
+              type: session-finished
+        result:
+          data:
+            session:
+              cwd: /home/user/other
+              hostId: host-1
+              hostLabel: ssh://box
+              kind: claude-code
+              name: refactor
+              pid: 456
+              sessionId: session-2
+              startedAt: 1699998000000
+              status: idle
+              transcript:
+                aiTitle: Refactor parser
+                cacheCreationTokens: 100
+                cacheReadTokens: 200
+                gitBranch: main
+                inputTokens: 1
+                lastPrompt: go
+                model: glm-5
+                outputTokens: 2
+                thinkingTokens: 3
+                userTurnsCount: 4
+                version: '1.0'
+            type: session-finished
+          success: true
+      # --- usage-warning variant, high-usage carries the percent pair ---
+      - params:
+          - message:
+              type: usage-warning
+              warning:
+                reason: high-usage
+                trackerId: tracker-1
+                trackerName: Claude
+                usedPercent: 86.5
+                windowLabel: 5h
+        result:
+          data:
+            type: usage-warning
+            warning:
+              reason: high-usage
+              trackerId: tracker-1
+              trackerName: Claude
+              usedPercent: 86.5
+              windowLabel: 5h
+          success: true
+      # --- usage-warning variant, provider-error carries errorMessage ---
+      - params:
+          - message:
+              type: usage-warning
+              warning:
+                errorMessage: invalid api key
+                reason: provider-error
+                trackerId: tracker-2
+                trackerName: z.ai
+        result:
+          data:
+            type: usage-warning
+            warning:
+              errorMessage: invalid api key
+              reason: provider-error
+              trackerId: tracker-2
+              trackerName: z.ai
+          success: true
+      # --- heartbeat variant ---
+      - params:
+          - message:
+              at: 1700000000000
+              type: heartbeat
+        result:
+          data:
+            at: 1700000000000
+            type: heartbeat
+          success: true
+      # --- wrong shapes ---
+      # Unknown type matches no discriminator literal.
+      - params:
+          - message:
+              type: nope
+        result:
+          success: false
+      # state without the usage section fails.
+      - params:
+          - message:
+              sessions: null
+              type: state
+        result:
+          success: false
+      # heartbeat with a non-number at fails.
+      - params:
+          - message:
+              at: soon
+              type: heartbeat
+        result:
+          success: false
+      # session status outside the enum fails.
+      - params:
+          - message:
+              session:
+                cwd: /home/user/project
+                kind: claude-code
+                name: fix-login
+                pid: 123
+                sessionId: session-1
+                startedAt: 1699999000000
+                status: sleeping
+              type: session-finished
+        result:
+          success: false
+      # warning reason outside the enum fails.
+      - params:
+          - message:
+              type: usage-warning
+              warning:
+                reason: heads-up
+                trackerId: tracker-1
+                trackerName: Claude
+        result:
+          success: false
+  parseStateResponse:
+    terms:
+      # Both sections present parses.
+      - params:
+          - response:
+              sessions:
+                fetchedAt: 1700000000000
+                sessions: []
+                unreachableHosts: []
+              usage:
+                providers: []
+        result:
+          data:
+            sessions:
+              fetchedAt: 1700000000000
+              sessions: []
+              unreachableHosts: []
+            usage:
+              providers: []
+          success: true
+      # sessions null parses (first sessions poll not completed yet).
+      - params:
+          - response:
+              sessions: null
+              usage:
+                providers: []
+        result:
+          data:
+            sessions: null
+            usage:
+              providers: []
+          success: true
+      # Missing sessions section fails.
+      - params:
+          - response:
+              usage:
+                providers: []
+        result:
+          success: false
+  parseHealthResponse:
+    terms:
+      # The fixed health payload parses.
+      - params:
+          - response:
+              appVersion: '1.2.3'
+              ok: true
+        result:
+          data:
+            appVersion: '1.2.3'
+            ok: true
+          success: true
+      # Missing appVersion fails.
+      - params:
+          - response:
+              ok: true
+        result:
+          success: false

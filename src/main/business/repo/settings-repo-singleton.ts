@@ -1,4 +1,5 @@
 import { singletonPattern } from '@beecode/msh-util'
+import { randomBytes } from 'node:crypto'
 
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
 import { appSettingsSchema } from '#src/main/business/schema/settings-schema'
@@ -51,11 +52,26 @@ export class _SettingsRepo {
     return new SettingsModel({
       settings: {
         ...sanitizedSettings,
+        mobileServerToken: this._resolveMobileServerToken({ token: sanitizedSettings.mobileServerToken }),
         sshHosts: idUtil.ensureUniqueIds(sanitizedSettings.sshHosts),
         trackers: idUtil.ensureUniqueIds(sanitizedSettings.trackers),
         triggers: idUtil.ensureUniqueIds(sanitizedSettings.triggers),
       },
     })
+  }
+
+  protected _generateMobileServerToken(): string {
+    return randomBytes(24).toString('hex')
+  }
+
+  protected _resolveMobileServerToken(params: { token: string }): string {
+    const { token } = params
+
+    if (token !== '') {
+      return token
+    }
+
+    return this._generateMobileServerToken()
   }
 }
 

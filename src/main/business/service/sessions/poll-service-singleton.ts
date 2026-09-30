@@ -33,7 +33,7 @@ export class _SessionsPollService {
   async start(): Promise<void> {
     this._settings = this._settingsRepo.fetch()
 
-    if (!this._isWindowVisible) {
+    if (!this._isPollingEnabled()) {
       return
     }
 
@@ -64,13 +64,15 @@ export class _SessionsPollService {
 
     this._isWindowVisible = isVisible
 
-    if (!isVisible) {
+    if (!isVisible && !this._isPollingEnabled()) {
       this.stop()
 
       return
     }
 
-    void this._resumeAutoRefresh()
+    if (isVisible) {
+      void this._resumeAutoRefresh()
+    }
   }
 
   async refreshNow(): Promise<SessionSnapshot> {
@@ -94,6 +96,10 @@ export class _SessionsPollService {
 
   getSnapshot(): SessionSnapshot | undefined {
     return this._snapshot
+  }
+
+  protected _isPollingEnabled(): boolean {
+    return this._isWindowVisible || (this._settings?.isMobileServerEnabled ?? false)
   }
 
   protected async _resumeAutoRefresh(): Promise<void> {
@@ -190,7 +196,7 @@ export class _SessionsPollService {
       return
     }
 
-    if (!this._isWindowVisible) {
+    if (!this._isPollingEnabled()) {
       return
     }
 

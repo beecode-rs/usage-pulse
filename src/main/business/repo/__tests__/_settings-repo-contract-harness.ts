@@ -13,6 +13,7 @@ import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'
 
 const deterministicNowMs = 1_700_000_000_000
+const deterministicMobileServerToken = '001122334455667700112233445566770011223344556677'
 
 let generatedIdCount = 0
 
@@ -33,6 +34,10 @@ class TempFileSettingsRepo extends _SettingsRepo {
     super()
     const { settingsFilePath } = params
     this._dal = new SettingsDal({ settingsFilePath })
+  }
+
+  protected override _generateMobileServerToken(): string {
+    return deterministicMobileServerToken
   }
 
   override sanitize(params: { rawSettings: unknown }): SettingsModel {

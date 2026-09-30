@@ -13,9 +13,12 @@ constructor:
     # No params: every field comes back as its default.
     - params: []
       result:
+        isMobileServerEnabled: false
         isSchedulingEnabled: false
         isSessionsAutoRefreshPaused: false
-        sessionFinishedPulseMs: 10000
+        mobileServerPort: 8787
+        mobileServerToken: ''
+        sessionFinishedPulseMs: 30000
         sessionFinishedSoundId: success
         sessionsRefreshIntervalMs: 5000
         soundVolumePercent: 40
@@ -27,7 +30,10 @@ constructor:
     # wholesale) and absent fields fall back to their defaults.
     - params:
         - settings:
+            isMobileServerEnabled: true
             isSchedulingEnabled: true
+            mobileServerPort: 9100
+            mobileServerToken: 'pairing-token'
             sessionFinishedSoundId: ding
             trackers:
               - accessToken: 'tok'
@@ -38,9 +44,12 @@ constructor:
                 providerId: 'claude'
                 refreshIntervalMs: 900000
       result:
+        isMobileServerEnabled: true
         isSchedulingEnabled: true
         isSessionsAutoRefreshPaused: false
-        sessionFinishedPulseMs: 10000
+        mobileServerPort: 9100
+        mobileServerToken: 'pairing-token'
+        sessionFinishedPulseMs: 30000
         sessionFinishedSoundId: ding
         sessionsRefreshIntervalMs: 5000
         soundVolumePercent: 40
@@ -63,7 +72,7 @@ methods:
           - settings:
               isSchedulingEnabled: false
               isSessionsAutoRefreshPaused: false
-              sessionFinishedPulseMs: 10000
+              sessionFinishedPulseMs: 30000
               sessionFinishedSoundId: success
               sessionsRefreshIntervalMs: 5000
               soundVolumePercent: 40
@@ -74,9 +83,12 @@ methods:
         params:
           - isEnabled: true
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: true
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseMs: 10000
+          mobileServerPort: 8787
+          mobileServerToken: ''
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -92,7 +104,7 @@ methods:
           - settings:
               isSchedulingEnabled: false
               isSessionsAutoRefreshPaused: false
-              sessionFinishedPulseMs: 10000
+              sessionFinishedPulseMs: 30000
               sessionFinishedSoundId: success
               sessionsRefreshIntervalMs: 5000
               soundVolumePercent: 40
@@ -117,9 +129,12 @@ methods:
           - isAutoRefreshPaused: true
             trackerId: 't-1'
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseMs: 10000
+          mobileServerPort: 8787
+          mobileServerToken: ''
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40
@@ -147,7 +162,7 @@ methods:
           - settings:
               isSchedulingEnabled: false
               isSessionsAutoRefreshPaused: false
-              sessionFinishedPulseMs: 10000
+              sessionFinishedPulseMs: 30000
               sessionFinishedSoundId: success
               sessionsRefreshIntervalMs: 5000
               soundVolumePercent: 40
@@ -167,9 +182,12 @@ methods:
           - isEnabled: true
             triggerId: 'trg-1'
         result:
+          isMobileServerEnabled: false
           isSchedulingEnabled: false
           isSessionsAutoRefreshPaused: false
-          sessionFinishedPulseMs: 10000
+          mobileServerPort: 8787
+          mobileServerToken: ''
+          sessionFinishedPulseMs: 30000
           sessionFinishedSoundId: success
           sessionsRefreshIntervalMs: 5000
           soundVolumePercent: 40

@@ -1,0 +1,47 @@
+# Contract for usageSeverityLevelUtil.
+# resolveSeverityLevel answers "how loaded is a usage window" as one of four bands over
+# the used percent: below the filling-up threshold nothing is reported; from that
+# threshold up to (excluding) the high-usage threshold the window is filling up; from
+# there up to (excluding) the limit-reached threshold usage is high; at or above the
+# limit the limit is reached. Boundaries are inclusive upward: exactly 70 is filling
+# up, exactly 85 is high usage, exactly 95 is limit reached. The renderer severity
+# label maps from this level, so presentation and the main-process warning derivation
+# share one band definition.
+subject: usageSeverityLevelUtil
+module: ./usage-severity-level-util.js
+subjectType: function
+methods:
+  resolveSeverityLevel:
+    terms:
+      # Far inside the none band: nothing to report.
+      - params:
+          - usedPercent: 0
+        result: NONE
+      # Just below the filling-up boundary stays none.
+      - params:
+          - usedPercent: 69
+        result: NONE
+      # The exact filling-up boundary belongs to the filling-up band.
+      - params:
+          - usedPercent: 70
+        result: FILLING_UP
+      # The rest of the filling-up band, just below high usage.
+      - params:
+          - usedPercent: 84
+        result: FILLING_UP
+      # The exact high-usage boundary belongs to the high-usage band.
+      - params:
+          - usedPercent: 85
+        result: HIGH_USAGE
+      # The rest of the high-usage band, just below the limit.
+      - params:
+          - usedPercent: 94
+        result: HIGH_USAGE
+      # The exact limit-reached boundary belongs to the limit-reached band.
+      - params:
+          - usedPercent: 95
+        result: LIMIT_REACHED
+      # Above the limit stays limit reached, however far over.
+      - params:
+          - usedPercent: 100
+        result: LIMIT_REACHED

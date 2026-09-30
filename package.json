@@ -40,6 +40,7 @@
 		"@beecode/msh-env": "^2.0.3",
 		"@beecode/msh-util": "^3.0.1",
 		"rxjs": "^7.8.2",
+		"ws": "^8.18.0",
 		"zod": "^4.6.5"
 	},
 	"devDependencies": {
@@ -48,6 +49,7 @@
 		"@types/node": "^26.2.0",
 		"@types/react": "^19.2.18",
 		"@types/react-dom": "^19.2.4",
+		"@types/ws": "^8.18.0",
 		"@vitejs/plugin-react": "^5.2.0",
 		"electron": "^43.4.1",
 		"electron-builder": "^26.15.3",
