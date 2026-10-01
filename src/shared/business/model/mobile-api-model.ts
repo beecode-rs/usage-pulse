@@ -37,6 +37,11 @@ export type MobileSessionFinishedMessage = {
   type: 'session-finished'
 }
 
+export type MobileSessionWaitingMessage = {
+  session: SessionInfo
+  type: 'session-waiting'
+}
+
 export type MobileUsageWarningMessage = {
   type: 'usage-warning'
   warning: UsageWarning
@@ -50,6 +55,7 @@ export type MobileHeartbeatMessage = {
 export type MobileWsMessage =
   | MobileHeartbeatMessage
   | MobileSessionFinishedMessage
+  | MobileSessionWaitingMessage
   | MobileSessionsSnapshotMessage
   | MobileStateMessage
   | MobileUsageSnapshotMessage

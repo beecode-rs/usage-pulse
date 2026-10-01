@@ -25,6 +25,26 @@ export const mobileDerivedEventsServiceContractHarness = {
 
     return deliveries
   },
+  sessionWaitingDeliveries(params: { snapshots: SessionSnapshot[] }): SessionInfo[] {
+    const { snapshots } = params
+    const deliveries: SessionInfo[] = []
+    const subscription = appEventBusSingleton().subscribe({
+      listener: (session) => {
+        deliveries.push(session)
+      },
+      type: AppEventType.SESSION_WAITING,
+    })
+    const service = new _MobileDerivedEventsService()
+    service.start()
+    snapshots.forEach((snapshot) => {
+      appEventBusSingleton().emit({ payload: snapshot, type: AppEventType.SESSIONS_SNAPSHOT })
+    })
+    service.stop()
+    subscription.unsubscribe()
+
+    return deliveries
+  },
+
   usageWarningDeliveries(params: { snapshots: UsageSnapshot[] }): UsageWarning[] {
     const { snapshots } = params
     const deliveries: UsageWarning[] = []

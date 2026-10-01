@@ -114,6 +114,12 @@ export class _MobileServerService {
         type: AppEventType.SESSION_FINISHED,
       }),
       appEventBusSingleton().subscribe({
+        listener: (session) => {
+          broadcaster.broadcast({ message: { session, type: 'session-waiting' } })
+        },
+        type: AppEventType.SESSION_WAITING,
+      }),
+      appEventBusSingleton().subscribe({
         listener: (sessions) => {
           broadcaster.broadcast({ message: { sessions, type: 'sessions-snapshot' } })
         },

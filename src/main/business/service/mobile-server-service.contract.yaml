@@ -74,6 +74,23 @@ methods:
             appVersion: '0.6.1-test'
             ok: true
           status: 200
+  sessionWaitingMessage:
+    terms:
+      # Emitting SESSION_WAITING on the app event bus delivers a session-waiting
+      # message with the full session to the connected socket after the initial
+      # state push.
+      - params:
+          - token: test-token
+        result:
+          session:
+            cwd: /home/user/proj-a
+            kind: claude-code
+            name: session-a
+            pid: 1234
+            sessionId: s-a
+            startedAt: 1726000000000
+            status: waiting
+          type: session-waiting
   stateResponse:
     terms:
       # State with a valid token returns both sections; usage is the poll

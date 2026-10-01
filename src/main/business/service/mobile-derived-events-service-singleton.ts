@@ -6,7 +6,7 @@ import { SessionStatusMapper } from '#src/shared/business/enum/session-status-ma
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { UsageSeverityLevel } from '#src/shared/business/enum/usage-severity-level-enum'
 import { type UsageWarning, UsageWarningReason } from '#src/shared/business/model/mobile-api-model'
-import { type SessionSnapshot } from '#src/shared/business/model/session-model'
+import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
 import { type ProviderSnapshot, type UsageSnapshot } from '#src/shared/business/model/usage-model'
 import { sessionStatusTransitionUtil } from '#src/shared/util/session-status-transition-util'
 import { usageSeverityLevelUtil } from '#src/shared/util/usage-severity-level-util'
@@ -54,17 +54,57 @@ export class _MobileDerivedEventsService {
 
   protected _onSessionsSnapshot(params: { snapshot: SessionSnapshot }): void {
     const { snapshot } = params
-    const finishedSessionIds = sessionStatusTransitionUtil.resolveStatusTransitionSessionIds({
+    const previousSessions = this._previousSessionsSnapshot?.sessions
+    const finishedSessionIds = this._resolveFinishedSessionIds({ currentSessions: snapshot.sessions, previousSessions })
+    const newlyWaitingSessionIds = sessionStatusTransitionUtil.resolveNewlyStatusSessionIds({
       currentSessions: snapshot.sessions,
-      fromStatus: SessionStatusMapper.BUSY,
-      previousSessions: this._previousSessionsSnapshot?.sessions,
-      toStatus: SessionStatusMapper.IDLE,
+      previousSessions,
+      status: SessionStatusMapper.WAITING,
     })
 
     this._previousSessionsSnapshot = snapshot
 
-    finishedSessionIds.forEach((sessionId) => {
-      const session = snapshot.sessions.find((candidate) => {
+    this._emitSessionEvents({
+      sessionIds: finishedSessionIds,
+      sessions: snapshot.sessions,
+      type: AppEventType.SESSION_FINISHED,
+    })
+    this._emitSessionEvents({
+      sessionIds: newlyWaitingSessionIds,
+      sessions: snapshot.sessions,
+      type: AppEventType.SESSION_WAITING,
+    })
+  }
+
+  protected _resolveFinishedSessionIds(params: {
+    currentSessions: SessionInfo[]
+    previousSessions?: SessionInfo[]
+  }): string[] {
+    const { currentSessions, previousSessions } = params
+    const busyToIdleSessionIds = sessionStatusTransitionUtil.resolveStatusTransitionSessionIds({
+      currentSessions,
+      fromStatus: SessionStatusMapper.BUSY,
+      previousSessions,
+      toStatus: SessionStatusMapper.IDLE,
+    })
+    const waitingToIdleSessionIds = sessionStatusTransitionUtil.resolveStatusTransitionSessionIds({
+      currentSessions,
+      fromStatus: SessionStatusMapper.WAITING,
+      previousSessions,
+      toStatus: SessionStatusMapper.IDLE,
+    })
+
+    return [...new Set([...busyToIdleSessionIds, ...waitingToIdleSessionIds])]
+  }
+
+  protected _emitSessionEvents(params: {
+    sessionIds: string[]
+    sessions: SessionInfo[]
+    type: AppEventType.SESSION_FINISHED | AppEventType.SESSION_WAITING
+  }): void {
+    const { sessionIds, sessions, type } = params
+    sessionIds.forEach((sessionId) => {
+      const session = sessions.find((candidate) => {
         return candidate.sessionId === sessionId
       })
 
@@ -72,7 +112,7 @@ export class _MobileDerivedEventsService {
         return
       }
 
-      appEventBusSingleton().emit({ payload: session, type: AppEventType.SESSION_FINISHED })
+      appEventBusSingleton().emit({ payload: session, type })
     })
   }
 

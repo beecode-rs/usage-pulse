@@ -2,10 +2,10 @@
 # The contractor resolves flat callable subjects, so the terms drive the scenario
 # functions in __tests__/_mobile-derived-events-service-contract-harness.ts. Each
 # scenario creates a fresh service instance, starts it, replays a sequence of
-# snapshots on the shared app event bus, and returns every SESSION_FINISHED or
-# USAGE_WARNING delivery captured while the service was running. The bus is a
-# module singleton shared by every term in this file, so each scenario stops the
-# service and unsubscribes before returning.
+# snapshots on the shared app event bus, and returns every SESSION_FINISHED,
+# SESSION_WAITING, or USAGE_WARNING delivery captured while the service was
+# running. The bus is a module singleton shared by every term in this file, so
+# each scenario stops the service and unsubscribes before returning.
 subject: mobileDerivedEventsServiceContractHarness
 module: ./__tests__/_mobile-derived-events-service-contract-harness.js
 subjectType: function
@@ -81,6 +81,151 @@ methods:
                     sessionId: s-a
                     startedAt: 1726000000000
                     status: busy
+                unreachableHosts: []
+        result: []
+      # A session that was WAITING in the previous snapshot and IDLE in the current
+      # one also finished: answering and completing within one poll window still
+      # emits exactly one SESSION_FINISHED.
+      - params:
+          - snapshots:
+              - fetchedAt: 1726000000000
+                sessions:
+                  - cwd: /home/user/proj-a
+                    kind: claude-code
+                    name: session-a
+                    pid: 1234
+                    sessionId: s-a
+                    startedAt: 1726000000000
+                    status: waiting
+                unreachableHosts: []
+              - fetchedAt: 1726000001000
+                sessions:
+                  - cwd: /home/user/proj-a
+                    kind: claude-code
+                    name: session-a
+                    pid: 1234
+                    sessionId: s-a
+                    startedAt: 1726000000000
+                    status: idle
+                unreachableHosts: []
+        result:
+          - cwd: /home/user/proj-a
+            kind: claude-code
+            name: session-a
+            pid: 1234
+            sessionId: s-a
+            startedAt: 1726000000000
+            status: idle
+  sessionWaitingDeliveries:
+    terms:
+      # A session that was BUSY in the previous snapshot and WAITING in the current
+      # one emits exactly one SESSION_WAITING carrying the current session.
+      - params:
+          - snapshots:
+              - fetchedAt: 1726000000000
+                sessions:
+                  - cwd: /home/user/proj-a
+                    kind: claude-code
+                    name: session-a
+                    pid: 1234
+                    sessionId: s-a
+                    startedAt: 1726000000000
+                    status: busy
+                unreachableHosts: []
+              - fetchedAt: 1726000001000
+                sessions:
+                  - cwd: /home/user/proj-a
+                    kind: claude-code
+                    name: session-a
+                    pid: 1234
+                    sessionId: s-a
+                    startedAt: 1726000000000
+                    status: waiting
+                unreachableHosts: []
+        result:
+          - cwd: /home/user/proj-a
+            kind: claude-code
+            name: session-a
+            pid: 1234
+            sessionId: s-a
+            startedAt: 1726000000000
+            status: waiting
+      # A session absent from the previous snapshot that appears while WAITING is
+      # newly waiting and emits too.
+      - params:
+          - snapshots:
+              - fetchedAt: 1726000000000
+                sessions:
+                  - cwd: /home/user/proj-b
+                    kind: claude-code
+                    name: session-b
+                    pid: 5678
+                    sessionId: s-b
+                    startedAt: 1726000000000
+                    status: busy
+                unreachableHosts: []
+              - fetchedAt: 1726000001000
+                sessions:
+                  - cwd: /home/user/proj-b
+                    kind: claude-code
+                    name: session-b
+                    pid: 5678
+                    sessionId: s-b
+                    startedAt: 1726000000000
+                    status: busy
+                  - cwd: /home/user/proj-a
+                    kind: claude-code
+                    name: session-a
+                    pid: 1234
+                    sessionId: s-a
+                    startedAt: 1726000000500
+                    status: waiting
+                unreachableHosts: []
+        result:
+          - cwd: /home/user/proj-a
+            kind: claude-code
+            name: session-a
+            pid: 1234
+            sessionId: s-a
+            startedAt: 1726000000500
+            status: waiting
+      # A session already WAITING in both snapshots emits nothing.
+      - params:
+          - snapshots:
+              - fetchedAt: 1726000000000
+                sessions:
+                  - cwd: /home/user/proj-a
+                    kind: claude-code
+                    name: session-a
+                    pid: 1234
+                    sessionId: s-a
+                    startedAt: 1726000000000
+                    status: waiting
+                unreachableHosts: []
+              - fetchedAt: 1726000001000
+                sessions:
+                  - cwd: /home/user/proj-a
+                    kind: claude-code
+                    name: session-a
+                    pid: 1234
+                    sessionId: s-a
+                    startedAt: 1726000000000
+                    status: waiting
+                unreachableHosts: []
+        result: []
+      # The first snapshot after start only records the previous state, so a lone
+      # WAITING snapshot emits nothing (no restart notification spam).
+      - params:
+          - snapshots:
+              - fetchedAt: 1726000000000
+                sessions:
+                  - cwd: /home/user/proj-a
+                    kind: claude-code
+                    name: session-a
+                    pid: 1234
+                    sessionId: s-a
+                    startedAt: 1726000000000
+                    status: waiting
                 unreachableHosts: []
         result: []
   usageWarningDeliveries:

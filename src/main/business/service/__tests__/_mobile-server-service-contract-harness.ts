@@ -13,11 +13,23 @@ import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-sin
 import { _MobileServerService } from '#src/main/business/service/mobile-server-service-singleton'
 import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
+import { type SessionInfo } from '#src/shared/business/model/session-model'
 import { SettingsModel } from '#src/shared/business/model/settings-model'
 import { type UsageSnapshot } from '#src/shared/business/model/usage-model'
 
 const TEST_TOKEN = 'test-token'
+
+const sessionWaitingFixture: SessionInfo = {
+  cwd: '/home/user/proj-a',
+  kind: 'claude-code',
+  name: 'session-a',
+  pid: 1234,
+  sessionId: 's-a',
+  startedAt: 1_726_000_000_000,
+  status: SessionStatusMapper.WAITING,
+}
 
 const usageSnapshotFixture: UsageSnapshot = {
   providers: [
@@ -234,6 +246,25 @@ export const mobileServerServiceContractHarness = {
     return await withStartedService({
       run: async ({ service }) => {
         return await fetchApiResponse({ path: '/api/health', port: service.getPort() ?? 0, tokenVia })
+      },
+    })
+  },
+
+  async sessionWaitingMessage(params: { token: string }): Promise<unknown> {
+    const { token } = params
+
+    return await withStartedService({
+      run: async ({ service }) => {
+        const messages = await collectWsMessages({
+          count: 2,
+          onOpen: () => {
+            appEventBusSingleton().emit({ payload: sessionWaitingFixture, type: AppEventType.SESSION_WAITING })
+          },
+          port: service.getPort() ?? 0,
+          token,
+        })
+
+        return messages[1]
       },
     })
   },

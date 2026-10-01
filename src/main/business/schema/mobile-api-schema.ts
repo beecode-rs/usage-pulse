@@ -90,6 +90,10 @@ const sessionFinishedMessageSchema = z.object({
   session: sessionInfoSchema,
   type: z.literal('session-finished'),
 })
+const sessionWaitingMessageSchema = z.object({
+  session: sessionInfoSchema,
+  type: z.literal('session-waiting'),
+})
 const usageWarningMessageSchema = z.object({
   type: z.literal('usage-warning'),
   warning: usageWarningSchema,
@@ -102,6 +106,7 @@ const heartbeatMessageSchema = z.object({
 export const mobileWsMessageSchema: z.ZodType<MobileWsMessage> = z.discriminatedUnion('type', [
   heartbeatMessageSchema,
   sessionFinishedMessageSchema,
+  sessionWaitingMessageSchema,
   sessionsSnapshotMessageSchema,
   stateMessageSchema,
   usageSnapshotMessageSchema,

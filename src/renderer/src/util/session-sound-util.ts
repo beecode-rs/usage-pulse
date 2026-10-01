@@ -76,28 +76,7 @@ export class SessionSoundUtil {
     previousSessions?: SessionInfo[]
     status: SessionStatusMapper
   }): string[] {
-    const { currentSessions, previousSessions, status } = params
-    if (previousSessions === undefined) {
-      return []
-    }
-
-    const previousStatusSessionIds = new Set(
-      previousSessions
-        .filter((session) => {
-          return session.status === status
-        })
-        .map((session) => {
-          return session.sessionId
-        }),
-    )
-
-    return currentSessions
-      .filter((session) => {
-        return session.status === status && !previousStatusSessionIds.has(session.sessionId)
-      })
-      .map((session) => {
-        return session.sessionId
-      })
+    return sessionStatusTransitionUtil.resolveNewlyStatusSessionIds(params)
   }
 
   resolveSoundGain(params: { volumePercent: number }): number {

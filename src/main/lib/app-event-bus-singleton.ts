@@ -12,6 +12,7 @@ export type AppEventMessage = {
   [AppEventType.MOBILE_DEVICES_CHANGED]: MobileConnectedDevice[]
   [AppEventType.SESSIONS_SNAPSHOT]: SessionSnapshot
   [AppEventType.SESSION_FINISHED]: SessionInfo
+  [AppEventType.SESSION_WAITING]: SessionInfo
   [AppEventType.SETTINGS_SAVED]: SettingsModel
   [AppEventType.UPDATE_STATUS]: UpdateStatus
   [AppEventType.USAGE_SNAPSHOT]: UsageSnapshot
