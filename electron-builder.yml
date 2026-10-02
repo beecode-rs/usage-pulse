@@ -6,6 +6,7 @@ files:
   - out/**
   - build/icons/256x256.png
   - build/icons/512x512.png
+  - '!**/node_modules/**'
 asar: true
 mac:
   category: public.app-category.developer-tools
