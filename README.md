@@ -11,11 +11,12 @@
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License badge" />
 </p>
 
-A small Electron + TypeScript desktop app for people who run several Claude Code sessions at once. It does three things:
+A small Electron + TypeScript desktop app for people who run several Claude Code sessions at once. It does four things:
 
 - **Usage limits** — continuously pings your coding-plan providers and shows how much of your limits you have consumed: the 5-hour window as a ring, the longer window (weekly for Claude, monthly for z.ai) as a bar.
 - **Active sessions** — lists your running Claude Code sessions, local and on remote SSH hosts, with their project folder and transcript stats, so you can see what every window is up to at a glance.
 - **Scheduling** — registers a Claude command trigger with your OS scheduler (launchd/systemd) timed to the start of each 5-hour usage window. A provider's window opens when your first prompt lands, so a tiny scheduled prompt at 07:00, 12:02 and 17:05 deliberately opens fresh windows that together cover an 8-hour workday — instead of one window that starts whenever you happen to begin and runs out mid-afternoon.
+- **Mobile API** — an opt-in server inside the app that streams the same live usage and session data to the Usage Pulse companion app on your phone, secured by a pairing token and reached over your VPN.
 
 ## Status: Proof of Concept
 
@@ -62,33 +63,47 @@ I usually have three or four Claude Code sessions running at the same time, each
 
 ### Dashboard
 
-![Dashboard screen](resource/media/dashboard.png)
+![Dashboard screen](resource/screenshots/dashboard.png)
 
 The landing screen: a combined at-a-glance view of everything below. One compact usage card per tracker across the top (5-hour window utilization and time until reset), then a row per running session with its status, project folder, context tokens, model, branch, and last activity — click a row to focus that session's terminal window.
 
 ### Sessions
 
-![Sessions screen](resource/media/sessions.png)
+![Sessions screen](resource/screenshots/sessions.png)
 
 All running Claude Code sessions, local and on remote SSH hosts, with a summary line (`2 sessions · 2 working · 0 waiting · 0 idle · 1 remote`) and a status legend. Each card shows the project folder, transcript stats (context tokens, model, branch), how recently it was active, plus pid and uptime. Clicking a card focuses that session's terminal window so you can jump straight to the one waiting for you (macOS, Linux X11).
 
 ### Usage
 
-![Usage dashboard](resource/media/usage.png)
+![Usage dashboard](resource/screenshots/usage.png)
 
 The usage screen. One card per tracker — here a Claude and a z.ai account, each with a Live badge, a pause button, and a gear that opens its settings (display name, token, remove). Every card shows the 5-hour window (utilization % plus a bar counting down to the reset) and the long window: weekly for Claude, MCP quota with consumed counts (e.g. `26 / 1000`) for z.ai. The footer tracks the last poll time and interval, and **+ Add** in the header creates a new tracker.
 
+![Add a tracker dialog](resource/screenshots/usage-add-tracker.png)
+
+**+ Add** opens this dialog: pick the provider to monitor — Claude or z.ai — and a new tracker card appears, ready for its token and display name from the card's gear menu.
+
 ### Scheduling
 
-![Scheduling screen](resource/media/scheduling.png)
+![Scheduling screen](resource/screenshots/scheduling.png)
 
 Run commands on a schedule through your OS scheduler (launchd on macOS, systemd on Linux). The master toggle enables the whole feature; each task has its own toggle, a command, the weekdays it runs on, and its trigger times. The status shows whether the task is registered with the scheduler, and each task can be run immediately or edited from its row. The **+ Max 5h windows** preset and the **Plan windows** button both lead to the planner below.
 
+![Add a trigger dialog](resource/screenshots/scheduling-add-trigger.png)
+
+The **+** button opens this dialog: give the trigger a display name and the full shell command it fires, pick the weekdays and trigger times (with Weekdays / Weekend / Every day shortcuts), set a timeout in minutes, and choose whether it registers with the OS scheduler right away.
+
 ### Plan 5-hour windows
 
-![Plan 5-hour windows dialog](resource/media/scheduling-planner.png)
+![Plan 5-hour windows dialog](resource/screenshots/scheduling-planner.png)
 
 A dialog for stacking 5-hour usage windows over your workday: set work start, work hours, and lunch start on the dials, then drag the first-trigger slider (15-minute steps). The timeline previews the resulting windows against your work and lunch bars, warns you if the windows miss the edges of the workday, and **Create trigger** writes the computed start times back as a new scheduled task.
+
+### Mobile
+
+![Mobile screen](resource/screenshots/mobile.png)
+
+The mobile screen. A toggle starts a small server that serves live usage and session data to the Usage Pulse mobile app: a port of your choice, a pairing token that authenticates the phone (masked, with reveal, copy, and regenerate — regenerating invalidates the old token on its next connection), and the list of connected devices. From your phone, connect to this computer's VPN IP and the port, using the pairing token. While the server is enabled, usage trackers keep polling in the background even when the app window is not visible. The companion app is a separate project: [usage-pulse-mobile](https://github.com/beecode-rs/usage-pulse-mobile).
 
 ## Feature status
 
@@ -103,6 +118,7 @@ Done:
 - [x] Overview dashboard (light combined view of usage and sessions, as the landing screen with click-to-focus session rows)
 - [x] Menu status dots (red = error on any screen, purple = session waiting for an answer, orange = usage limit nearing expiry or pace exceeding the window)
 - [x] Usage notifications (when a window's utilization turns red or is used up)
+- [x] Mobile API (local server streaming live usage and session data to the [usage-pulse-mobile](https://github.com/beecode-rs/usage-pulse-mobile) companion app)
 
 Planned:
 
