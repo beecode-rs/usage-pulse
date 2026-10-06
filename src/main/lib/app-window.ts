@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { config } from '#src/main/util/config'
 import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
+import { appTitleUtil } from '#src/shared/util/app-title-util'
 
 export type WindowVisibilityChangeListener = (params: { isVisible: boolean }) => void
 
@@ -18,7 +19,7 @@ export class AppWindow {
       minHeight: 560,
       minWidth: 760,
       show: false,
-      title: 'Usage Pulse',
+      title: appTitleUtil.resolve({ isDev: config.rendererUrl !== undefined }),
       webPreferences: {
         contextIsolation: true,
         preload: join(__dirname, '../preload/index.mjs'),

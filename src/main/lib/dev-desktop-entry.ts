@@ -4,6 +4,7 @@ import { join } from 'node:path'
 
 import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
+import { appTitleUtil } from '#src/shared/util/app-title-util'
 
 export const devDesktopEntry = {
   install(): void {
@@ -14,7 +15,7 @@ export const devDesktopEntry = {
     const entryLines = [
       '[Desktop Entry]',
       'Type=Application',
-      'Name=Usage Pulse (Dev)',
+      `Name=${appTitleUtil.resolve({ isDev: true })}`,
       `Exec=${process.execPath} ${app.getAppPath()}`,
       `Icon=${join(app.getAppPath(), 'build/icons/512x512.png')}`,
       `StartupWMClass=${app.getName()}`,

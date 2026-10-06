@@ -20,9 +20,17 @@ const scopedSrcAliasPlugin = (): Plugin => {
   }
 }
 
+const processEnvDefine = (envName: string): Record<string, string> => {
+  return { [`process.env.${envName}`]: '"true"' }
+}
+
 export default defineConfig({
   main: {
     build: { externalizeDeps: false },
+    define: {
+      ...processEnvDefine('WS_NO_BUFFER_UTIL'),
+      ...processEnvDefine('WS_NO_UTF_8_VALIDATE'),
+    },
     plugins: [scopedSrcAliasPlugin()],
   },
   preload: {

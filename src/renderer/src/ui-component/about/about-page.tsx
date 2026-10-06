@@ -3,8 +3,10 @@ import { type ReactElement, useEffect, useState } from 'react'
 import appIconUrl from '#resource/icon/app-icon.png'
 import { updateClientService } from '#src/renderer/src/business/service/update-client-service'
 import '#src/renderer/src/ui-component/about/about-page.css'
+import { appTitleUtil } from '#src/shared/util/app-title-util'
 import { constant } from '#src/shared/util/constant'
 
+const APP_TITLE = appTitleUtil.resolve({ isDev: import.meta.env.DEV })
 const TITLE_CLICKS_TO_TOGGLE_DEVELOPMENT = 7
 
 export const AboutPage = (props: { onToggleDevelopmentUnlock: () => void }): ReactElement => {
@@ -54,7 +56,7 @@ export const AboutPage = (props: { onToggleDevelopmentUnlock: () => void }): Rea
       <header>
         <img alt="Usage Pulse app icon" className="about-page-icon" src={appIconUrl} />
         <h1 className="about-page-title" onClick={handleTitleClick}>
-          Usage Pulse
+          {APP_TITLE}
         </h1>
         {developmentClicksRemaining < TITLE_CLICKS_TO_TOGGLE_DEVELOPMENT && (
           <p className="about-page-development-hint">{resolveDevelopmentHintText()}</p>
