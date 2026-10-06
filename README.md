@@ -25,7 +25,15 @@ Usage Pulse is at **v0.3.0** and still a proof of concept. It was built through 
 
 Downloads live on the [GitHub Releases](https://github.com/beecode-rs/usage-pulse/releases) page.
 
-**macOS** (Apple Silicon & Intel, one universal build): download `Usage-Pulse-<version>-universal.dmg` and drag **Usage Pulse** to Applications. The app is unsigned, so macOS blocks the first launch — after one failed open attempt, go to **System Settings → Privacy & Security → Open Anyway**, or clear the quarantine flag from a Terminal:
+**macOS** (Apple Silicon & Intel, one universal build): download `Usage-Pulse-<version>-universal.dmg` and drag **Usage Pulse** to Applications.
+
+> The release builds are not signed or notarized with an Apple developer certificate, so macOS blocks the first launch. That is standard macOS behavior for any unsigned app — it needs a one-time confirmation that you trust it:
+>
+> 1. Open **Usage Pulse** once — it will be blocked with a "cannot be checked for malicious software" dialog. Dismiss the dialog.
+> 2. Go to **System Settings → Privacy & Security** and scroll down to the Security section.
+> 3. Under "'Usage Pulse' was blocked from use because it is not notarized", click **Open Anyway** and confirm.
+
+Alternatively, clear the quarantine flag from a Terminal:
 
 ```bash
 xattr -cr '/Applications/Usage Pulse.app'
