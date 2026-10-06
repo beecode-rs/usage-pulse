@@ -26,6 +26,7 @@ import { SessionStatusMapper } from '#src/shared/business/enum/session-status-ma
 import type { SessionInfo, SessionSnapshot } from '#src/shared/business/model/session-model'
 import type { SettingsModel } from '#src/shared/business/model/settings-model'
 import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
+import { appTitleUtil } from '#src/shared/util/app-title-util'
 import { constant } from '#src/shared/util/constant'
 
 const DEFAULT_ELAPSED_MINUTES = 60
@@ -519,7 +520,7 @@ export const AppShell = (): ReactElement => {
         onToggleCollapse={handleToggleCollapse}
         statusDot={brandStatusDot}
         statusDotTitle={resolveStatusDotTitle({ statusDot: brandStatusDot })}
-        title="Usage Pulse"
+        title={appTitleUtil.resolve({ isDev: import.meta.env.DEV })}
       />
       <div className="app-shell-main">
         <div className="app-shell-content">{renderActiveView()}</div>
