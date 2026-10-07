@@ -164,7 +164,7 @@ catalog --> usageModel
    - `src/renderer/src/ui-component/tracker/add-tracker-dialog.tsx:18`
    - `src/renderer/src/ui-component/tracker/tracker-config-fields.tsx:12`
 3. Run `lint-fix` (import order and paths are lint-enforced).
-4. Update `resource/doc/architecture.md`, which still lists `provider-catalog.ts` at the
+4. Update `resource/docs/architecture.md`, which still lists `provider-catalog.ts` at the
    `src/shared/` root (that doc predates the ongoing refactor).
 
 Codegraph reports no tests covering the catalog. A cheap guard worth adding during the move:

@@ -1,5 +1,7 @@
 # Architecture
 
+Electron's three-process layout: shared cross-process models, a main process with repos, services, and per-OS scheduler strategies, and a React renderer. The full source tree with per-file notes:
+
 ```
 src/
 ├── shared/                         # cross-process models (main + preload + renderer)
