@@ -103,6 +103,71 @@ methods:
             usage:
               providers: []
           status: 200
+  trackerRefreshResponse:
+    terms:
+      # A valid refresh command is forwarded to the poll service by trackerId
+      # and answered with the current state.
+      - params:
+          - body:
+              trackerId: tracker-main
+            tokenVia: bearer
+        result:
+          body:
+            sessions: null
+            usage:
+              providers: []
+          refreshedTrackerIds:
+            - tracker-main
+          status: 200
+      # A body the schema rejects (empty trackerId) is a 400 invalid body and
+      # the command never reaches the poll service.
+      - params:
+          - body:
+              trackerId: ''
+            tokenVia: bearer
+        result:
+          body:
+            error: invalid body
+          refreshedTrackerIds: []
+          status: 400
+      # A refresh without a token is rejected before routing.
+      - params:
+          - body:
+              trackerId: tracker-main
+            tokenVia: none
+        result:
+          body:
+            error: unauthorized
+          refreshedTrackerIds: []
+          status: 401
+  trackerSetPausedResponse:
+    terms:
+      # A valid set-paused command saves settings with the tracker's paused
+      # flag applied and answers with the current state.
+      - params:
+          - body:
+              isAutoRefreshPaused: true
+              trackerId: tracker-main
+            tokenVia: bearer
+        result:
+          body:
+            sessions: null
+            usage:
+              providers: []
+          savedPausedFlags:
+            - true
+          status: 200
+      # A body missing the boolean flag is a 400 invalid body and nothing is
+      # saved.
+      - params:
+          - body:
+              trackerId: tracker-main
+            tokenVia: bearer
+        result:
+          body:
+            error: invalid body
+          savedPausedFlags: []
+          status: 400
   unknownRouteResponse:
     terms:
       # An authenticated request to an unknown route is a 404.

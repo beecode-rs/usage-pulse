@@ -14,6 +14,8 @@ export type UsageWindow = {
 export type ProviderSnapshot = {
   errorMessage?: string
   fetchedAt?: number
+  isAutoRefreshPaused?: boolean
+  isRefreshing?: boolean
   nextRefreshAt?: number
   providerId: ProviderIdMapper
   refreshIntervalMs?: number

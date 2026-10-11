@@ -40,6 +40,7 @@ export const constant = {
     defaultPort: 8787,
     heartbeatIntervalMs: 30_000,
     maxPort: 65_535,
+    maxRequestBodyBytes: 10_000,
     minPort: 1024,
     unknownUserAgent: 'unknown',
   },

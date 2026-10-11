@@ -101,6 +101,52 @@ methods:
                   trackerId: tracker-2
                   trackerName: z.ai
           success: true
+      # --- usage-snapshot variant with the paused flag a tracker carries
+      # while its auto-refresh is paused ---
+      - params:
+          - message:
+              type: usage-snapshot
+              usage:
+                providers:
+                  - isAutoRefreshPaused: true
+                    providerId: zai
+                    status: OK
+                    trackerId: tracker-2
+                    trackerName: z.ai
+        result:
+          data:
+            type: usage-snapshot
+            usage:
+              providers:
+                - isAutoRefreshPaused: true
+                  providerId: zai
+                  status: OK
+                  trackerId: tracker-2
+                  trackerName: z.ai
+          success: true
+      # --- usage-snapshot variant with the refreshing flag a tracker carries
+      # while a poll is in flight, whatever triggered it ---
+      - params:
+          - message:
+              type: usage-snapshot
+              usage:
+                providers:
+                  - isRefreshing: true
+                    providerId: zai
+                    status: OK
+                    trackerId: tracker-2
+                    trackerName: z.ai
+        result:
+          data:
+            type: usage-snapshot
+            usage:
+              providers:
+                - isRefreshing: true
+                  providerId: zai
+                  status: OK
+                  trackerId: tracker-2
+                  trackerName: z.ai
+          success: true
       # --- sessions-snapshot variant ---
       - params:
           - message:
@@ -268,6 +314,19 @@ methods:
                 trackerName: Claude
         result:
           success: false
+      # paused flag outside boolean fails.
+      - params:
+          - message:
+              type: usage-snapshot
+              usage:
+                providers:
+                  - isAutoRefreshPaused: 'yes'
+                    providerId: zai
+                    status: OK
+                    trackerId: tracker-2
+                    trackerName: z.ai
+        result:
+          success: false
   parseStateResponse:
     terms:
       # Both sections present parses.
@@ -299,6 +358,28 @@ methods:
             sessions: null
             usage:
               providers: []
+          success: true
+      # a provider carrying the paused flag parses.
+      - params:
+          - response:
+              sessions: null
+              usage:
+                providers:
+                  - isAutoRefreshPaused: true
+                    providerId: zai
+                    status: OK
+                    trackerId: tracker-2
+                    trackerName: z.ai
+        result:
+          data:
+            sessions: null
+            usage:
+              providers:
+                - isAutoRefreshPaused: true
+                  providerId: zai
+                  status: OK
+                  trackerId: tracker-2
+                  trackerName: z.ai
           success: true
       # Missing sessions section fails.
       - params:

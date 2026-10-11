@@ -19,6 +19,7 @@ export class _UsagePollService {
   protected _generationByTrackerId = new Map<string, number>()
   protected _isWindowVisible = false
   protected _nextPollAtByTrackerId = new Map<string, number>()
+  protected _refreshingTrackerIds = new Set<string>()
   protected _settings: SettingsModel | undefined
   protected _snapshotByTrackerId = new Map<string, ProviderSnapshot>()
   protected _timerByTrackerId = new Map<string, NodeJS.Timeout>()
@@ -141,6 +142,7 @@ export class _UsagePollService {
   protected async _pollTrackerOnce(params: { tracker: TrackerConfig }): Promise<boolean> {
     const { tracker } = params
     const generation = this._beginTrackerPoll({ trackerId: tracker.id })
+    this._refreshingTrackerIds.add(tracker.id)
     appEventBusSingleton().emit({ payload: this._buildSnapshot(), type: AppEventType.USAGE_SNAPSHOT })
 
     const providerSnapshot = await this._pollTracker({ tracker })
@@ -150,6 +152,7 @@ export class _UsagePollService {
     }
 
     this._snapshotByTrackerId.set(tracker.id, providerSnapshot)
+    this._refreshingTrackerIds.delete(tracker.id)
     this._persistSnapshots()
     appEventBusSingleton().emit({ payload: this._buildSnapshot(), type: AppEventType.USAGE_SNAPSHOT })
 
@@ -283,12 +286,16 @@ export class _UsagePollService {
     if (existingSnapshot !== undefined) {
       return {
         ...existingSnapshot,
+        isAutoRefreshPaused: tracker.isAutoRefreshPaused,
+        isRefreshing: this._refreshingTrackerIds.has(tracker.id),
         nextRefreshAt,
         refreshIntervalMs: tracker.refreshIntervalMs,
       }
     }
 
     return {
+      isAutoRefreshPaused: tracker.isAutoRefreshPaused,
+      isRefreshing: this._refreshingTrackerIds.has(tracker.id),
       nextRefreshAt,
       providerId: tracker.providerId,
       refreshIntervalMs: tracker.refreshIntervalMs,

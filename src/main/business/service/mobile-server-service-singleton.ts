@@ -143,7 +143,7 @@ export class _MobileServerService {
   protected _listen(params: { port: number }): Promise<void> {
     const { port } = params
     const server = createServer((request, response) => {
-      httpRequestHandler.handleRequest({ request, response })
+      void httpRequestHandler.handleRequest({ request, response })
     })
 
     server.on('upgrade', (request, socket, head) => {

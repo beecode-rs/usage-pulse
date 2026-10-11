@@ -16,6 +16,8 @@ const usageWindowSchema = z.object({
 const providerSnapshotSchema = z.object({
   errorMessage: z.string().optional(),
   fetchedAt: z.number().optional(),
+  isAutoRefreshPaused: z.boolean().optional(),
+  isRefreshing: z.boolean().optional(),
   nextRefreshAt: z.number().optional(),
   providerId: z.enum(ProviderIdMapper),
   refreshIntervalMs: z.number().optional(),
