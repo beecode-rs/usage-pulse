@@ -1,6 +1,7 @@
 import { app, dialog } from 'electron'
 
 import { DesktopApp } from '#src/main/app-boot/desktop-app'
+import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
 import { TriggerRunnerService } from '#src/main/business/service/trigger-runner-service'
 import { devDesktopEntry } from '#src/main/lib/dev-desktop-entry'
 import { errorUtil } from '#src/main/util/error-util'
@@ -23,8 +24,11 @@ const bootstrapTriggerWorker = (params: { triggerId: string }): void => {
   const { triggerId } = params
   app.dock?.hide()
 
-  void new TriggerRunnerService()
-    .runTrigger({ source: ScheduleTriggerRunSourceMapper.OS_SCHEDULE, triggerId })
+  void settingsRepoSingleton()
+    .init()
+    .then(() => {
+      return new TriggerRunnerService().runTrigger({ source: ScheduleTriggerRunSourceMapper.OS_SCHEDULE, triggerId })
+    })
     .then(({ exitCode }) => {
       app.exit(exitCode)
     })

@@ -147,6 +147,31 @@ body {
   padding: 20px;
 }
 
+.provider-card-wrap {
+  --provider-card-tab-offset: 23px;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--provider-card-tab-offset);
+}
+
+.provider-card-wrap > .provider-card {
+  flex: 1;
+}
+
+.provider-card-wrap > .provider-card-peak-banner {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 8px 8px 0 0;
+  height: calc(var(--provider-card-tab-offset) + 1px);
+  margin: calc(var(--provider-card-tab-offset) * -1) 20px -1px;
+  padding: 4px 12px;
+  z-index: 1;
+}
+
+.provider-card-wrap > .provider-card-peak-banner.is-peak-active {
+  background: color-mix(in srgb, var(--meter-warning) 12%, var(--surface));
+}
+
 .provider-card-header {
   align-items: center;
   display: flex;

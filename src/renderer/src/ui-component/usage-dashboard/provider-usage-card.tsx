@@ -281,117 +281,119 @@ export const ProviderUsageCard = (props: {
   const hasFooterContent = footerItems.length > 0 || refreshProgressPercent !== undefined
 
   return (
-    <section className={resolveCardClassName()}>
-      <header className="provider-card-header">
-        <div className="provider-card-heading">
-          <ProviderIcon providerId={providerSnapshot.providerId} />
-          <h2 className="provider-card-title">{providerSnapshot.trackerName}</h2>
-        </div>
-        <div className="provider-card-actions">
-          <span className={resolveStatusClassName()}>{resolveStatusText()}</span>
-          <button
-            aria-label={pauseButtonLabel}
-            className={resolvePauseButtonClassName()}
-            onClick={onToggleAutoRefresh}
-            title={pauseButtonLabel}
-            type="button"
-          >
-            {renderPauseIcon()}
-          </button>
-          <button
-            aria-label="Refresh tracker"
-            className={resolveRefreshButtonClassName()}
-            disabled={isRefreshing}
-            onClick={onRefresh}
-            title="Refresh tracker"
-            type="button"
-          >
-            <RefreshIcon />
-          </button>
-          <button
-            aria-label="Tracker settings"
-            className="provider-card-gear"
-            onClick={onOpenSettings}
-            title="Tracker settings"
-            type="button"
-          >
-            <svg
-              fill="none"
-              height="15"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="15"
-            >
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </button>
-        </div>
-      </header>
+    <div className="provider-card-wrap">
       {renderPeakBanner()}
-      {providerSnapshot.status === UsageActivityStatus.OK && primaryWindow !== undefined && (
-        <div className="provider-card-body">
-          <UsageWindowBox
-            resetAt={primaryWindow.resetAt}
-            title={primaryWindow.label}
-            totalAmount={primaryWindow.totalAmount}
-            usedAmount={primaryWindow.usedAmount}
-            usedPercent={primaryWindow.usedPercent}
-            windowMs={primaryWindow.windowMs ?? usageResetUtil.fiveHourWindowMs}
-          />
-          <div className="provider-card-windows">
-            {secondaryWindows.map((usageWindow) => {
-              if (usageWindow.windowMs !== undefined) {
-                return (
-                  <UsageWindowBox
-                    key={usageWindow.label}
-                    resetAt={usageWindow.resetAt}
-                    title={usageWindow.label}
-                    totalAmount={usageWindow.totalAmount}
-                    usedAmount={usageWindow.usedAmount}
-                    usedPercent={usageWindow.usedPercent}
-                    windowMs={usageWindow.windowMs}
-                  />
-                )
-              }
-
-              return <UsageBar key={usageWindow.label} label={usageWindow.label} percent={usageWindow.usedPercent} />
-            })}
+      <section className={resolveCardClassName()}>
+        <header className="provider-card-header">
+          <div className="provider-card-heading">
+            <ProviderIcon providerId={providerSnapshot.providerId} />
+            <h2 className="provider-card-title">{providerSnapshot.trackerName}</h2>
           </div>
-        </div>
-      )}
-      {providerSnapshot.status === UsageActivityStatus.PENDING && (
-        <p className="provider-card-message">{resolvePendingMessage()}</p>
-      )}
-      {providerSnapshot.status === UsageActivityStatus.UNCONFIGURED && (
-        <p className="provider-card-message">Add an access token in this tracker&apos;s settings to track usage.</p>
-      )}
-      {providerSnapshot.status === UsageActivityStatus.ERROR && (
-        <p className="provider-card-message provider-card-message-error">{providerSnapshot.errorMessage}</p>
-      )}
-      {providerSnapshot.status === UsageActivityStatus.OK && primaryWindow === undefined && (
-        <p className="provider-card-message">No usage windows returned.</p>
-      )}
-      {hasFooterContent && (
-        <footer className="provider-card-footer">
-          {footerItems.length > 0 && <div className="provider-card-footer-meta">{footerItems}</div>}
-          {refreshProgressPercent !== undefined && (
-            <div
-              aria-label="Time until next auto-refresh"
-              aria-valuemax={100}
-              aria-valuemin={0}
-              aria-valuenow={Math.round(refreshProgressPercent)}
-              className="provider-card-progress-track"
-              role="meter"
+          <div className="provider-card-actions">
+            <span className={resolveStatusClassName()}>{resolveStatusText()}</span>
+            <button
+              aria-label={pauseButtonLabel}
+              className={resolvePauseButtonClassName()}
+              onClick={onToggleAutoRefresh}
+              title={pauseButtonLabel}
+              type="button"
             >
-              <div className="provider-card-progress-fill" style={{ width: `${String(refreshProgressPercent)}%` }} />
+              {renderPauseIcon()}
+            </button>
+            <button
+              aria-label="Refresh tracker"
+              className={resolveRefreshButtonClassName()}
+              disabled={isRefreshing}
+              onClick={onRefresh}
+              title="Refresh tracker"
+              type="button"
+            >
+              <RefreshIcon />
+            </button>
+            <button
+              aria-label="Tracker settings"
+              className="provider-card-gear"
+              onClick={onOpenSettings}
+              title="Tracker settings"
+              type="button"
+            >
+              <svg
+                fill="none"
+                height="15"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="15"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+          </div>
+        </header>
+        {providerSnapshot.status === UsageActivityStatus.OK && primaryWindow !== undefined && (
+          <div className="provider-card-body">
+            <UsageWindowBox
+              resetAt={primaryWindow.resetAt}
+              title={primaryWindow.label}
+              totalAmount={primaryWindow.totalAmount}
+              usedAmount={primaryWindow.usedAmount}
+              usedPercent={primaryWindow.usedPercent}
+              windowMs={primaryWindow.windowMs ?? usageResetUtil.fiveHourWindowMs}
+            />
+            <div className="provider-card-windows">
+              {secondaryWindows.map((usageWindow) => {
+                if (usageWindow.windowMs !== undefined) {
+                  return (
+                    <UsageWindowBox
+                      key={usageWindow.label}
+                      resetAt={usageWindow.resetAt}
+                      title={usageWindow.label}
+                      totalAmount={usageWindow.totalAmount}
+                      usedAmount={usageWindow.usedAmount}
+                      usedPercent={usageWindow.usedPercent}
+                      windowMs={usageWindow.windowMs}
+                    />
+                  )
+                }
+
+                return <UsageBar key={usageWindow.label} label={usageWindow.label} percent={usageWindow.usedPercent} />
+              })}
             </div>
-          )}
-        </footer>
-      )}
-    </section>
+          </div>
+        )}
+        {providerSnapshot.status === UsageActivityStatus.PENDING && (
+          <p className="provider-card-message">{resolvePendingMessage()}</p>
+        )}
+        {providerSnapshot.status === UsageActivityStatus.UNCONFIGURED && (
+          <p className="provider-card-message">Add an access token in this tracker&apos;s settings to track usage.</p>
+        )}
+        {providerSnapshot.status === UsageActivityStatus.ERROR && (
+          <p className="provider-card-message provider-card-message-error">{providerSnapshot.errorMessage}</p>
+        )}
+        {providerSnapshot.status === UsageActivityStatus.OK && primaryWindow === undefined && (
+          <p className="provider-card-message">No usage windows returned.</p>
+        )}
+        {hasFooterContent && (
+          <footer className="provider-card-footer">
+            {footerItems.length > 0 && <div className="provider-card-footer-meta">{footerItems}</div>}
+            {refreshProgressPercent !== undefined && (
+              <div
+                aria-label="Time until next auto-refresh"
+                aria-valuemax={100}
+                aria-valuemin={0}
+                aria-valuenow={Math.round(refreshProgressPercent)}
+                className="provider-card-progress-track"
+                role="meter"
+              >
+                <div className="provider-card-progress-fill" style={{ width: `${String(refreshProgressPercent)}%` }} />
+              </div>
+            )}
+          </footer>
+        )}
+      </section>
+    </div>
   )
 }

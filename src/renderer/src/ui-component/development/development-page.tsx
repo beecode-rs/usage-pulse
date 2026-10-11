@@ -7,6 +7,7 @@ import { ProviderUsageCard } from '#src/renderer/src/ui-component/usage-dashboar
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { usageSeverityUtil } from '#src/renderer/src/util/usage-severity-util'
+import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
@@ -49,6 +50,8 @@ export const DevelopmentPage = (props: {
   usedPercent: number
 }): ReactElement => {
   const { elapsedMinutes, onElapsedMinutesChange, onUsedPercentChange, usedPercent } = props
+
+  const zaiPeakUtil = new ZaiPeakUtil()
 
   const [fetchedElapsedMinutes, setFetchedElapsedMinutes] = useState(DEFAULT_FETCHED_ELAPSED_MINUTES)
   const [minuteOfDay, setMinuteOfDay] = useState((): number => {
@@ -151,11 +154,19 @@ export const DevelopmentPage = (props: {
   }
 
   const resolveTimeValueText = (): string => {
-    const timeDate = new Date()
+    const hourText = String(Math.floor(minuteOfDay / MINUTES_PER_HOUR)).padStart(2, '0')
+    const minuteText = String(minuteOfDay % MINUTES_PER_HOUR).padStart(2, '0')
 
-    timeDate.setHours(Math.floor(minuteOfDay / MINUTES_PER_HOUR), minuteOfDay % MINUTES_PER_HOUR, 0, 0)
+    return `${hourText}:${minuteText}`
+  }
 
-    return dateUtil.formatHourMinute(timeDate.getTime())
+  const resolvePeakHintText = (): string => {
+    const peakWindowText = zaiPeakUtil.resolvePeakInfo({
+      nowMs: Date.now(),
+      providerId: ProviderIdMapper.ZAI,
+    })?.peakWindowText
+
+    return `Peak tint: weekdays ${peakWindowText ?? '14:00–18:00'} your time (14:00–18:00 UTC+8)`
   }
 
   const handlePreviewToggleAutoRefresh = (): void => {
@@ -181,7 +192,8 @@ export const DevelopmentPage = (props: {
         <h1 className="development-page-title">Development</h1>
         <p className="development-page-subtitle">
           Drag the sliders and pick a day to preview the provider card at any usage level, point in the five hour
-          window, data age, and time of week. The z.ai card tints amber during peak hours (weekdays 14:00–18:00 UTC+8).
+          window, data age, and time of week. Time of day and Day use your local clock: the z.ai card tints amber on
+          weekdays during the peak window shown on the card.
         </p>
       </header>
       <ProviderUsageCard
@@ -224,6 +236,7 @@ export const DevelopmentPage = (props: {
           valueText={resolveTimeValueText()}
         />
         <SelectField label="Day" onChange={setWeekdayValue} options={WEEKDAY_OPTIONS} value={weekdayValue} />
+        <p className="development-page-hint">{resolvePeakHintText()}</p>
       </section>
       <section className="development-page-panel">
         <h2 className="development-page-section-title">Color bands</h2>
