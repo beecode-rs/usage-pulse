@@ -57,8 +57,10 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
       case ProviderIdMapper.CLAUDE: {
         return {
           accessToken: '',
+          accessTokenRefreshCommand: constant.claudeSystemAccessToken.cliTokenRefresh.defaultCommand,
           accessTokenSource: ClaudeAccessTokenSource.MANUAL,
           id: crypto.randomUUID(),
+          isAccessTokenRefreshEnabled: constant.claudeSystemAccessToken.cliTokenRefresh.defaultIsEnabled,
           isAutoRefreshPaused: false,
           name: '',
           providerId: ProviderIdMapper.CLAUDE,

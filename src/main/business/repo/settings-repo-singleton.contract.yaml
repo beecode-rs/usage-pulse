@@ -26,9 +26,9 @@
 # Sanitize: trackers - the providerId discriminated union decides survival
 # first: an unknown or missing providerId drops the whole item. A minimal
 # claude tracker gets every default (name Claude, empty token, MANUAL source,
-# 15 minute refresh). Invalid field values fall back per-field (catch
-# defaults) while valid siblings survive. The zai variant strips
-# accessTokenSource entirely.
+# 15 minute refresh, the default CLI token refresh command). Invalid field
+# values fall back per-field (catch defaults) while valid siblings survive.
+# The zai variant strips accessTokenSource entirely.
 #
 # Sanitize: triggers - command trims and must survive non-empty; days keeps
 # only weekday names, dedupes and re-orders into the canonical
@@ -388,7 +388,8 @@ methods:
           triggers: []
           waitingSoundId: chime
       # A minimal claude tracker fills in every default: empty token, MANUAL source,
-      # generated id, not paused, catalog name and the 15 minute catalog refresh interval.
+      # generated id, not paused, catalog name, the 15 minute catalog refresh interval and
+      # the default CLI token refresh command.
       - params:
           - rawSettings:
               trackers:
@@ -406,8 +407,10 @@ methods:
           sshHosts: []
           trackers:
             - accessToken: ''
+              accessTokenRefreshCommand: 'claude -p "what is your name, only name" --model haiku'
               accessTokenSource: 'MANUAL'
               id: 'generated-id-1'
+              isAccessTokenRefreshEnabled: false
               isAutoRefreshPaused: false
               name: 'Claude'
               providerId: 'claude'
@@ -438,16 +441,19 @@ methods:
           triggers: []
           waitingSoundId: chime
       # Invalid tracker field values fall back per-field: a non-string token becomes
-      # empty, an unknown source becomes MANUAL, a blank id regenerates, a non-boolean
-      # pause flag becomes false, a blank name becomes the catalog default and a too
-      # small refresh clamps up to the one minute minimum.
+      # empty, an unknown source becomes MANUAL, a whitespace-only refresh command
+      # becomes the default command, a blank id regenerates, a non-boolean pause flag
+      # becomes false, a blank name becomes the catalog default and a too small refresh
+      # clamps up to the one minute minimum.
       - params:
           - rawSettings:
               trackers:
                 - providerId: 'claude'
                   accessToken: 42
+                  accessTokenRefreshCommand: '   '
                   accessTokenSource: 'cli'
                   id: ''
+                  isAccessTokenRefreshEnabled: 'yes'
                   isAutoRefreshPaused: 'yes'
                   name: ''
                   refreshIntervalMs: 1
@@ -464,8 +470,10 @@ methods:
           sshHosts: []
           trackers:
             - accessToken: ''
+              accessTokenRefreshCommand: 'claude -p "what is your name, only name" --model haiku'
               accessTokenSource: 'MANUAL'
               id: 'generated-id-1'
+              isAccessTokenRefreshEnabled: false
               isAutoRefreshPaused: false
               name: 'Claude'
               providerId: 'claude'
@@ -694,8 +702,10 @@ methods:
           sshHosts: []
           trackers:
             - accessToken: 'first'
+              accessTokenRefreshCommand: 'claude -p "what is your name, only name" --model haiku'
               accessTokenSource: 'MANUAL'
               id: 'dup'
+              isAccessTokenRefreshEnabled: false
               isAutoRefreshPaused: false
               name: 'Claude'
               providerId: 'claude'

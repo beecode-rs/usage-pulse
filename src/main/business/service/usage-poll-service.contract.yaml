@@ -9,6 +9,83 @@ subject: usagePollServiceContractHarness
 module: ./__tests__/_usage-poll-service-contract-harness.js
 subjectType: function
 methods:
+  claudeTokenRefreshFallbackOutcome:
+    terms:
+      # A 401 on a system-token Claude tracker with the fallback enabled triggers the CLI
+      # token refresh seam with the tracker's configured command and retries the fetch once
+      # with the refreshed token.
+      - params:
+          - accessTokenRefreshCommand: 'claude -p "what is your name, only name" --model haiku'
+            accessTokenSource: SYSTEM
+            firstCallErrorStatus: 401
+            isAccessTokenRefreshEnabled: true
+        result:
+          fetchCallsCount: 2
+          isRefreshCalled: true
+          lastAccessToken: refreshed-access-token
+          outcomeErrorMessage: ''
+          refreshCommandUsed: 'claude -p "what is your name, only name" --model haiku'
+      # A custom refresh command on the tracker is passed through to the CLI refresh seam.
+      - params:
+          - accessTokenRefreshCommand: 'claude -p ping --model haiku'
+            accessTokenSource: SYSTEM
+            firstCallErrorStatus: 401
+            isAccessTokenRefreshEnabled: true
+        result:
+          fetchCallsCount: 2
+          isRefreshCalled: true
+          lastAccessToken: refreshed-access-token
+          outcomeErrorMessage: ''
+          refreshCommandUsed: 'claude -p ping --model haiku'
+      # The fallback is off by default: a 401 on a system-token tracker that did not opt in
+      # surfaces the original error without any CLI refresh.
+      - params:
+          - accessTokenRefreshCommand: 'claude -p "what is your name, only name" --model haiku'
+            accessTokenSource: SYSTEM
+            firstCallErrorStatus: 401
+        result:
+          fetchCallsCount: 1
+          isRefreshCalled: false
+          lastAccessToken: stale-access-token
+          outcomeErrorMessage: request failed with status 401 Unauthorized
+          refreshCommandUsed: ''
+      # A 401 on a manually entered token is not refreshable through the CLI even with the
+      # fallback enabled: the original error surfaces after a single fetch.
+      - params:
+          - accessTokenRefreshCommand: 'claude -p "what is your name, only name" --model haiku'
+            accessTokenSource: MANUAL
+            firstCallErrorStatus: 401
+            isAccessTokenRefreshEnabled: true
+        result:
+          fetchCallsCount: 1
+          isRefreshCalled: false
+          lastAccessToken: stale-access-token
+          outcomeErrorMessage: request failed with status 401 Unauthorized
+          refreshCommandUsed: ''
+      # A non-401 failure on the system token is not a token problem: no refresh, the
+      # original error surfaces.
+      - params:
+          - accessTokenRefreshCommand: 'claude -p "what is your name, only name" --model haiku'
+            accessTokenSource: SYSTEM
+            firstCallErrorStatus: 500
+            isAccessTokenRefreshEnabled: true
+        result:
+          fetchCallsCount: 1
+          isRefreshCalled: false
+          lastAccessToken: stale-access-token
+          outcomeErrorMessage: request failed with status 500 Unauthorized
+          refreshCommandUsed: ''
+      # Without a first-fetch failure there is no refresh: a single fetch resolves.
+      - params:
+          - accessTokenRefreshCommand: 'claude -p "what is your name, only name" --model haiku'
+            accessTokenSource: SYSTEM
+            isAccessTokenRefreshEnabled: true
+        result:
+          fetchCallsCount: 1
+          isRefreshCalled: false
+          lastAccessToken: stale-access-token
+          outcomeErrorMessage: ''
+          refreshCommandUsed: ''
   windowVisibilityMatrixPollCounts:
     terms:
       # Mobile server disabled: a hidden window at start polls nothing, showing

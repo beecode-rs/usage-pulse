@@ -83,6 +83,38 @@ export const TrackerConfigFields = (props: {
           {selectedAccessTokenSource === ClaudeAccessTokenSource.SYSTEM && systemAccessTokenOption !== undefined && (
             <p className="settings-hint">{systemAccessTokenOption.hint}</p>
           )}
+          {selectedAccessTokenSource === ClaudeAccessTokenSource.SYSTEM && systemAccessTokenOption !== undefined && (
+            <label className="settings-access-token-source-option">
+              <input
+                checked={config.isAccessTokenRefreshEnabled}
+                onChange={(event) => {
+                  onChange({ ...config, isAccessTokenRefreshEnabled: event.target.checked })
+                }}
+                type="checkbox"
+              />
+              Refresh token on 401 via the claude CLI
+            </label>
+          )}
+          {selectedAccessTokenSource === ClaudeAccessTokenSource.SYSTEM &&
+            systemAccessTokenOption !== undefined &&
+            config.isAccessTokenRefreshEnabled && (
+              <label className="settings-field">
+                <span className="settings-field-label">Token refresh command</span>
+                <input
+                  className="settings-field-input"
+                  onChange={(event) => {
+                    onChange({ ...config, accessTokenRefreshCommand: event.target.value })
+                  }}
+                  placeholder={constant.claudeSystemAccessToken.cliTokenRefresh.defaultCommand}
+                  type="text"
+                  value={config.accessTokenRefreshCommand}
+                />
+                <span className="settings-hint">
+                  Shell command run when the stored token is rejected (401); it must make the claude CLI refresh its
+                  OAuth token. Leave on the default for a one-word prompt on the cheapest model.
+                </span>
+              </label>
+            )}
         </div>
       )}
       {config.providerId === ProviderIdMapper.ZAI && (

@@ -1,0 +1,23 @@
+# Contract for httpUtil.fetchJson error status propagation. The harness stubs the global
+# fetch with a Response carrying the term's status; fetchJson wraps the failure but must
+# preserve the HTTP status on the wrapped error so resolveErrorStatus can read it back
+# (the usage poll service keys its Claude token refresh off a 401). A successful response
+# resolves without any error, reported through the -1 sentinel.
+subject: httpUtilContractHarness
+module: ./__tests__/_http-util-contract-harness.js
+subjectType: function
+methods:
+  fetchJsonErrorStatus:
+    terms:
+      # An unauthorized response keeps its 401 status through the error wrapping.
+      - params:
+          - status: 401
+        result: 401
+      # A server error keeps its 500 status the same way.
+      - params:
+          - status: 500
+        result: 500
+      # A successful response resolves without any error status.
+      - params:
+          - status: 200
+        result: -1

@@ -38,7 +38,7 @@ export const trackerAccessTokenSourceUtil = {
         return {
           selectedAccessTokenSource: config.accessTokenSource,
           systemAccessTokenOption: {
-            hint: 'Reads the OAuth token from ~/.claude/.credentials.json on every poll, so it tracks the one Claude Code account logged in on this machine.',
+            hint: 'Reads the OAuth token from ~/.claude/.credentials.json on every poll, so it tracks the one Claude Code account logged in on this machine. When the stored token is rejected, an opt-in claude CLI fallback can refresh it.',
             label: 'Use system access token (logged-in Claude Code)',
           },
         }
@@ -48,7 +48,7 @@ export const trackerAccessTokenSourceUtil = {
         return {
           selectedAccessTokenSource: config.accessTokenSource,
           systemAccessTokenOption: {
-            hint: 'Reads the OAuth token from the macOS Keychain entry "Claude Code-credentials" on every poll, so it tracks the one Claude Code account logged in on this machine. Not available on Windows yet.',
+            hint: 'Reads the OAuth token from the macOS Keychain entry "Claude Code-credentials" on every poll, so it tracks the one Claude Code account logged in on this machine. When the stored token is rejected, an opt-in claude CLI fallback can refresh it. Not available on Windows yet.',
             label: 'Use system access token (macOS Keychain)',
           },
         }

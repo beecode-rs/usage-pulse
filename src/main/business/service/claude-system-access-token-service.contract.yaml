@@ -156,3 +156,16 @@ methods:
         params:
           - new Error("spawn security ENOENT")
         result: spawn security ENOENT
+      # A timeout kill carries no stderr; the message names the timeout and the likely
+      # locked login keychain behind it.
+      - constructorParams: []
+        params:
+          - killed: true
+            message: command failed
+        result: the 'security' command timed out; the login keychain may be locked
+      # A non-empty stderr still wins over the timeout kill.
+      - constructorParams: []
+        params:
+          - killed: true
+            stderr: "security: could not be found"
+        result: "security: could not be found"

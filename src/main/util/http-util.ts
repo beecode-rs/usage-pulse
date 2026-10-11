@@ -18,14 +18,28 @@ export const httpUtil = {
       const response = await fetch(url, { headers, signal: abortController.signal })
 
       if (!response.ok) {
-        throw new Error(`request failed with status ${String(response.status)} ${response.statusText}`)
+        throw Object.assign(new Error(`request failed with status ${String(response.status)} ${response.statusText}`), {
+          status: response.status,
+        })
       }
 
       return await response.json()
     } catch (error) {
-      throw new Error(`request to ${url} failed: ${errorUtil.resolveMessage(error)}`)
+      throw Object.assign(new Error(`request to ${url} failed: ${errorUtil.resolveMessage(error)}`), {
+        status: (error as { status?: unknown }).status,
+      })
     } finally {
       clearTimeout(timeoutId)
     }
+  },
+
+  resolveErrorStatus: (error: unknown): number | undefined => {
+    const status = (error as { status?: unknown } | undefined)?.status
+
+    if (typeof status === 'number') {
+      return status
+    }
+
+    return undefined
   },
 }

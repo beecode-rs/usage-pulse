@@ -9,11 +9,13 @@ import { type UsageProvider } from '#src/main/business/service/usage-provider/us
 import { UsageProviderZai } from '#src/main/business/service/usage-provider/zai'
 import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { errorUtil } from '#src/main/util/error-util'
+import { httpUtil } from '#src/main/util/http-util'
 import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type SettingsModel, type TrackerConfig } from '#src/shared/business/model/settings-model'
-import { type ProviderSnapshot, type UsageSnapshot } from '#src/shared/business/model/usage-model'
+import { type ProviderSnapshot, type UsageSnapshot, type UsageWindow } from '#src/shared/business/model/usage-model'
+import { constant } from '#src/shared/util/constant'
 
 export class _UsagePollService {
   protected _generationByTrackerId = new Map<string, number>()
@@ -316,7 +318,6 @@ export class _UsagePollService {
 
   protected async _pollTracker(params: { tracker: TrackerConfig }): Promise<ProviderSnapshot> {
     const { tracker } = params
-    const provider = this._providers[tracker.providerId]
 
     try {
       const accessToken = await this._resolveAccessToken({ tracker })
@@ -330,7 +331,7 @@ export class _UsagePollService {
         }
       }
 
-      const usage = await provider.fetchUsage({ accessToken })
+      const usage = await this._fetchUsageWithTokenRefresh({ accessToken, tracker })
 
       return {
         fetchedAt: Date.now(),
@@ -349,6 +350,58 @@ export class _UsagePollService {
         trackerName: tracker.name,
       }
     }
+  }
+
+  protected async _fetchUsageWithTokenRefresh(params: {
+    accessToken: string
+    tracker: TrackerConfig
+  }): Promise<UsageWindow[]> {
+    const { accessToken, tracker } = params
+    const provider = this._providers[tracker.providerId]
+
+    try {
+      return await provider.fetchUsage({ accessToken })
+    } catch (error) {
+      if (!this._isEligibleForClaudeTokenRefresh({ error, tracker })) {
+        throw error
+      }
+
+      const refreshedAccessToken = await this._refreshClaudeSystemAccessToken({
+        command: this._resolveClaudeTokenRefreshCommand({ tracker }),
+      })
+
+      return await provider.fetchUsage({ accessToken: refreshedAccessToken })
+    }
+  }
+
+  protected _isEligibleForClaudeTokenRefresh(params: { error: unknown; tracker: TrackerConfig }): boolean {
+    const { error, tracker } = params
+
+    if (
+      tracker.providerId === ProviderIdMapper.CLAUDE &&
+      tracker.accessTokenSource === ClaudeAccessTokenSource.SYSTEM &&
+      tracker.isAccessTokenRefreshEnabled
+    ) {
+      return httpUtil.resolveErrorStatus(error) === 401
+    }
+
+    return false
+  }
+
+  protected _resolveClaudeTokenRefreshCommand(params: { tracker: TrackerConfig }): string {
+    const { tracker } = params
+
+    if (tracker.providerId === ProviderIdMapper.CLAUDE && tracker.accessTokenRefreshCommand !== '') {
+      return tracker.accessTokenRefreshCommand
+    }
+
+    return constant.claudeSystemAccessToken.cliTokenRefresh.defaultCommand
+  }
+
+  protected async _refreshClaudeSystemAccessToken(params: { command: string }): Promise<string> {
+    const { command } = params
+
+    return await this._claudeSystemAccessTokenService.refreshAccessToken({ command })
   }
 
   protected async _resolveAccessToken(params: { tracker: TrackerConfig }): Promise<string> {

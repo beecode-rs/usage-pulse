@@ -117,8 +117,12 @@ const triggerSchema = z.object({
 })
 const claudeTrackerSchema = z.object({
   accessToken: accessTokenSchema,
+  accessTokenRefreshCommand: trimmedNonEmptyStringSchema.catch(
+    constant.claudeSystemAccessToken.cliTokenRefresh.defaultCommand,
+  ),
   accessTokenSource: accessTokenSourceSchema,
   id: idSchema,
+  isAccessTokenRefreshEnabled: z.boolean().catch(constant.claudeSystemAccessToken.cliTokenRefresh.defaultIsEnabled),
   isAutoRefreshPaused: z.boolean().catch(false),
   name: z
     .string()

@@ -5,8 +5,11 @@
 //   runner's error strategy catches synchronous throws only)
 // - the Linux happy path through the real filesystem: a temp home fixture with a
 //   .claude/.credentials.json file (contract terms cannot stage files)
-// - the macos platform routing into the macOS Keychain exec, which on non-macOS machines
-//   rejects with the wrapped keychain read error
+// - the macOS Keychain read path: the retry budget, the exhausted-retries wrapping and the
+//   timeout-kill error message, driven through a subclass stubbing the single security
+//   exec and the retry delay (contract terms cannot stub protected async collaborators)
+// - refreshAccessToken: the claude CLI refresh runs before the keychain re-read, and a CLI
+//   refresh failure surfaces without any keychain read
 
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -15,7 +18,6 @@ import { describe, expect, it } from 'vitest'
 
 import { ClaudeSystemAccessTokenService } from '#src/main/business/service/claude-system-access-token-service'
 import { OS } from '#src/shared/business/enum/os-enum'
-import { osUtil } from '#src/main/util/os-util'
 
 const createLinuxHomeFixture = async (params: { credentialsJson?: string }) => {
   const { credentialsJson } = params
@@ -34,6 +36,58 @@ const createLinuxHomeFixture = async (params: { credentialsJson?: string }) => {
     },
     credentialsPath: join(claudeDir, '.credentials.json'),
     homeDir,
+  }
+}
+
+class KeychainReadStubService extends ClaudeSystemAccessTokenService {
+  readAttemptsCount = 0
+  readOutcomes: Array<Error | string> = []
+
+  constructor(params: { readOutcomes: Array<Error | string> }) {
+    super({ homeDir: '/tmp/unused-claude-home', platform: OS.MACOS })
+    this.readOutcomes = [...params.readOutcomes]
+  }
+
+  protected async _readKeychainCredentialsJsonOnce(): Promise<string> {
+    this.readAttemptsCount += 1
+    const outcome = this.readOutcomes.shift()
+
+    if (outcome === undefined) {
+      throw new Error('unexpected keychain read attempt')
+    }
+
+    if (typeof outcome === 'string') {
+      return outcome
+    }
+
+    throw outcome
+  }
+
+  protected async _waitForKeychainRetryDelay(): Promise<void> {
+    return await Promise.resolve()
+  }
+}
+
+class CliTokenRefreshStubService extends KeychainReadStubService {
+  cliRefreshCallsCount = 0
+  cliRefreshError: Error | undefined
+  lastCliRefreshCommand = ''
+
+  constructor(params: { cliRefreshError?: Error; readOutcomes: Array<Error | string> }) {
+    super({ readOutcomes: params.readOutcomes })
+    this.cliRefreshError = params.cliRefreshError
+  }
+
+  protected async _runCliTokenRefresh(params: { command: string }): Promise<void> {
+    const { command } = params
+    this.cliRefreshCallsCount += 1
+    this.lastCliRefreshCommand = command
+
+    if (this.cliRefreshError !== undefined) {
+      throw this.cliRefreshError
+    }
+
+    return await Promise.resolve()
   }
 }
 
@@ -127,14 +181,62 @@ describe('ClaudeSystemAccessTokenService [contract supplement]', () => {
     )
   })
 
-  it.skipIf(osUtil.resolvePlatform() === OS.MACOS)(
-    'rejects the macos platform with the keychain read-failure message when the security binary is unavailable',
-    async () => {
-      const service = new ClaudeSystemAccessTokenService({ homeDir: '/tmp/unused-claude-home', platform: OS.MACOS })
+  it('rejects the macos keychain read with the wrapped failure message after exhausting all attempts', async () => {
+    const readFailure = Object.assign(new Error('Command failed: security find-generic-password'), {
+      stderr: 'security: SecKeychainSearchCopyNext: intermittent keychain error',
+    })
+    const service = new KeychainReadStubService({ readOutcomes: [readFailure, readFailure, readFailure] })
 
-      await expect(service.resolveAccessToken()).rejects.toThrow(
-        "reading 'Claude Code-credentials' from the macOS Keychain failed:",
-      )
-    },
-  )
+    await expect(service.resolveAccessToken()).rejects.toThrow(
+      "reading 'Claude Code-credentials' from the macOS Keychain failed: security: SecKeychainSearchCopyNext: intermittent keychain error",
+    )
+    expect(service.readAttemptsCount).toBe(3)
+  })
+
+  it('resolves the token after transient keychain read failures within the retry budget', async () => {
+    const timeoutKill = Object.assign(new Error('Command failed: security find-generic-password'), { killed: true })
+    const readFailure = Object.assign(new Error('Command failed: security find-generic-password'), {
+      stderr: 'security: SecKeychainSearchCopyNext: intermittent keychain error',
+    })
+    const service = new KeychainReadStubService({
+      readOutcomes: [timeoutKill, readFailure, '{"claudeAiOauth":{"accessToken":"satp-keychain-token"}}'],
+    })
+
+    await expect(service.resolveAccessToken()).resolves.toBe('satp-keychain-token')
+    expect(service.readAttemptsCount).toBe(3)
+  })
+
+  it('reports the timeout kill as the keychain failure reason when stderr is empty', async () => {
+    const timeoutKill = Object.assign(new Error('Command failed: security find-generic-password'), { killed: true })
+    const service = new KeychainReadStubService({ readOutcomes: [timeoutKill, timeoutKill, timeoutKill] })
+
+    await expect(service.resolveAccessToken()).rejects.toThrow(
+      "reading 'Claude Code-credentials' from the macOS Keychain failed: the 'security' command timed out; the login keychain may be locked",
+    )
+    expect(service.readAttemptsCount).toBe(3)
+  })
+
+  it('refreshes the token by running the given claude CLI command before re-reading the keychain', async () => {
+    const service = new CliTokenRefreshStubService({
+      readOutcomes: ['{"claudeAiOauth":{"accessToken":"satp-refreshed-token"}}'],
+    })
+
+    await expect(
+      service.refreshAccessToken({ command: 'claude -p "what is your name, only name" --model haiku' }),
+    ).resolves.toBe('satp-refreshed-token')
+    expect(service.cliRefreshCallsCount).toBe(1)
+    expect(service.lastCliRefreshCommand).toBe('claude -p "what is your name, only name" --model haiku')
+  })
+
+  it('rejects with the CLI refresh failure without reading the keychain', async () => {
+    const service = new CliTokenRefreshStubService({
+      cliRefreshError: new Error('refreshing the Claude token via the claude CLI failed: not logged in'),
+      readOutcomes: [],
+    })
+
+    await expect(service.refreshAccessToken({ command: 'claude -p ping --model haiku' })).rejects.toThrow(
+      'refreshing the Claude token via the claude CLI failed: not logged in',
+    )
+    expect(service.cliRefreshCallsCount).toBe(1)
+  })
 })

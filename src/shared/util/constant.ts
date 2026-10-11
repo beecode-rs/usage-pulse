@@ -33,6 +33,18 @@ const providerCatalog: ProviderCatalogEntry[] = [
 ]
 
 export const constant = {
+  claudeSystemAccessToken: {
+    cliTokenRefresh: {
+      defaultCommand: 'claude -p "what is your name, only name" --model haiku',
+      defaultIsEnabled: false,
+      timeoutMs: 60000,
+    },
+    keychainRead: {
+      attemptsCount: 3,
+      retryDelayMs: 1000,
+      timeoutMs: 10000,
+    },
+  },
   fiveHourWindowMs,
   maxWindowScheduleTriggerPreset,
   mobileServer: {

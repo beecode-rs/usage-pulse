@@ -13,8 +13,10 @@ export interface TrackerConfigBase {
 }
 
 export interface ClaudeTrackerConfig extends TrackerConfigBase {
-  providerId: ProviderIdMapper.CLAUDE
+  accessTokenRefreshCommand: string
   accessTokenSource: ClaudeAccessTokenSource
+  isAccessTokenRefreshEnabled: boolean
+  providerId: ProviderIdMapper.CLAUDE
 }
 
 export interface ZaiTrackerConfig extends TrackerConfigBase {
