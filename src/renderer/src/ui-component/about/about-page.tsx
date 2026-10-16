@@ -2,33 +2,99 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import appIconUrl from '#resource/icon/app-icon.png'
 import { updateClientService } from '#src/renderer/src/business/service/update-client-service'
+import { errorUtil } from '#src/renderer/src/util/error-util'
 import '#src/renderer/src/ui-component/about/about-page.css'
+import type { UpdateStatus } from '#src/shared/business/model/update-model'
 import { appTitleUtil } from '#src/shared/util/app-title-util'
 import { constant } from '#src/shared/util/constant'
+import { updateCheckErrorMessageUtil } from '#src/shared/util/update-check-error-message-util'
 
 const APP_TITLE = appTitleUtil.resolve({ isDev: import.meta.env.DEV })
 const TITLE_CLICKS_TO_TOGGLE_DEVELOPMENT = 7
 
+const resolveCheckButtonLabel = (params: { isChecking: boolean }): string => {
+  const { isChecking } = params
+
+  if (isChecking) {
+    return 'Checking…'
+  }
+
+  return 'Check for updates'
+}
+
+const resolveUpdateStatusText = (params: {
+  checkErrorMessage: string
+  isChecking: boolean
+  status: UpdateStatus | undefined
+}): string => {
+  const { checkErrorMessage, isChecking, status } = params
+
+  if (isChecking) {
+    return 'Checking for updates…'
+  }
+
+  if (checkErrorMessage !== '') {
+    return checkErrorMessage
+  }
+
+  if (status === undefined) {
+    return ''
+  }
+
+  if (status.error !== undefined) {
+    return updateCheckErrorMessageUtil.resolveMessage({ error: status.error })
+  }
+
+  if (status.isUpdateAvailable && status.latestVersion !== undefined) {
+    return `Version ${status.latestVersion} is available`
+  }
+
+  return `Up to date (v${status.currentVersion})`
+}
+
 export const AboutPage = (props: { onToggleDevelopmentUnlock: () => void }): ReactElement => {
   const { onToggleDevelopmentUnlock } = props
+  const [checkErrorMessage, setCheckErrorMessage] = useState<string>('')
   const [developmentClicksRemaining, setDevelopmentClicksRemaining] = useState<number>(
     TITLE_CLICKS_TO_TOGGLE_DEVELOPMENT,
   )
-  const [currentVersion, setCurrentVersion] = useState('')
+  const [isCheckingForUpdate, setIsCheckingForUpdate] = useState<boolean>(false)
+  const [status, setStatus] = useState<UpdateStatus | undefined>(undefined)
 
   useEffect(() => {
-    const loadCurrentVersion = async (): Promise<void> => {
+    const loadStatus = async (): Promise<void> => {
       try {
-        const status = await updateClientService.getStatus()
-
-        setCurrentVersion(status.currentVersion)
+        setStatus(await updateClientService.getStatus())
       } catch {
         return
       }
     }
 
-    void loadCurrentVersion()
+    void loadStatus()
+
+    return updateClientService.subscribeToUpdateStatus({
+      onUpdate: (nextStatus) => {
+        setStatus(nextStatus)
+      },
+    })
   }, [])
+
+  const handleCheckForUpdates = (): void => {
+    setIsCheckingForUpdate(true)
+
+    void updateClientService
+      .checkForUpdate()
+      .then((nextStatus) => {
+        setCheckErrorMessage('')
+        setStatus(nextStatus)
+      })
+      .catch((error: unknown) => {
+        setCheckErrorMessage(errorUtil.resolveMessage(error))
+      })
+      .finally(() => {
+        setIsCheckingForUpdate(false)
+      })
+  }
 
   const handleTitleClick = (): void => {
     const nextClicksRemaining = developmentClicksRemaining - 1
@@ -51,6 +117,12 @@ export const AboutPage = (props: { onToggleDevelopmentUnlock: () => void }): Rea
     return `${String(developmentClicksRemaining)} more clicks to toggle the Development tab`
   }
 
+  const updateStatusText = resolveUpdateStatusText({
+    checkErrorMessage,
+    isChecking: isCheckingForUpdate,
+    status,
+  })
+
   return (
     <div className="about-page">
       <header>
@@ -62,8 +134,22 @@ export const AboutPage = (props: { onToggleDevelopmentUnlock: () => void }): Rea
           <p className="about-page-development-hint">{resolveDevelopmentHintText()}</p>
         )}
         <p className="about-page-tagline">Desktop tracker for Claude and z.ai coding-plan usage limits.</p>
-        {currentVersion !== '' && <p className="about-page-version">Version {currentVersion}</p>}
+        {status !== undefined && <p className="about-page-version">Version {status.currentVersion}</p>}
       </header>
+      <section className="about-page-section">
+        <h2 className="about-page-section-title">Updates</h2>
+        <div className="about-page-updates">
+          <button
+            className="about-page-update-button"
+            disabled={isCheckingForUpdate}
+            onClick={handleCheckForUpdates}
+            type="button"
+          >
+            {resolveCheckButtonLabel({ isChecking: isCheckingForUpdate })}
+          </button>
+          {updateStatusText !== '' && <p className="about-page-update-status">{updateStatusText}</p>}
+        </div>
+      </section>
       <section className="about-page-section">
         <h2 className="about-page-section-title">What it does</h2>
         <p className="about-page-text">

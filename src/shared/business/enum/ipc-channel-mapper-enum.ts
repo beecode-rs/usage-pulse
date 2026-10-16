@@ -18,6 +18,8 @@ export enum IpcChannelMapper {
   TRIGGER_GET_RUN_LOGS = 'trigger:get-run-logs',
   TRIGGER_OS_INSPECT = 'trigger:os-inspect',
   TRIGGER_SET_ENABLED = 'trigger:set-enabled',
+  UPDATE_CHECK = 'update:check',
+  UPDATE_DOWNLOAD = 'update:download',
   UPDATE_GET_STATUS = 'update:get-status',
   UPDATE_OPEN_RELEASE = 'update:open-release',
   UPDATE_STATUS = 'update:status',

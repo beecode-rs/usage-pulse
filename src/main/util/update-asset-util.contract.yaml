@@ -1,0 +1,89 @@
+# Contract for updateAssetUtil.
+# resolveUpdateAsset picks the release asset whose file name ends with the preferred
+# suffix for the given OS, trying suffixes in priority order (.dmg for MACOS;
+# .AppImage before .deb for LINUX; .exe for WINDOWS). Matching is case-insensitive so
+# mixed-case asset names still resolve. No matching asset yields undefined, which keeps
+# the release page as the update fallback in UpdateStatus.
+subject: updateAssetUtil
+module: ./update-asset-util.js
+subjectType: function
+methods:
+  resolveUpdateAsset:
+    terms:
+      # --- Platform dispatch picks the matching suffix ---
+      # MACOS picks the .dmg and ignores the Linux and Windows assets.
+      - params:
+          - assets:
+              - name: 'Usage.Pulse-1.0.0.AppImage'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.AppImage'
+              - name: 'Usage.Pulse-1.0.0.dmg'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.dmg'
+              - name: 'Usage.Pulse-1.0.0.exe'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.exe'
+            platform: MACOS
+        result:
+          name: 'Usage.Pulse-1.0.0.dmg'
+          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.dmg'
+      # LINUX prefers .AppImage over .deb.
+      - params:
+          - assets:
+              - name: 'usage-pulse-1.0.0.deb'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
+              - name: 'usage-pulse-1.0.0.AppImage'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.AppImage'
+            platform: LINUX
+        result:
+          name: 'usage-pulse-1.0.0.AppImage'
+          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.AppImage'
+      # LINUX falls back to .deb when no .AppImage exists.
+      - params:
+          - assets:
+              - name: 'usage-pulse-1.0.0.deb'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
+              - name: 'Usage.Pulse-1.0.0.dmg'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.dmg'
+            platform: LINUX
+        result:
+          name: 'usage-pulse-1.0.0.deb'
+          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
+      # WINDOWS picks .exe even when a macOS asset is present.
+      - params:
+          - assets:
+              - name: 'Usage.Pulse-1.0.0.dmg'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.dmg'
+              - name: 'Usage.Pulse-1.0.0.exe'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.exe'
+            platform: WINDOWS
+        result:
+          name: 'Usage.Pulse-1.0.0.exe'
+          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.exe'
+      # --- Case-insensitive suffix matching ---
+      # An uppercase .DMG asset name still resolves on MACOS.
+      - params:
+          - assets:
+              - name: 'usage-pulse-1.0.0.DMG'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.DMG'
+            platform: MACOS
+        result:
+          name: 'usage-pulse-1.0.0.DMG'
+          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.DMG'
+      # --- No match keeps the release-page fallback ---
+      # A platform whose assets are all foreign yields undefined.
+      - params:
+          - assets:
+              - name: 'Usage.Pulse-1.0.0.exe'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.exe'
+            platform: MACOS
+        result: !undefined
+      # An empty asset list yields undefined.
+      - params:
+          - assets: []
+            platform: LINUX
+        result: !undefined
+      # A lookalike name that contains but does not end with the suffix is no match.
+      - params:
+          - assets:
+              - name: 'Usage.Pulse-1.0.0.dmg.blockmap'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.dmg.blockmap'
+            platform: MACOS
+        result: !undefined

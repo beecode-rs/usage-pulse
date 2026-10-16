@@ -32,3 +32,8 @@
   background: color-mix(in srgb, var(--meter-accent) 26%, transparent);
   color: var(--ink-primary);
 }
+
+.app-footer-update-button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}

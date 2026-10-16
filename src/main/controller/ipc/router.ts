@@ -41,6 +41,8 @@ export class IpcRouter {
     ipcMain.handle(IpcChannelMapper.TRIGGER_SET_ENABLED, ipcTrigger.setEnabled)
 
     // update
+    ipcMain.handle(IpcChannelMapper.UPDATE_CHECK, ipcUpdate.check)
+    ipcMain.handle(IpcChannelMapper.UPDATE_DOWNLOAD, ipcUpdate.download)
     ipcMain.handle(IpcChannelMapper.UPDATE_GET_STATUS, ipcUpdate.getStatus)
     ipcMain.on(IpcChannelMapper.UPDATE_OPEN_RELEASE, ipcUpdate.openRelease)
 

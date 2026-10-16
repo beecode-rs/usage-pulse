@@ -1,6 +1,12 @@
 import type { UpdateStatus, UpdateStatusListener } from '#src/shared/business/model/update-model'
 
 export const updateClientService = {
+  checkForUpdate: (): Promise<UpdateStatus> => {
+    return window.usageApi.checkForUpdate()
+  },
+  downloadUpdate: (): Promise<string> => {
+    return window.usageApi.downloadUpdate()
+  },
   getStatus: (): Promise<UpdateStatus> => {
     return window.usageApi.getUpdateStatus()
   },

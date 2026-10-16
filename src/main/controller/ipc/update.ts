@@ -4,6 +4,14 @@ import { updateServiceSingleton } from '#src/main/business/service/update-servic
 import { type UpdateStatus } from '#src/shared/business/model/update-model'
 
 export const ipcUpdate = {
+  check: async (): Promise<UpdateStatus> => {
+    return await updateServiceSingleton().checkForUpdate()
+  },
+
+  download: async (): Promise<string> => {
+    return await updateServiceSingleton().downloadUpdate()
+  },
+
   getStatus: (): UpdateStatus => {
     return updateServiceSingleton().getStatus()
   },

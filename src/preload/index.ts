@@ -22,8 +22,14 @@ import {
 } from '#src/shared/business/model/usage-model'
 
 const usageApi: UsageApiClient = {
+  checkForUpdate: (): Promise<UpdateStatus> => {
+    return ipcRenderer.invoke(IpcChannelMapper.UPDATE_CHECK)
+  },
   clearTriggerRunLogs: (params: { triggerId: string }): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.TRIGGER_CLEAR_RUN_LOGS, params)
+  },
+  downloadUpdate: (): Promise<string> => {
+    return ipcRenderer.invoke(IpcChannelMapper.UPDATE_DOWNLOAD)
   },
   focusSession: (params: { cwd: string; pid: number }): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_FOCUS, params)

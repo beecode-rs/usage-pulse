@@ -47,6 +47,42 @@
   padding-top: 20px;
 }
 
+.about-page-updates {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.about-page-update-button {
+  background: color-mix(in srgb, var(--meter-accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--meter-accent) 45%, transparent);
+  border-radius: 6px;
+  color: var(--meter-accent);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 3px 10px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.about-page-update-button:hover {
+  background: color-mix(in srgb, var(--meter-accent) 26%, transparent);
+  color: var(--ink-primary);
+}
+
+.about-page-update-button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.about-page-update-status {
+  color: var(--ink-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
 .about-page-section-title {
   font-size: 14px;
   font-weight: 600;

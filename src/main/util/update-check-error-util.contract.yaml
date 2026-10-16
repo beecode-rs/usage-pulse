@@ -1,0 +1,77 @@
+# Contract for updateCheckErrorUtil, the classifier that turns a failed update
+# check into the typed UpdateCheckError carried on UpdateStatus. classifyResponse
+# maps an HTTP failure response to RATE_LIMITED only when the status is 403 and
+# GitHub's x-ratelimit-remaining header is '0' (carrying the x-ratelimit-reset
+# epoch as a millisecond timestamp); every other status is HTTP_ERROR with its
+# status code, so the renderer can special-case 404 as "no release published
+# yet". classifyThrown classifies the error a failed fetch threw: a failure
+# created by createThrown carries its checkError verbatim (the INVALID_RESPONSE
+# path used by the json and shape guards), a TimeoutError/AbortError name is the
+# request timeout, and anything else is a network failure.
+subject: updateCheckErrorUtilContractHarness
+module: ./__tests__/_update-check-error-util-contract-harness.js
+subjectType: function
+methods:
+  classifyResponse:
+    terms:
+      # --- Rate limiting: 403 with an exhausted quota ---
+      # A 403 with x-ratelimit-remaining '0' is the rate limit, with the reset
+      # epoch (seconds) carried as milliseconds.
+      - params:
+          - rateLimitRemaining: '0'
+            rateLimitReset: '1790000000'
+            status: 403
+        result:
+          kind: RATE_LIMITED
+          rateLimitResetAt: 1790000000000
+      # A missing or unreadable reset header still classifies as rate limited.
+      - params:
+          - rateLimitRemaining: '0'
+            rateLimitReset: ''
+            status: 403
+        result:
+          kind: RATE_LIMITED
+      # --- Other HTTP statuses keep their code as HTTP_ERROR ---
+      # A 403 with quota left is a plain HTTP error, not a rate limit.
+      - params:
+          - rateLimitRemaining: '42'
+            rateLimitReset: ''
+            status: 403
+        result:
+          httpStatusCode: 403
+          kind: HTTP_ERROR
+      # A 404 means the repository has no latest release yet.
+      - params:
+          - rateLimitRemaining: ''
+            rateLimitReset: ''
+            status: 404
+        result:
+          httpStatusCode: 404
+          kind: HTTP_ERROR
+      # Any other failure status keeps its code the same way.
+      - params:
+          - rateLimitRemaining: ''
+            rateLimitReset: ''
+            status: 500
+        result:
+          httpStatusCode: 500
+          kind: HTTP_ERROR
+  classifyThrown:
+    terms:
+      # A TimeoutError name is the request timeout abort.
+      - params:
+          - simulatedFailure: timeout
+        result:
+          kind: TIMEOUT
+      # Any other thrown fetch failure is a network failure.
+      - params:
+          - simulatedFailure: network
+        result:
+          kind: NETWORK
+      # A failure created by createThrown carries its classified checkError
+      # (the INVALID_RESPONSE path used by the response parse guards) through
+      # the catch untouched.
+      - params:
+          - simulatedFailure: invalid-body
+        result:
+          kind: INVALID_RESPONSE

@@ -11,7 +11,9 @@ import type { UpdateStatus, UpdateStatusListener } from '#src/shared/business/mo
 import type { SettingsUpdateListener, UsageSnapshot, UsageUpdateListener } from '#src/shared/business/model/usage-model'
 
 export type UsageApiClient = {
+  checkForUpdate: () => Promise<UpdateStatus>
   clearTriggerRunLogs: (params: { triggerId: string }) => Promise<void>
+  downloadUpdate: () => Promise<string>
   focusSession: (params: { cwd: string; pid: number }) => Promise<void>
   getMobileDevices: () => Promise<MobileConnectedDevice[]>
   getPlatform: () => Promise<OS>
