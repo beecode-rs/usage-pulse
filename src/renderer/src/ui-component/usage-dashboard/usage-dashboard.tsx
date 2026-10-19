@@ -146,7 +146,7 @@ export const UsageDashboard = (): ReactElement => {
               providerSnapshot={providerSnapshot}
               refreshIntervalMs={trackerConfig?.refreshIntervalMs}
               isRefreshing={
-                refreshingTrackerIds.includes(providerSnapshot.trackerId) || providerSnapshot.isRefreshing === true
+                refreshingTrackerIds.includes(providerSnapshot.trackerId) || (providerSnapshot.isRefreshing ?? false)
               }
             />
           )

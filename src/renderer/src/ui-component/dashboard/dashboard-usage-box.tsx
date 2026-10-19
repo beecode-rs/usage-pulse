@@ -67,7 +67,7 @@ export const DashboardUsageBox = (props: {
     providerId: providerSnapshot.providerId,
   })
 
-  const isWindowWarning = new MenuStatusUtil().resolveIsWindowWarning({
+  const isWindowWarning = new MenuStatusUtil().isWindowWarning({
     now,
     resetAt: fiveHourWindow?.resetAt,
     usedPercent: fiveHourWindow?.usedPercent ?? 0,

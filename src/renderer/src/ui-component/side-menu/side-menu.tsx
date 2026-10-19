@@ -113,7 +113,7 @@ export const SideMenu = <ItemId extends string>(props: {
         title={resolveItemTitle({ label: item.label })}
         type="button"
       >
-        <span className={resolveItemIconClassName({ isLive: item.isLive === true })}>
+        <span className={resolveItemIconClassName({ isLive: item.isLive ?? false })}>
           {item.icon}
           {renderStatusDot({ item })}
         </span>

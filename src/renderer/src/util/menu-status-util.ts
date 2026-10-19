@@ -77,14 +77,14 @@ export class MenuStatusUtil {
     return this.resolveUsageActivityStatusDot({ now, snapshot })
   }
 
-  resolveIsWindowWarning(params: { now: number; resetAt?: number; usedPercent: number; windowMs?: number }): boolean {
+  isWindowWarning(params: { now: number; resetAt?: number; usedPercent: number; windowMs?: number }): boolean {
     const { now, resetAt, usedPercent, windowMs } = params
 
     if (resetAt === undefined || windowMs === undefined) {
       return false
     }
 
-    return new UsagePaceUtil().resolveIsUsageOutpacingWindow({
+    return new UsagePaceUtil().isUsageOutpacingWindow({
       now,
       resetAt,
       usedPercent,
@@ -100,7 +100,11 @@ export class MenuStatusUtil {
     const isAnyProviderInPeakHours = providers.some((provider) => {
       const peakInfo = new ZaiPeakUtil().resolvePeakInfo({ nowMs: now, providerId: provider.providerId })
 
-      return peakInfo?.isPeakHour === true
+      if (peakInfo === undefined) {
+        return false
+      }
+
+      return peakInfo.isPeakHour
     })
 
     if (isAnyProviderInPeakHours) {
@@ -118,7 +122,7 @@ export class MenuStatusUtil {
 
     const hasSnapshotError = snapshot?.errorMessage !== undefined && snapshot.errorMessage !== ''
 
-    if (hasLoadError === true || hasSnapshotError) {
+    if (hasLoadError || hasSnapshotError) {
       return MenuStatusDotMapper.ERROR
     }
 
@@ -171,7 +175,7 @@ export class MenuStatusUtil {
 
     const isAnyWindowWarning = providers.some((provider) => {
       return (provider.usage ?? []).some((window) => {
-        return this.resolveIsWindowWarning({
+        return this.isWindowWarning({
           now,
           resetAt: window.resetAt,
           usedPercent: window.usedPercent,

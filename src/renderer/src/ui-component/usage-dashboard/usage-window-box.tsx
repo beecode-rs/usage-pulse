@@ -35,7 +35,7 @@ export const UsageWindowBox = (props: {
   const remainingMs = usageResetUtil.resolveRemainingMs({ now, resetAt })
   const remainingPercent = usageResetUtil.resolveRemainingPercent({ remainingMs, windowMs })
   const paceFillColor = new UsagePaceUtil().resolvePaceColor({ now, resetAt, usedPercent, windowMs })
-  const isWindowWarning = new MenuStatusUtil().resolveIsWindowWarning({ now, resetAt, usedPercent, windowMs })
+  const isWindowWarning = new MenuStatusUtil().isWindowWarning({ now, resetAt, usedPercent, windowMs })
 
   const resolveBoxClassName = (): string => {
     if (isWindowWarning) {

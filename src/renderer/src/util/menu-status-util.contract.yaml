@@ -18,6 +18,56 @@ constructor:
     - params: []
       result: {}
 methods:
+  isWindowWarning:
+    terms:
+      # A window without a reset time never warns, however much of the quota is used.
+      - constructorParams: []
+        params:
+          - now: 0
+            usedPercent: 90
+            windowMs: 3600000
+        result: false
+      # A window without a window length never warns either.
+      - constructorParams: []
+        params:
+          - now: 0
+            resetAt: 3600000
+            usedPercent: 90
+        result: false
+      # Nearing reset (5% remaining, resetAt 180000 of 3600000) with usage far under
+      # pace does not warn.
+      - constructorParams: []
+        params:
+          - now: 0
+            resetAt: 180000
+            usedPercent: 10
+            windowMs: 3600000
+        result: false
+      # Warning via pace: 80% used at 20% elapsed is drift +60, far past the +10
+      # outpacing threshold.
+      - constructorParams: []
+        params:
+          - now: 0
+            resetAt: 2880000
+            usedPercent: 80
+            windowMs: 3600000
+        result: true
+      # Boundary: 20% used at 10% elapsed is exactly drift +10 and warns.
+      - constructorParams: []
+        params:
+          - now: 0
+            resetAt: 3240000
+            usedPercent: 20
+            windowMs: 3600000
+        result: true
+      # Mid-window and on pace (drift 0) stays clean.
+      - constructorParams: []
+        params:
+          - now: 0
+            resetAt: 1800000
+            usedPercent: 50
+            windowMs: 3600000
+        result: false
   resolveCombinedStatusDot:
     terms:
       # Error outranks waiting.
@@ -163,56 +213,6 @@ methods:
             now: 0
             usedPercent: 0
         result: !undefined
-  resolveIsWindowWarning:
-    terms:
-      # A window without a reset time never warns, however much of the quota is used.
-      - constructorParams: []
-        params:
-          - now: 0
-            usedPercent: 90
-            windowMs: 3600000
-        result: false
-      # A window without a window length never warns either.
-      - constructorParams: []
-        params:
-          - now: 0
-            resetAt: 3600000
-            usedPercent: 90
-        result: false
-      # Nearing reset (5% remaining, resetAt 180000 of 3600000) with usage far under
-      # pace does not warn.
-      - constructorParams: []
-        params:
-          - now: 0
-            resetAt: 180000
-            usedPercent: 10
-            windowMs: 3600000
-        result: false
-      # Warning via pace: 80% used at 20% elapsed is drift +60, far past the +10
-      # outpacing threshold.
-      - constructorParams: []
-        params:
-          - now: 0
-            resetAt: 2880000
-            usedPercent: 80
-            windowMs: 3600000
-        result: true
-      # Boundary: 20% used at 10% elapsed is exactly drift +10 and warns.
-      - constructorParams: []
-        params:
-          - now: 0
-            resetAt: 3240000
-            usedPercent: 20
-            windowMs: 3600000
-        result: true
-      # Mid-window and on pace (drift 0) stays clean.
-      - constructorParams: []
-        params:
-          - now: 0
-            resetAt: 1800000
-            usedPercent: 50
-            windowMs: 3600000
-        result: false
   resolvePeakStatusDot:
     terms:
       # z.ai peak hours are weekdays 14:00-18:00 UTC+8. Terms use the UTC+8 wall clock of

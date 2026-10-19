@@ -3,6 +3,15 @@ import { SessionStatusMapper } from '#src/shared/business/enum/session-status-ma
 import { type SessionInfo } from '#src/shared/business/model/session-model'
 
 export const sessionFinishedPulseUtil = {
+  isPulsing: (params: { finishedAtMs?: number; nowMs: number; pulseMs: number }): boolean => {
+    const { finishedAtMs, nowMs, pulseMs } = params
+    if (finishedAtMs === undefined || pulseMs <= 0) {
+      return false
+    }
+
+    return nowMs - finishedAtMs < pulseMs
+  },
+
   resolveFinishedAtBySessionId: (params: {
     currentSessions: SessionInfo[]
     finishedAtBySessionId: Record<string, number>
@@ -34,14 +43,5 @@ export const sessionFinishedPulseUtil = {
       })
 
     return Object.fromEntries([...keptEntries, ...finishedEntries])
-  },
-
-  resolveIsPulsing: (params: { finishedAtMs?: number; nowMs: number; pulseMs: number }): boolean => {
-    const { finishedAtMs, nowMs, pulseMs } = params
-    if (finishedAtMs === undefined || pulseMs <= 0) {
-      return false
-    }
-
-    return nowMs - finishedAtMs < pulseMs
   },
 }

@@ -17,7 +17,7 @@ constructor:
     - params: []
       result: {}
 methods:
-  resolveIsUsageOutpacingWindow:
+  isUsageOutpacingWindow:
     terms:
       # Outpacing fires when usage runs at least 10 points ahead of the elapsed window
       # percent. 20% used at 10% elapsed is exactly drift +10 and counts.

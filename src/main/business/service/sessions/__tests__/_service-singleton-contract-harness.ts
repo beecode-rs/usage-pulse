@@ -54,7 +54,7 @@ export class SessionsServiceContractHarness extends _SessionsService {
     return this.macOsAgentsQueryStdout
   }
 
-  protected override _resolveGhosttyTtySupport(): Promise<boolean> {
+  protected override _isGhosttyTtySupported(): Promise<boolean> {
     return Promise.resolve(this.macOsGhosttyTtySupport)
   }
 

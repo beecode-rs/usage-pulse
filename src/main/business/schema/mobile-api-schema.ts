@@ -3,7 +3,8 @@ import { z } from 'zod'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
-import { type MobileWsMessage, UsageWarningReason } from '#src/shared/business/model/mobile-api-model'
+import { UsageWarningReasonMapper } from '#src/shared/business/enum/usage-warning-reason-mapper-enum'
+import { type MobileWsMessage } from '#src/shared/business/model/mobile-api-model'
 
 const usageWindowSchema = z.object({
   label: z.string(),
@@ -69,7 +70,7 @@ const sessionSnapshotSchema = z.object({
 })
 const usageWarningSchema = z.object({
   errorMessage: z.string().optional(),
-  reason: z.enum(UsageWarningReason),
+  reason: z.enum(UsageWarningReasonMapper),
   trackerId: z.string(),
   trackerName: z.string(),
   usedPercent: z.number().optional(),

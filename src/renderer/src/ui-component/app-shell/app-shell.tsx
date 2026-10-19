@@ -226,7 +226,7 @@ const resolveFooterMenuItems = (params: {
   ]
 }
 
-const resolveIsUsageLive = (params: { settings?: SettingsModel }): boolean => {
+const isUsageLive = (params: { settings?: SettingsModel }): boolean => {
   const { settings } = params
   const trackers = settings?.trackers ?? []
 
@@ -235,22 +235,22 @@ const resolveIsUsageLive = (params: { settings?: SettingsModel }): boolean => {
   })
 }
 
-const resolveIsSchedulingLive = (params: { settings?: SettingsModel }): boolean => {
+const isSchedulingLive = (params: { settings?: SettingsModel }): boolean => {
   const { settings } = params
 
-  return settings?.isSchedulingEnabled === true
+  return settings?.isSchedulingEnabled ?? false
 }
 
-const resolveIsSessionsLive = (params: { settings?: SettingsModel }): boolean => {
+const isSessionsLive = (params: { settings?: SettingsModel }): boolean => {
   const { settings } = params
 
-  return settings?.isSessionsAutoRefreshPaused === false
+  return settings !== undefined && !settings.isSessionsAutoRefreshPaused
 }
 
 const isMobileServerLive = (params: { settings?: SettingsModel }): boolean => {
   const { settings } = params
 
-  return settings?.isMobileServerEnabled === true
+  return settings?.isMobileServerEnabled ?? false
 }
 
 export const AppShell = (): ReactElement => {
@@ -426,9 +426,9 @@ export const AppShell = (): ReactElement => {
   const menuItems = resolveMenuItems({
     dashboardStatusDot,
     isMobileServerLive: isMobileServerLive({ settings }),
-    isSchedulingLive: resolveIsSchedulingLive({ settings }),
-    isSessionsLive: resolveIsSessionsLive({ settings }),
-    isUsageLive: resolveIsUsageLive({ settings }),
+    isSchedulingLive: isSchedulingLive({ settings }),
+    isSessionsLive: isSessionsLive({ settings }),
+    isUsageLive: isUsageLive({ settings }),
     sessionsStatusDot,
     usageActivityStatusDot,
   })

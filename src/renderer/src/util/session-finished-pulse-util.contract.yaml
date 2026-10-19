@@ -11,7 +11,7 @@
 # duration out. A session that finishes twice keeps the newer timestamp, which
 # restarts the pulse from full brightness.
 #
-# resolveIsPulsing turns a recorded timestamp into the render decision: pulsing
+# isPulsing turns a recorded timestamp into the render decision: pulsing
 # while less than pulseMs (milliseconds) have passed, done exactly at the boundary.
 # A session with no recorded timestamp never pulses, and a pulseMs of 0 (or lower)
 # turns the indicator off for everyone.
@@ -19,7 +19,7 @@ subject: sessionFinishedPulseUtil
 module: ./session-finished-pulse-util.js
 subjectType: function
 methods:
-  resolveIsPulsing:
+  isPulsing:
     terms:
       # A session that never finished while the page watched has nothing to pulse.
       - params:
