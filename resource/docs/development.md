@@ -28,7 +28,7 @@ pnpm dev
 - `pnpm typecheck` — typecheck the node and web projects
 - `pnpm lint` / `pnpm lint-fix` — ESLint + Prettier + json-sort-cli
 - `pnpm test:contract` — run the contract tests (part of the release quality gate)
-- `pnpm dist:mac` / `pnpm dist:linux` — build installers into `dist/` (universal dmg; AppImage + deb)
+- `pnpm dist-mac` / `pnpm dist-linux` — build installers into `dist/` (universal dmg; AppImage + deb)
 - `pnpm pack:dir` — unpacked build into `dist/` for a quick local smoke test
 
 ## Quality gates

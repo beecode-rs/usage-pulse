@@ -5,6 +5,7 @@ import { WebSocket, WebSocketServer } from 'ws'
 
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
 import { mobileWsMessageSchema } from '#src/main/business/schema/mobile-api-schema'
+import { validationUtil } from '#src/main/util/validation-util'
 import { type MobileConnectedDevice, type MobileWsMessage } from '#src/shared/business/model/mobile-api-model'
 import { constant } from '#src/shared/util/constant'
 
@@ -163,7 +164,7 @@ export class WsBroadcaster {
 
   protected _serializeMessage(params: { message: MobileWsMessage }): string | undefined {
     const { message } = params
-    const parsedMessage = mobileWsMessageSchema.safeParse(message)
+    const parsedMessage = validationUtil.safeParse(message, mobileWsMessageSchema)
 
     if (!parsedMessage.success) {
       return undefined

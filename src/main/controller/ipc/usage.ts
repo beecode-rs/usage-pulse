@@ -7,7 +7,7 @@ import { validationUtil } from '#src/main/util/validation-util'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'
 import { type UsageSnapshot } from '#src/shared/business/model/usage-model'
 
-const usageRefreshTrackerParamsSchema = z.string()
+const usageRefreshTrackerParamsSchema = z.object({ trackerId: z.string() })
 const usageSetTrackerPausedParamsSchema = z.object({ isAutoRefreshPaused: z.boolean(), trackerId: z.string() })
 
 export const ipcUsage = {
@@ -19,8 +19,8 @@ export const ipcUsage = {
     await usagePollServiceSingleton().refreshNow()
   },
 
-  refreshTracker: async (_event: IpcMainInvokeEvent, rawTrackerId: unknown): Promise<void> => {
-    const trackerId = validationUtil.parse(rawTrackerId, usageRefreshTrackerParamsSchema)
+  refreshTracker: async (_event: IpcMainInvokeEvent, rawParams: unknown): Promise<void> => {
+    const { trackerId } = validationUtil.parse(rawParams, usageRefreshTrackerParamsSchema)
 
     await usagePollServiceSingleton().refreshTracker({ trackerId })
   },

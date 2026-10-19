@@ -132,9 +132,7 @@ const usageApi: UsageApiClient = {
     return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH)
   },
   refreshTracker: (params: { trackerId: string }): Promise<void> => {
-    const { trackerId } = params
-
-    return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH_TRACKER, trackerId)
+    return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH_TRACKER, params)
   },
   saveSettings: (settings: SettingsModel): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.SETTINGS_SAVE, settings)

@@ -4,6 +4,10 @@ import { constant } from '#src/shared/util/constant'
 export const triggerValidationUtil = {
   resolveValidationError(params: { trigger: ScheduleTriggerConfig }): string | undefined {
     const { trigger } = params
+    if (trigger.name.trim() === '') {
+      return 'Enter a display name for this trigger.'
+    }
+
     if (trigger.command.trim() === '') {
       return 'Enter a command for this trigger to run.'
     }

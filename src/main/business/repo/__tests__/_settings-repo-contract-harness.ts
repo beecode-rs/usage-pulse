@@ -8,9 +8,10 @@ import {
   _SettingsRepo,
   settingsRepoSingleton,
 } from '#src/main/business/repo/settings-repo-singleton'
+import { appSettingsStrictSchema } from '#src/main/business/schema/settings-schema'
 import { SettingsDal } from '#src/main/dal/settings-dal'
 import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
-import { type SettingsModel } from '#src/shared/business/model/settings-model'
+import { type SettingsData, type SettingsModel } from '#src/shared/business/model/settings-model'
 
 const deterministicNowMs = 1_700_000_000_000
 const deterministicMobileServerToken = '001122334455667700112233445566770011223344556677'
@@ -27,6 +28,21 @@ const resolveDeterministicNow = (): number => {
   return deterministicNowMs
 }
 
+const runWithDeterministicIdsAndNow = <T>(run: () => T): T => {
+  const originalRandomUuid = crypto.randomUUID.bind(crypto)
+  const originalNow = Date.now
+  generatedIdCount = 0
+  crypto.randomUUID = nextGeneratedId as typeof crypto.randomUUID
+  Date.now = resolveDeterministicNow
+
+  try {
+    return run()
+  } finally {
+    crypto.randomUUID = originalRandomUuid
+    Date.now = originalNow
+  }
+}
+
 class TempFileSettingsRepo extends _SettingsRepo {
   declare protected readonly _dal: ISettingsDal
 
@@ -41,23 +57,59 @@ class TempFileSettingsRepo extends _SettingsRepo {
   }
 
   override sanitize(params: { rawSettings: unknown }): SettingsModel {
-    const originalRandomUuid = crypto.randomUUID.bind(crypto)
-    const originalNow = Date.now
-    generatedIdCount = 0
-    crypto.randomUUID = nextGeneratedId as typeof crypto.randomUUID
-    Date.now = resolveDeterministicNow
-
-    try {
+    return runWithDeterministicIdsAndNow(() => {
       return super.sanitize(params)
-    } finally {
-      crypto.randomUUID = originalRandomUuid
-      Date.now = originalNow
+    })
+  }
+
+  override saveExternal(params: { settings: SettingsData }): Promise<SettingsModel> {
+    return runWithDeterministicIdsAndNow(() => {
+      return super.saveExternal(params)
+    })
+  }
+}
+
+class InMemoryRecordingSettingsRepo extends _SettingsRepo {
+  declare protected readonly _dal: ISettingsDal
+
+  readonly writeCalls: SettingsModel[] = []
+
+  constructor() {
+    super()
+    const memory: { settings?: SettingsModel } = {}
+    this._dal = {
+      readSettings: () => {
+        return memory.settings
+      },
+      readSettingsFile: () => {
+        return Promise.resolve(memory.settings)
+      },
+      writeSettings: (params) => {
+        memory.settings = params.settings
+        this.writeCalls.push(params.settings)
+
+        return Promise.resolve()
+      },
     }
+  }
+
+  protected override _generateMobileServerToken(): string {
+    return deterministicMobileServerToken
+  }
+
+  override saveExternal(params: { settings: SettingsData }): Promise<SettingsModel> {
+    return runWithDeterministicIdsAndNow(() => {
+      return super.saveExternal(params)
+    })
   }
 }
 
 const resolveTempSettingsFilePath = (): string => {
   return join(mkdtempSync(join(tmpdir(), 'settings-repo-')), 'settings.json')
+}
+
+const createInMemoryRecordingSettingsRepo = (): InMemoryRecordingSettingsRepo => {
+  return new InMemoryRecordingSettingsRepo()
 }
 
 const createTempFileSettingsRepo = (): TempFileSettingsRepo => {
@@ -87,6 +139,13 @@ export const settingsRepoContractHarness = {
 
     return repo.fetch()
   },
+  fetchAfterSaveExternal: async (params: { settings: SettingsData }): Promise<SettingsModel> => {
+    const { settings } = params
+    const repo = createTempFileSettingsRepo()
+    await repo.saveExternal({ settings })
+
+    return repo.fetch()
+  },
   fetchErrorMessageBeforeInit: (): string => {
     try {
       new _SettingsRepo().fetch()
@@ -107,6 +166,27 @@ export const settingsRepoContractHarness = {
     const repo = createTempFileSettingsRepo()
 
     return repo.sanitize(params)
+  },
+  saveExternalResult: async (params: { settings: SettingsData }): Promise<SettingsModel> => {
+    const { settings } = params
+    const repo = createTempFileSettingsRepo()
+
+    return repo.saveExternal({ settings })
+  },
+  saveExternalViaStrictParse: async (params: {
+    rawSettings: unknown
+  }): Promise<{ savedSettings: SettingsModel; writeCallCount: number } | { writeCallCount: number }> => {
+    const { rawSettings } = params
+    const repo = createInMemoryRecordingSettingsRepo()
+    const parsedSettings = appSettingsStrictSchema.safeParse(rawSettings)
+
+    if (!parsedSettings.success) {
+      return { writeCallCount: repo.writeCalls.length }
+    }
+
+    const savedSettings = await repo.saveExternal({ settings: parsedSettings.data })
+
+    return { savedSettings, writeCallCount: repo.writeCalls.length }
   },
   settingsSavedDeliveriesAfterInit: async (): Promise<SettingsModel[]> => {
     const repo = createTempFileSettingsRepo()

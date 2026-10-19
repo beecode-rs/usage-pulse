@@ -7,7 +7,7 @@ import { SettingsDal } from '#src/main/dal/settings-dal'
 import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { idUtil } from '#src/main/util/id-util'
 import { objectUtil } from '#src/main/util/object-util'
-import { SettingsModel } from '#src/shared/business/model/settings-model'
+import { type SettingsData, SettingsModel } from '#src/shared/business/model/settings-model'
 
 export interface ISettingsDal {
   readSettings: () => SettingsModel | undefined
@@ -58,6 +58,24 @@ export class _SettingsRepo {
         triggers: idUtil.ensureUniqueIds(sanitizedSettings.triggers),
       },
     })
+  }
+
+  async saveExternal(params: { settings: SettingsData }): Promise<SettingsModel> {
+    const { settings } = params
+
+    const resolvedSettings = new SettingsModel({
+      settings: {
+        ...settings,
+        mobileServerToken: this._resolveMobileServerToken({ token: settings.mobileServerToken }),
+        sshHosts: idUtil.ensureUniqueIds(settings.sshHosts),
+        trackers: idUtil.ensureUniqueIds(settings.trackers),
+        triggers: idUtil.ensureUniqueIds(settings.triggers),
+      },
+    })
+
+    await this.save({ settings: resolvedSettings })
+
+    return resolvedSettings
   }
 
   protected _generateMobileServerToken(): string {

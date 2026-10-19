@@ -275,7 +275,7 @@ export class _SessionsService {
       return this._isWaylandSessionOverride
     }
 
-    return config.xdgSessionType === 'wayland' || config.waylandDisplay !== undefined
+    return config.xdg.sessionType === 'wayland' || config.waylandDisplay !== undefined
   }
 
   protected async _resolveIsFocusSupported(): Promise<boolean> {
