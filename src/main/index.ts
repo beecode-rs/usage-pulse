@@ -4,11 +4,11 @@ import { DesktopApp } from '#src/main/app-boot/desktop-app'
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
 import { TriggerRunnerService } from '#src/main/business/service/trigger-runner-service'
 import { devDesktopEntry } from '#src/main/lib/dev-desktop-entry'
-import { errorUtil } from '#src/main/util/error-util'
 import { NoSandboxReexecUtil } from '#src/main/util/no-sandbox-reexec-util'
 import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { ScheduleTriggerRunSourceMapper } from '#src/shared/business/enum/schedule-trigger-run-source-mapper-enum'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const resolveFiredTriggerId = (): string | undefined => {
   const flagIndex = process.argv.indexOf('--fire-trigger')

@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 import { SessionsProcessService } from '#src/main/business/service/sessions/process-service'
-import { errorUtil } from '#src/main/util/error-util'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const execFileAsync = promisify(execFile)
 

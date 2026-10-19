@@ -1,7 +1,7 @@
 import { type ScheduleTriggerConfig } from '#src/shared/business/model/schedule-trigger-model'
 import { constant } from '#src/shared/util/constant'
 
-export const triggerValidationUtil = {
+export const triggerValidationService = {
   resolveValidationError(params: { trigger: ScheduleTriggerConfig }): string | undefined {
     const { trigger } = params
     if (trigger.name.trim() === '') {

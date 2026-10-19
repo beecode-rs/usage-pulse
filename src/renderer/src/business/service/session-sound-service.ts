@@ -1,8 +1,8 @@
 import { type SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { SoundNameMapper } from '#src/shared/business/enum/sound-name-mapper-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
+import { sessionStatusTransitionService } from '#src/shared/business/service/session-status-transition-service'
 import { constant } from '#src/shared/util/constant'
-import { sessionStatusTransitionUtil } from '#src/shared/util/session-status-transition-util'
 
 const TONE_ATTACK_SECONDS = 0.01
 const TONE_MAX_GAIN = 0.4
@@ -51,7 +51,7 @@ const SESSION_SOUND_TONES: Record<SoundNameMapper, SessionSoundTone[]> = {
 
 const audioContextCache: { context?: AudioContext } = {}
 
-export class SessionSoundUtil {
+export class SessionSoundService {
   playSessionSound(params: { soundId: SoundNameMapper; volumePercent: number }): void {
     const { soundId, volumePercent } = params
     if (soundId === SoundNameMapper.NONE) {
@@ -76,7 +76,7 @@ export class SessionSoundUtil {
     previousSessions?: SessionInfo[]
     status: SessionStatusMapper
   }): string[] {
-    return sessionStatusTransitionUtil.resolveNewlyStatusSessionIds(params)
+    return sessionStatusTransitionService.resolveNewlyStatusSessionIds(params)
   }
 
   resolveSoundGain(params: { volumePercent: number }): number {
@@ -95,7 +95,7 @@ export class SessionSoundUtil {
     previousSessions?: SessionInfo[]
     toStatus: SessionStatusMapper
   }): string[] {
-    return sessionStatusTransitionUtil.resolveStatusTransitionSessionIds(params)
+    return sessionStatusTransitionService.resolveStatusTransitionSessionIds(params)
   }
 
   protected _playTone(params: { audioContext: AudioContext; gain: number; tone: SessionSoundTone }): void {

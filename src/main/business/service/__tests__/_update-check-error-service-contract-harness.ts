@@ -1,7 +1,7 @@
-import { updateCheckErrorUtil } from '#src/main/util/update-check-error-util'
+import { updateCheckErrorService } from '#src/main/business/service/update-check-error-service'
 import { type UpdateCheckError } from '#src/shared/business/model/update-model'
 
-export const updateCheckErrorUtilContractHarness = {
+export const updateCheckErrorServiceContractHarness = {
   classifyResponse: (params: {
     rateLimitRemaining: string
     rateLimitReset: string
@@ -9,16 +9,16 @@ export const updateCheckErrorUtilContractHarness = {
   }): UpdateCheckError => {
     const { rateLimitRemaining, rateLimitReset, status } = params
 
-    return updateCheckErrorUtil.classifyResponse({ rateLimitRemaining, rateLimitReset, status })
+    return updateCheckErrorService.classifyResponse({ rateLimitRemaining, rateLimitReset, status })
   },
 
   classifyThrown: (params: { simulatedFailure: 'invalid-body' | 'network' | 'timeout' }): UpdateCheckError => {
     const { simulatedFailure } = params
 
     if (simulatedFailure === 'invalid-body') {
-      return updateCheckErrorUtil.classifyThrown({
-        error: updateCheckErrorUtil.createThrown({
-          checkError: updateCheckErrorUtil.resolveInvalidResponse(),
+      return updateCheckErrorService.classifyThrown({
+        error: updateCheckErrorService.createThrown({
+          checkError: updateCheckErrorService.resolveInvalidResponse(),
           message: 'github release response is not an object',
         }),
       })
@@ -30,6 +30,6 @@ export const updateCheckErrorUtilContractHarness = {
       error.name = 'TimeoutError'
     }
 
-    return updateCheckErrorUtil.classifyThrown({ error })
+    return updateCheckErrorService.classifyThrown({ error })
   },
 }

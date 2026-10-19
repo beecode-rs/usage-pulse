@@ -1,7 +1,7 @@
 import { type SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
 
-export const sessionStatusTransitionUtil = {
+export const sessionStatusTransitionService = {
   resolveNewlyStatusSessionIds(params: {
     currentSessions: SessionInfo[]
     previousSessions?: SessionInfo[]

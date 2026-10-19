@@ -3,17 +3,17 @@ import { type ReactElement, useEffect, useState } from 'react'
 import { AppViewIdMapper } from '#src/renderer/src/business/enum/app-view-id-mapper-enum'
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
+import { UsageStalenessService } from '#src/renderer/src/business/service/usage-staleness-service'
 import { DashboardEmptyBox } from '#src/renderer/src/ui-component/dashboard/dashboard-empty-box'
 import { DashboardSessionBox } from '#src/renderer/src/ui-component/dashboard/dashboard-session-box'
 import { DashboardUsageBox } from '#src/renderer/src/ui-component/dashboard/dashboard-usage-box'
 import '#src/renderer/src/ui-component/dashboard/dashboard.css'
 import '#src/renderer/src/ui-component/sessions/sessions.css'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
-import { errorUtil } from '#src/renderer/src/util/error-util'
-import { UsageStalenessUtil } from '#src/renderer/src/util/usage-staleness-util'
 import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
 import type { SettingsModel } from '#src/shared/business/model/settings-model'
 import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const resolveSessionKey = (session: SessionInfo): string => {
   const hostId = session.hostId ?? 'local'
@@ -111,7 +111,7 @@ export const DashboardPage = (props: {
   }, [])
 
   const providerSnapshots = usageSnapshot?.providers ?? []
-  const refreshIntervalMsByTrackerId = new UsageStalenessUtil().resolveRefreshIntervalMsByTrackerId({
+  const refreshIntervalMsByTrackerId = new UsageStalenessService().resolveRefreshIntervalMsByTrackerId({
     trackers: settings?.trackers ?? [],
   })
   const sessions = sessionSnapshot?.sessions ?? []

@@ -1,7 +1,7 @@
 import { MenuStatusDotMapper } from '#src/renderer/src/business/enum/menu-status-dot-mapper-enum'
+import { UsageStalenessService } from '#src/renderer/src/business/service/usage-staleness-service'
+import { ZaiPeakService } from '#src/renderer/src/business/service/zai-peak-service'
 import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
-import { UsageStalenessUtil } from '#src/renderer/src/util/usage-staleness-util'
-import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
@@ -11,7 +11,7 @@ import { constant } from '#src/shared/util/constant'
 
 const MAX_ELAPSED_MINUTES = 300
 
-export class MenuStatusUtil {
+export class MenuStatusService {
   resolveCombinedStatusDot(params: { dots: (MenuStatusDotMapper | undefined)[] }): MenuStatusDotMapper | undefined {
     const { dots } = params
 
@@ -98,7 +98,7 @@ export class MenuStatusUtil {
     const providers = snapshot?.providers ?? []
 
     const isAnyProviderInPeakHours = providers.some((provider) => {
-      const peakInfo = new ZaiPeakUtil().resolvePeakInfo({ nowMs: now, providerId: provider.providerId })
+      const peakInfo = new ZaiPeakService().resolvePeakInfo({ nowMs: now, providerId: provider.providerId })
 
       if (peakInfo === undefined) {
         return false
@@ -143,10 +143,10 @@ export class MenuStatusUtil {
     snapshot?: UsageSnapshot
   }): MenuStatusDotMapper | undefined {
     const { now, refreshIntervalMsByTrackerId, snapshot } = params
-    const stalenessUtil = new UsageStalenessUtil()
+    const stalenessService = new UsageStalenessService()
 
     const isAnyProviderStale = (snapshot?.providers ?? []).some((provider) => {
-      return stalenessUtil.isSnapshotStale({
+      return stalenessService.isSnapshotStale({
         nowMs: now,
         providerSnapshot: provider,
         refreshIntervalMs: refreshIntervalMsByTrackerId?.[provider.trackerId],

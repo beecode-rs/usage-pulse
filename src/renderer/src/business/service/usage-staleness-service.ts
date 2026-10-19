@@ -1,7 +1,7 @@
 import type { TrackerConfig } from '#src/shared/business/model/settings-model'
 import type { ProviderSnapshot } from '#src/shared/business/model/usage-model'
 
-export class UsageStalenessUtil {
+export class UsageStalenessService {
   isSnapshotStale(params: { nowMs: number; providerSnapshot: ProviderSnapshot; refreshIntervalMs?: number }): boolean {
     const { nowMs, providerSnapshot, refreshIntervalMs } = params
 

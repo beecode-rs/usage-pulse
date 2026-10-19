@@ -1,8 +1,8 @@
 import { vi } from 'vitest'
 
 import { UsageProviderClaude } from '#src/main/business/service/usage-provider/claude'
-import { errorUtil } from '#src/main/util/error-util'
 import { type UsageWindow } from '#src/shared/business/model/usage-model'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const httpUtilFetchJsonResponse = vi.hoisted((): { response: unknown } => {
   return { response: undefined }

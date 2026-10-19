@@ -9,10 +9,10 @@ import { MobileServerPortField } from '#src/renderer/src/ui-component/mobile/mob
 import { MobileServerToggle } from '#src/renderer/src/ui-component/mobile/mobile-server-toggle'
 import '#src/renderer/src/ui-component/mobile/mobile.css'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
-import { errorUtil } from '#src/renderer/src/util/error-util'
 import { type MobileConnectedDevice } from '#src/shared/business/model/mobile-api-model'
 import { type SettingsData, SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 export const MobilePage = (): ReactElement => {
   const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)

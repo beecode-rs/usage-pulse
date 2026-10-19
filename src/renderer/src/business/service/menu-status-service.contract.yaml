@@ -1,4 +1,4 @@
-# Contract for MenuStatusUtil.
+# Contract for MenuStatusService.
 # Terms pin the side-menu status dots. The usage dot is 'error' when any provider
 # snapshot reports UsageActivityStatus.ERROR, else 'warning' when any usage window is
 # outpacing the window (usage percent at least 10 points ahead of the
@@ -9,8 +9,8 @@
 # error > warning > waiting > peak.
 # All terms use now: 0 and windowMs: 3600000 unless stated, so resetAt encodes the
 # remaining share directly (resetAt 1800000 leaves exactly half the window).
-subject: MenuStatusUtil
-module: ./menu-status-util.js
+subject: MenuStatusService
+module: ./menu-status-service.js
 subjectType: class
 constructor:
   # A fresh instance carries no own fields, so it serializes as an empty object.

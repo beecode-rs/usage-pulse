@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react'
 
-import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
+import { SessionSoundService } from '#src/renderer/src/business/service/session-sound-service'
 import { SoundNameMapper } from '#src/shared/business/enum/sound-name-mapper-enum'
 
 const SESSION_SOUND_OPTIONS: { label: string; soundId: SoundNameMapper }[] = [
@@ -30,7 +30,7 @@ export const SessionSoundField = (props: {
   volumePercent: number
 }): ReactElement => {
   const handlePlaySound = (): void => {
-    new SessionSoundUtil().playSessionSound({ soundId: props.soundId, volumePercent: props.volumePercent })
+    new SessionSoundService().playSessionSound({ soundId: props.soundId, volumePercent: props.volumePercent })
   }
 
   return (

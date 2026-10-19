@@ -3,7 +3,7 @@ import { typeUtil } from '@beecode/msh-util'
 import { UpdateCheckErrorKind } from '#src/shared/business/enum/update-check-error-kind-enum'
 import { type UpdateCheckError } from '#src/shared/business/model/update-model'
 
-export const updateCheckErrorMessageUtil = {
+export const updateCheckErrorMessageService = {
   resolveMessage: (params: { error: UpdateCheckError }): string => {
     const { error } = params
 

@@ -7,16 +7,16 @@ import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
+import { updateAssetService } from '#src/main/business/service/update-asset-service'
+import { updateCheckErrorService } from '#src/main/business/service/update-check-error-service'
 import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { constant } from '#src/main/util/constant'
-import { errorUtil } from '#src/main/util/error-util'
 import { objectUtil } from '#src/main/util/object-util'
 import { osUtil } from '#src/main/util/os-util'
-import { updateAssetUtil } from '#src/main/util/update-asset-util'
-import { updateCheckErrorUtil } from '#src/main/util/update-check-error-util'
 import { VersionCompareUtil } from '#src/main/util/version-compare-util'
 import { type UpdateAsset, type UpdateStatus } from '#src/shared/business/model/update-model'
-import { updateCheckErrorMessageUtil } from '#src/shared/util/update-check-error-message-util'
+import { updateCheckErrorMessageService } from '#src/shared/business/service/update-check-error-message-service'
+import { errorUtil } from '#src/shared/util/error-util'
 
 type LatestRelease = {
   assets: UpdateAsset[]
@@ -72,7 +72,7 @@ export class _UpdateService {
 
   protected _resolveFailureStatus(params: { error: unknown }): UpdateStatus {
     const { error } = params
-    const checkError = updateCheckErrorUtil.classifyThrown({ error })
+    const checkError = updateCheckErrorService.classifyThrown({ error })
 
     // eslint-disable-next-line no-console -- repo has no logger util yet
     console.warn(`update check failed (${checkError.kind}): ${errorUtil.resolveMessage(error)}`)
@@ -89,7 +89,7 @@ export class _UpdateService {
     const checkError = this._status.error
 
     if (checkError !== undefined) {
-      return updateCheckErrorMessageUtil.resolveMessage({ error: checkError })
+      return updateCheckErrorMessageService.resolveMessage({ error: checkError })
     }
 
     return 'no matching update asset for this platform'
@@ -108,7 +108,7 @@ export class _UpdateService {
     }
 
     return {
-      asset: updateAssetUtil.resolveUpdateAsset({
+      asset: updateAssetService.resolveUpdateAsset({
         assets: latestRelease.assets,
         platform: osUtil.resolvePlatform(),
       }),
@@ -137,8 +137,8 @@ export class _UpdateService {
     })
 
     if (!response.ok) {
-      throw updateCheckErrorUtil.createThrown({
-        checkError: updateCheckErrorUtil.classifyResponse({
+      throw updateCheckErrorService.createThrown({
+        checkError: updateCheckErrorService.classifyResponse({
           rateLimitRemaining: response.headers.get('x-ratelimit-remaining') ?? '',
           rateLimitReset: response.headers.get('x-ratelimit-reset') ?? '',
           status: response.status,
@@ -148,16 +148,16 @@ export class _UpdateService {
     }
 
     const rawJson: unknown = await response.json().catch((error: unknown) => {
-      throw updateCheckErrorUtil.createThrown({
-        checkError: updateCheckErrorUtil.resolveInvalidResponse(),
+      throw updateCheckErrorService.createThrown({
+        checkError: updateCheckErrorService.resolveInvalidResponse(),
         message: `github release response is not valid json: ${errorUtil.resolveMessage(error)}`,
       })
     })
     const rawRelease = objectUtil.asRecord(rawJson)
 
     if (rawRelease === undefined) {
-      throw updateCheckErrorUtil.createThrown({
-        checkError: updateCheckErrorUtil.resolveInvalidResponse(),
+      throw updateCheckErrorService.createThrown({
+        checkError: updateCheckErrorService.resolveInvalidResponse(),
         message: 'github release response is not an object',
       })
     }
@@ -171,8 +171,8 @@ export class _UpdateService {
     const tagName = rawRelease['tag_name']
 
     if (typeof htmlUrl !== 'string' || typeof tagName !== 'string') {
-      throw updateCheckErrorUtil.createThrown({
-        checkError: updateCheckErrorUtil.resolveInvalidResponse(),
+      throw updateCheckErrorService.createThrown({
+        checkError: updateCheckErrorService.resolveInvalidResponse(),
         message: 'github release response is missing html_url or tag_name',
       })
     }

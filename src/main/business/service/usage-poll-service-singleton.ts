@@ -8,7 +8,6 @@ import { UsageProviderClaude } from '#src/main/business/service/usage-provider/c
 import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
 import { UsageProviderZai } from '#src/main/business/service/usage-provider/zai'
 import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
-import { errorUtil } from '#src/main/util/error-util'
 import { httpUtil } from '#src/main/util/http-util'
 import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
@@ -16,6 +15,7 @@ import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-st
 import { type SettingsModel, type TrackerConfig } from '#src/shared/business/model/settings-model'
 import { type ProviderSnapshot, type UsageSnapshot, type UsageWindow } from '#src/shared/business/model/usage-model'
 import { constant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 export class _UsagePollService {
   protected _generationByTrackerId = new Map<string, number>()

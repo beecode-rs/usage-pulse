@@ -1,5 +1,5 @@
 import { config } from '#src/main/util/config'
-import { errorUtil } from '#src/main/util/error-util'
+import { errorUtil } from '#src/shared/util/error-util'
 
 export const httpUtil = {
   fetchJson: async (params: {

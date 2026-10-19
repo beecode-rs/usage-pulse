@@ -14,11 +14,11 @@ import { SshHostsButton } from '#src/renderer/src/ui-component/sessions/ssh-host
 import { SshHostsDialog } from '#src/renderer/src/ui-component/sessions/ssh-hosts-dialog'
 import '#src/renderer/src/ui-component/sessions/sessions.css'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
-import { errorUtil } from '#src/renderer/src/util/error-util'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo, type SessionSnapshot, type UnreachableHost } from '#src/shared/business/model/session-model'
 import { SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const NOW_TICK_INTERVAL_MS = 1000
 

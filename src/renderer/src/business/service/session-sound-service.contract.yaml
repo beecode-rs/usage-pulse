@@ -1,4 +1,4 @@
-# Contract for SessionSoundUtil.
+# Contract for SessionSoundService.
 # Terms pin the session sound triggers (playSessionSound itself drives the Web Audio
 # API and stays untested here). resolveNewlyStatusSessionIds answers "which
 # sessions just entered the given status" (the waiting sound): with no previous
@@ -15,8 +15,8 @@
 # [0, 100] and maps it linearly onto gain [0, 0.4]. Volume 40 (the app default)
 # divides before multiplying, so the exact double is 0.16000000000000003 — the
 # nearest representable neighbor of 0.16.
-subject: SessionSoundUtil
-module: ./session-sound-util.js
+subject: SessionSoundService
+module: ./session-sound-service.js
 subjectType: class
 constructor:
   # A fresh instance carries no own fields (the AudioContext cache is module-level),

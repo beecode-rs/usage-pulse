@@ -16,7 +16,7 @@ export type TriggerRunSummary = {
   triggerName: string
 }
 
-export class TriggerRunUtil {
+export class TriggerRunService {
   groupRunsByEventId(params: { entries: ScheduleTriggerRunLogEntry[] }): TriggerRunSummary[] {
     const { entries } = params
     const summaryByEventId = entries.reduce<Record<string, TriggerRunSummary>>((summaryRecord, entry) => {

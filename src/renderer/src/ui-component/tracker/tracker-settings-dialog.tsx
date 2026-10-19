@@ -1,12 +1,12 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { osClientService } from '#src/renderer/src/business/service/os-client-service'
+import { trackerAccessTokenSourceService } from '#src/renderer/src/business/service/tracker-access-token-source-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/tracker-config-fields'
-import { errorUtil } from '#src/renderer/src/util/error-util'
-import { trackerAccessTokenSourceUtil } from '#src/renderer/src/util/tracker-access-token-source-util'
 import type { OS } from '#src/shared/business/enum/os-enum'
 import { SettingsModel, type TrackerConfig } from '#src/shared/business/model/settings-model'
+import { errorUtil } from '#src/shared/util/error-util'
 
 export const TrackerSettingsDialog = (props: {
   onClose: () => void
@@ -40,7 +40,9 @@ export const TrackerSettingsDialog = (props: {
         return
       }
 
-      setTracker(trackerAccessTokenSourceUtil.normalizeConfig({ config: loadedTracker, osPlatform: loadedOsPlatform }))
+      setTracker(
+        trackerAccessTokenSourceService.normalizeConfig({ config: loadedTracker, osPlatform: loadedOsPlatform }),
+      )
     }
 
     void loadSettings()

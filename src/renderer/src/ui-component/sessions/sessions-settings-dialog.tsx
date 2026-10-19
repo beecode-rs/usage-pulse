@@ -2,9 +2,9 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { SessionSoundField } from '#src/renderer/src/ui-component/sessions/session-sound-field'
-import { errorUtil } from '#src/renderer/src/util/error-util'
 import { SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const resolveClampedSecondsAsMs = (params: { maxMs: number; minMs: number; seconds: number }): number => {
   const { maxMs, minMs, seconds } = params

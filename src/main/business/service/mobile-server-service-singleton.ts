@@ -10,8 +10,8 @@ import { usagePollServiceSingleton } from '#src/main/business/service/usage-poll
 import { httpRequestHandler } from '#src/main/controller/mobile-server/http-request-handler'
 import { WsBroadcaster } from '#src/main/controller/mobile-server/ws-broadcaster'
 import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
-import { errorUtil } from '#src/main/util/error-util'
 import { type MobileConnectedDevice } from '#src/shared/business/model/mobile-api-model'
+import { errorUtil } from '#src/shared/util/error-util'
 
 export class _MobileServerService {
   protected _broadcaster: WsBroadcaster | undefined

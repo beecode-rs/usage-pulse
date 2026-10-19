@@ -5,11 +5,11 @@ import { join } from 'node:path'
 import { promisify } from 'node:util'
 
 import { TriggerCommandService } from '#src/main/business/service/trigger-command-service'
-import { errorUtil } from '#src/main/util/error-util'
 import { objectUtil } from '#src/main/util/object-util'
 import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { constant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const execFileAsync = promisify(execFile)
 

@@ -3,9 +3,9 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 import { SessionsParserService } from '#src/main/business/service/sessions/parser-service'
-import { errorUtil } from '#src/main/util/error-util'
 import { type SessionInfo, type SessionSnapshot, type UnreachableHost } from '#src/shared/business/model/session-model'
 import { type SshHostConfig } from '#src/shared/business/model/settings-model'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const execFileAsync = promisify(execFile)
 

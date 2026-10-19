@@ -1,15 +1,15 @@
 import type { ReactElement } from 'react'
 
+import { usageActivityStatusService } from '#src/renderer/src/business/service/usage-activity-status-service'
+import { UsageStalenessService } from '#src/renderer/src/business/service/usage-staleness-service'
+import { ZaiPeakService } from '#src/renderer/src/business/service/zai-peak-service'
 import { PeakIcon } from '#src/renderer/src/ui-component/icon/peak-icon'
 import { RefreshIcon } from '#src/renderer/src/ui-component/icon/refresh-icon'
 import { ProviderIcon } from '#src/renderer/src/ui-component/provider/provider-icon'
 import { UsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
 import { UsageWindowBox } from '#src/renderer/src/ui-component/usage-dashboard/usage-window-box'
 import { dateUtil } from '#src/renderer/src/util/date-util'
-import { usageActivityStatusUtil } from '#src/renderer/src/util/usage-activity-status-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
-import { UsageStalenessUtil } from '#src/renderer/src/util/usage-staleness-util'
-import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
 
@@ -36,14 +36,14 @@ export const ProviderUsageCard = (props: {
   const usageWindows = providerSnapshot.usage ?? []
   const primaryWindow = usageWindows[0]
   const secondaryWindows = usageWindows.slice(1)
-  const zaiPeakUtil = new ZaiPeakUtil()
-  const peakInfo = zaiPeakUtil.resolvePeakInfo({ nowMs, providerId: providerSnapshot.providerId })
-  const peakRemainingPercent = zaiPeakUtil.resolvePeakRemainingPercent({
+  const zaiPeakService = new ZaiPeakService()
+  const peakInfo = zaiPeakService.resolvePeakInfo({ nowMs, providerId: providerSnapshot.providerId })
+  const peakRemainingPercent = zaiPeakService.resolvePeakRemainingPercent({
     nowMs,
     providerId: providerSnapshot.providerId,
   })
-  const peakRemainingText = zaiPeakUtil.resolvePeakRemainingText({ nowMs, providerId: providerSnapshot.providerId })
-  const isSnapshotStale = new UsageStalenessUtil().isSnapshotStale({
+  const peakRemainingText = zaiPeakService.resolvePeakRemainingText({ nowMs, providerId: providerSnapshot.providerId })
+  const isSnapshotStale = new UsageStalenessService().isSnapshotStale({
     nowMs,
     providerSnapshot,
     refreshIntervalMs,
@@ -92,7 +92,7 @@ export const ProviderUsageCard = (props: {
       return 'Paused'
     }
 
-    return usageActivityStatusUtil.resolveStatusText(providerSnapshot.status)
+    return usageActivityStatusService.resolveStatusText(providerSnapshot.status)
   }
 
   const resolveStatusClassName = (): string => {

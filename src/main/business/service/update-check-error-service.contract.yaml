@@ -1,4 +1,4 @@
-# Contract for updateCheckErrorUtil, the classifier that turns a failed update
+# Contract for updateCheckErrorService, the classifier that turns a failed update
 # check into the typed UpdateCheckError carried on UpdateStatus. classifyResponse
 # maps an HTTP failure response to RATE_LIMITED only when the status is 403 and
 # GitHub's x-ratelimit-remaining header is '0' (carrying the x-ratelimit-reset
@@ -8,8 +8,8 @@
 # created by createThrown carries its checkError verbatim (the INVALID_RESPONSE
 # path used by the json and shape guards), a TimeoutError/AbortError name is the
 # request timeout, and anything else is a network failure.
-subject: updateCheckErrorUtilContractHarness
-module: ./__tests__/_update-check-error-util-contract-harness.js
+subject: updateCheckErrorServiceContractHarness
+module: ./__tests__/_update-check-error-service-contract-harness.js
 subjectType: function
 methods:
   classifyResponse:
