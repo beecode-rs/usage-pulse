@@ -64,6 +64,24 @@
 #
 # The runner matches results with a full deep equal (no partial matching), so
 # every sanitize term pins the complete sanitized settings object.
+#
+# SaveExternal: the external save path takes ALREADY strict-parsed plain
+# settings - the ipc settings controller safe-parses the renderer payload with
+# appSettingsStrictSchema (its rejections are pinned in the settings-schema
+# contract) and only on success calls saveExternal - then applies the
+# invariants and persists through save: an empty mobileServerToken regenerates
+# into the deterministic 48-char hex pairing token, duplicate ids across
+# sshHosts/trackers/triggers heal (the first item keeps the shared id, every
+# later duplicate regenerates, sshHosts first then trackers then triggers) and
+# the resolved SettingsModel comes back to the caller. saveExternal itself does
+# NOT parse, so the rejection terms below drive the controller-shaped flow
+# through saveExternalViaStrictParse: safeParse first, then saveExternal, with
+# an in-memory repo whose dal records every write, pinning that a rejected
+# payload produces ZERO dal writes while a valid one writes exactly once.
+#
+# The saveExternal scenarios run through the same TempFileSettingsRepo
+# override as sanitize (deterministic token, generated-id-<n> ids, pinned
+# now), so regenerated values are stable.
 subject: settingsRepoContractHarness
 module: ./__tests__/_settings-repo-contract-harness.js
 subjectType: function
@@ -175,6 +193,149 @@ methods:
           trackers: []
           triggers: []
           waitingSoundId: ping
+  fetchAfterSaveExternal:
+    terms:
+      # saveExternal() resolves the settings before persisting: an empty
+      # pairing token regenerates into the deterministic 48-char hex stub, so
+      # the persisted settings never carry a blank token. Everything else
+      # round-trips verbatim - saveExternal does not re-parse, it trusts the
+      # strict-parsed data the controller hands it.
+      - params:
+          - settings:
+              isMobileServerEnabled: true
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 9100
+              mobileServerToken: ''
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: chime
+        result:
+          isMobileServerEnabled: true
+          isSchedulingEnabled: true
+          isSessionsAutoRefreshPaused: false
+          mobileServerPort: 9100
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
+          sessionFinishedPulseMs: 25000
+          sessionFinishedSoundId: ding
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+      # Duplicate ids heal before persist: in sshHosts, trackers and triggers
+      # the first item keeps the shared id and every later duplicate gets a
+      # regenerated one. The heal passes run in sshHosts, trackers, triggers
+      # order, so the deterministic stub ids allocate 1, 2, 3 in that order.
+      - params:
+          - settings:
+              isMobileServerEnabled: false
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 9100
+              mobileServerToken: saved-token
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts:
+                - id: host-dup
+                  isEnabled: true
+                  url: ssh://one.example
+                - id: host-dup
+                  isEnabled: false
+                  url: ssh://two.example
+              trackers:
+                - accessToken: first
+                  accessTokenRefreshCommand: claude refresh
+                  accessTokenSource: MANUAL
+                  id: tracker-dup
+                  isAccessTokenRefreshEnabled: false
+                  isAutoRefreshPaused: false
+                  name: Claude
+                  providerId: claude
+                  refreshIntervalMs: 900000
+                - accessToken: second
+                  id: tracker-dup
+                  isAutoRefreshPaused: true
+                  name: GLM
+                  providerId: zai
+                  refreshIntervalMs: 60000
+              triggers:
+                - command: backup
+                  createdAt: 1700000000000
+                  days: [monday]
+                  id: trigger-dup
+                  isEnabled: true
+                  name: Backup
+                  timeoutMs: 300000
+                  times: ['08:00']
+                - command: cleanup
+                  createdAt: 1700000000001
+                  days: [tuesday]
+                  id: trigger-dup
+                  isEnabled: false
+                  name: Cleanup
+                  timeoutMs: 60000
+                  times: ['09:00']
+              waitingSoundId: chime
+        result:
+          isMobileServerEnabled: false
+          isSchedulingEnabled: true
+          isSessionsAutoRefreshPaused: false
+          mobileServerPort: 9100
+          mobileServerToken: saved-token
+          sessionFinishedPulseMs: 25000
+          sessionFinishedSoundId: ding
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts:
+            - id: host-dup
+              isEnabled: true
+              url: ssh://one.example
+            - id: generated-id-1
+              isEnabled: false
+              url: ssh://two.example
+          trackers:
+            - accessToken: first
+              accessTokenRefreshCommand: claude refresh
+              accessTokenSource: MANUAL
+              id: tracker-dup
+              isAccessTokenRefreshEnabled: false
+              isAutoRefreshPaused: false
+              name: Claude
+              providerId: claude
+              refreshIntervalMs: 900000
+            - accessToken: second
+              id: generated-id-2
+              isAutoRefreshPaused: true
+              name: GLM
+              providerId: zai
+              refreshIntervalMs: 60000
+          triggers:
+            - command: backup
+              createdAt: 1700000000000
+              days: [monday]
+              id: trigger-dup
+              isEnabled: true
+              name: Backup
+              timeoutMs: 300000
+              times: ['08:00']
+            - command: cleanup
+              createdAt: 1700000000001
+              days: [tuesday]
+              id: generated-id-3
+              isEnabled: false
+              name: Cleanup
+              timeoutMs: 60000
+              times: ['09:00']
+          waitingSoundId: chime
   fetchErrorMessageBeforeInit:
     terms:
       # fetch() before init() throws: no memory value has been stored yet.
@@ -943,6 +1104,189 @@ methods:
           trackers: []
           triggers: []
           waitingSoundId: chime
+  saveExternalResult:
+    terms:
+      # saveExternal() hands the resolved SettingsModel back to the caller (the
+      # ipc settings controller returns it to the renderer): the empty token in
+      # the payload comes back regenerated, so the renderer learns the pairing
+      # token in the same call that persists it.
+      - params:
+          - settings:
+              isMobileServerEnabled: true
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 9100
+              mobileServerToken: ''
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: chime
+        result:
+          isMobileServerEnabled: true
+          isSchedulingEnabled: true
+          isSessionsAutoRefreshPaused: false
+          mobileServerPort: 9100
+          mobileServerToken: '001122334455667700112233445566770011223344556677'
+          sessionFinishedPulseMs: 25000
+          sessionFinishedSoundId: ding
+          sessionsRefreshIntervalMs: 5000
+          soundVolumePercent: 40
+          sshHosts: []
+          trackers: []
+          triggers: []
+          waitingSoundId: chime
+  saveExternalViaStrictParse:
+    terms:
+      # The controller-shaped save flow (ipc settings save): safeParse with the
+      # strict schema first, saveExternal only on success. An empty payload
+      # fails the required-field parse, so the dal write is never invoked:
+      # zero writes, nothing persisted.
+      - params:
+          - rawSettings: {}
+        result:
+          writeCallCount: 0
+      # One garbage tracker entry rejects the WHOLE payload at the parse step:
+      # the fully valid sibling tracker is not partially saved either, and the
+      # dal still sees zero writes.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: false
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 9100
+              mobileServerToken: saved-token
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers:
+                - accessToken: zai-token
+                  id: tracker-zai
+                  isAutoRefreshPaused: true
+                  name: GLM
+                  providerId: zai
+                  refreshIntervalMs: 60000
+                - name: Bad
+                  providerId: openai
+              triggers: []
+              waitingSoundId: chime
+        result:
+          writeCallCount: 0
+      # A fully valid payload parses, saveExternal writes exactly once, and the
+      # resolved model comes back with the regenerated pairing token and the
+      # healed duplicate ids (sshHosts heal first, then trackers, then
+      # triggers). The parse already trimmed the ssh url and names, so the
+      # resolved model carries the trimmed values.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: false
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 9100
+              mobileServerToken: ''
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts:
+                - id: host-dup
+                  isEnabled: true
+                  url: '  ssh://one.example  '
+                - id: host-dup
+                  isEnabled: false
+                  url: ssh://two.example
+              trackers:
+                - accessToken: first
+                  accessTokenRefreshCommand: claude refresh
+                  accessTokenSource: MANUAL
+                  id: tracker-dup
+                  isAccessTokenRefreshEnabled: false
+                  isAutoRefreshPaused: false
+                  name: Claude
+                  providerId: claude
+                  refreshIntervalMs: 900000
+                - accessToken: second
+                  id: tracker-dup
+                  isAutoRefreshPaused: true
+                  name: GLM
+                  providerId: zai
+                  refreshIntervalMs: 60000
+              triggers:
+                - command: backup
+                  createdAt: 1700000000000
+                  days: [monday]
+                  id: trigger-dup
+                  isEnabled: true
+                  name: Backup
+                  timeoutMs: 300000
+                  times: ['08:00']
+                - command: cleanup
+                  createdAt: 1700000000001
+                  days: [tuesday]
+                  id: trigger-dup
+                  isEnabled: false
+                  name: Cleanup
+                  timeoutMs: 60000
+                  times: ['09:00']
+              waitingSoundId: chime
+        result:
+          savedSettings:
+            isMobileServerEnabled: false
+            isSchedulingEnabled: true
+            isSessionsAutoRefreshPaused: false
+            mobileServerPort: 9100
+            mobileServerToken: '001122334455667700112233445566770011223344556677'
+            sessionFinishedPulseMs: 25000
+            sessionFinishedSoundId: ding
+            sessionsRefreshIntervalMs: 5000
+            soundVolumePercent: 40
+            sshHosts:
+              - id: host-dup
+                isEnabled: true
+                url: ssh://one.example
+              - id: generated-id-1
+                isEnabled: false
+                url: ssh://two.example
+            trackers:
+              - accessToken: first
+                accessTokenRefreshCommand: claude refresh
+                accessTokenSource: MANUAL
+                id: tracker-dup
+                isAccessTokenRefreshEnabled: false
+                isAutoRefreshPaused: false
+                name: Claude
+                providerId: claude
+                refreshIntervalMs: 900000
+              - accessToken: second
+                id: generated-id-2
+                isAutoRefreshPaused: true
+                name: GLM
+                providerId: zai
+                refreshIntervalMs: 60000
+            triggers:
+              - command: backup
+                createdAt: 1700000000000
+                days: [monday]
+                id: trigger-dup
+                isEnabled: true
+                name: Backup
+                timeoutMs: 300000
+                times: ['08:00']
+              - command: cleanup
+                createdAt: 1700000000001
+                days: [tuesday]
+                id: generated-id-3
+                isEnabled: false
+                name: Cleanup
+                timeoutMs: 60000
+                times: ['09:00']
+            waitingSoundId: chime
+          writeCallCount: 1
   settingsSavedDeliveriesAfterInit:
     terms:
       # init() writes memory plus file but must NOT emit SETTINGS_SAVED: the

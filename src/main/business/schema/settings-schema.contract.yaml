@@ -1,0 +1,341 @@
+# Contract for appSettingsStrictSchema, the zod gate on the save path: the
+# renderer settings payload passes through ipcSettings.save, which safe-parses
+# with this schema and throws on failure before the repo is ever reached, so
+# every term here pins either acceptance (with the exact parsed shape handed to
+# saveExternal) or rejection ({ success: false }). Unlike the lenient
+# appSettingsSchema used for disk-read self-heal (covered through the settings
+# repo sanitize contract), the strict variant has zero .catch fallbacks: all 13
+# top-level fields are required, every tracker/trigger/ssh-host field is
+# required, bounded integers (mobileServerPort, refreshIntervalMs,
+# timeoutMs, sessionFinishedPulseMs, sessionsRefreshIntervalMs,
+# soundVolumePercent) must be whole numbers inside their range, and one bad
+# array entry rejects the WHOLE payload - the lenient schema would drop just
+# the bad entry and keep the rest.
+#
+# Acceptance still normalizes: names, commands and ssh host urls trim and must
+# survive non-empty ('' and whitespace-only reject, '  Claude  ' parses to
+# 'Claude'); trigger days keep weekday names deduped into the canonical
+# monday..sunday order; trigger times keep strict HH:mm values deduped and
+# sorted; unknown keys are stripped at every level, so a successful parse
+# yields exactly the 13 known top-level keys (plus the exact known item
+# shapes), never a key the persisted model does not define.
+#
+# The harness wraps safeParse and returns { data, success: true } with the
+# parsed value or { success: false } without error details, so terms pin the
+# accept/reject decision (the error text is zod's, not the boundary's) and the
+# full deep-equal on data pins key stripping by construction.
+subject: settingsSchemaContractHarness
+module: ./__tests__/_settings-schema-contract-harness.js
+subjectType: function
+methods:
+  parseStrictSettings:
+    terms:
+      # --- rejections: required fields ---
+      # An empty payload fails on every required field: the strict schema has
+      # no defaults, so nothing is filled in and nothing is persisted.
+      - params:
+          - rawSettings: {}
+        result:
+          success: false
+      # A payload missing only the trackers key still fails as a whole.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: false
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 8787
+              mobileServerToken: ''
+              sessionFinishedPulseMs: 30000
+              sessionFinishedSoundId: success
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              triggers: []
+              waitingSoundId: chime
+        result:
+          success: false
+      # --- rejections: one bad array entry rejects the whole payload ---
+      # A single garbage tracker entry (unknown providerId) fails the array
+      # even though the sibling tracker is fully valid: no partial acceptance,
+      # the renderer gets an error instead of a silently altered payload.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: false
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 9100
+              mobileServerToken: saved-token
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers:
+                - accessToken: zai-token
+                  id: tracker-zai
+                  isAutoRefreshPaused: true
+                  name: GLM
+                  providerId: zai
+                  refreshIntervalMs: 60000
+                - name: Bad
+                  providerId: openai
+              triggers: []
+              waitingSoundId: chime
+        result:
+          success: false
+      # --- rejections: name strictness ---
+      # An empty tracker name rejects instead of falling back to a default.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: false
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 8787
+              mobileServerToken: ''
+              sessionFinishedPulseMs: 30000
+              sessionFinishedSoundId: success
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers:
+                - accessToken: zai-token
+                  id: tracker-zai
+                  isAutoRefreshPaused: false
+                  name: ''
+                  providerId: zai
+                  refreshIntervalMs: 60000
+              triggers: []
+              waitingSoundId: chime
+        result:
+          success: false
+      # A whitespace-only tracker name trims to empty and rejects too.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: false
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 8787
+              mobileServerToken: ''
+              sessionFinishedPulseMs: 30000
+              sessionFinishedSoundId: success
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers:
+                - accessToken: zai-token
+                  id: tracker-zai
+                  isAutoRefreshPaused: false
+                  name: '   '
+                  providerId: zai
+                  refreshIntervalMs: 60000
+              triggers: []
+              waitingSoundId: chime
+        result:
+          success: false
+      # An empty trigger name rejects the same way.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: false
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 8787
+              mobileServerToken: ''
+              sessionFinishedPulseMs: 30000
+              sessionFinishedSoundId: success
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers:
+                - command: backup
+                  createdAt: 1700000000000
+                  days: [monday]
+                  id: trigger-1
+                  isEnabled: false
+                  name: ''
+                  timeoutMs: 300000
+                  times: ['08:00']
+              waitingSoundId: chime
+        result:
+          success: false
+      # --- rejections: bounded integers ---
+      # A port below the 1024 minimum rejects instead of clamping up.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: false
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 80
+              mobileServerToken: ''
+              sessionFinishedPulseMs: 30000
+              sessionFinishedSoundId: success
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers: []
+              triggers: []
+              waitingSoundId: chime
+        result:
+          success: false
+      # A tracker refresh interval below the one minute minimum rejects
+      # instead of clamping up.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: false
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 8787
+              mobileServerToken: ''
+              sessionFinishedPulseMs: 30000
+              sessionFinishedSoundId: success
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers:
+                - accessToken: zai-token
+                  id: tracker-zai
+                  isAutoRefreshPaused: false
+                  name: GLM
+                  providerId: zai
+                  refreshIntervalMs: 1
+              triggers: []
+              waitingSoundId: chime
+        result:
+          success: false
+      # --- acceptance: name trimming ---
+      # A padded tracker name trims; the parsed data carries 'Claude'.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: false
+              isSchedulingEnabled: false
+              isSessionsAutoRefreshPaused: false
+              mobileServerPort: 8787
+              mobileServerToken: ''
+              sessionFinishedPulseMs: 30000
+              sessionFinishedSoundId: success
+              sessionsRefreshIntervalMs: 5000
+              soundVolumePercent: 40
+              sshHosts: []
+              trackers:
+                - accessToken: zai-token
+                  id: tracker-zai
+                  isAutoRefreshPaused: false
+                  name: '  Claude  '
+                  providerId: zai
+                  refreshIntervalMs: 60000
+              triggers: []
+              waitingSoundId: chime
+        result:
+          data:
+            isMobileServerEnabled: false
+            isSchedulingEnabled: false
+            isSessionsAutoRefreshPaused: false
+            mobileServerPort: 8787
+            mobileServerToken: ''
+            sessionFinishedPulseMs: 30000
+            sessionFinishedSoundId: success
+            sessionsRefreshIntervalMs: 5000
+            soundVolumePercent: 40
+            sshHosts: []
+            trackers:
+              - accessToken: zai-token
+                id: tracker-zai
+                isAutoRefreshPaused: false
+                name: Claude
+                providerId: zai
+                refreshIntervalMs: 60000
+            triggers: []
+            waitingSoundId: chime
+          success: true
+      # --- acceptance: full payload round-trip ---
+      # A fully valid payload with trackers of both provider shapes, an ssh
+      # host and a trigger parses to exactly the 13 known keys: unknown keys
+      # are stripped at the top level and inside items, names and the ssh url
+      # trim, and the duplicated, unordered days normalize into the canonical
+      # monday..sunday order. This parsed value is exactly what reaches
+      # saveExternal.
+      - params:
+          - rawSettings:
+              isMobileServerEnabled: true
+              isSchedulingEnabled: true
+              isSessionsAutoRefreshPaused: true
+              junkKey: junk-value
+              mobileServerPort: 9000
+              mobileServerToken: pairing-token
+              sessionFinishedPulseMs: 25000
+              sessionFinishedSoundId: ding
+              sessionsRefreshIntervalMs: 12000
+              soundVolumePercent: 75
+              sshHosts:
+                - id: host-1
+                  isEnabled: true
+                  url: '  ssh://one.example  '
+              trackers:
+                - accessToken: claude-token
+                  accessTokenRefreshCommand: '  claude refresh token  '
+                  accessTokenSource: MANUAL
+                  id: tracker-claude
+                  isAccessTokenRefreshEnabled: true
+                  isAutoRefreshPaused: false
+                  junkKey: junk-value
+                  name: '  Claude  '
+                  providerId: claude
+                  refreshIntervalMs: 900000
+                - accessToken: zai-token
+                  id: tracker-zai
+                  isAutoRefreshPaused: true
+                  name: GLM
+                  providerId: zai
+                  refreshIntervalMs: 60000
+              triggers:
+                - command: '  diskutil unmount  '
+                  createdAt: 1700000000000
+                  days: [friday, monday, monday]
+                  id: trigger-1
+                  isEnabled: true
+                  name: '  Weekly cleanup  '
+                  timeoutMs: 300000
+                  times: ['09:05', '07:15']
+              waitingSoundId: ping
+        result:
+          data:
+            isMobileServerEnabled: true
+            isSchedulingEnabled: true
+            isSessionsAutoRefreshPaused: true
+            mobileServerPort: 9000
+            mobileServerToken: pairing-token
+            sessionFinishedPulseMs: 25000
+            sessionFinishedSoundId: ding
+            sessionsRefreshIntervalMs: 12000
+            soundVolumePercent: 75
+            sshHosts:
+              - id: host-1
+                isEnabled: true
+                url: ssh://one.example
+            trackers:
+              - accessToken: claude-token
+                accessTokenRefreshCommand: claude refresh token
+                accessTokenSource: MANUAL
+                id: tracker-claude
+                isAccessTokenRefreshEnabled: true
+                isAutoRefreshPaused: false
+                name: Claude
+                providerId: claude
+                refreshIntervalMs: 900000
+              - accessToken: zai-token
+                id: tracker-zai
+                isAutoRefreshPaused: true
+                name: GLM
+                providerId: zai
+                refreshIntervalMs: 60000
+            triggers:
+              - command: diskutil unmount
+                createdAt: 1700000000000
+                days: [monday, friday]
+                id: trigger-1
+                isEnabled: true
+                name: Weekly cleanup
+                timeoutMs: 300000
+                times: ['07:15', '09:05']
+            waitingSoundId: ping
+          success: true

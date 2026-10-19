@@ -86,6 +86,10 @@ export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => vo
   }
 
   const resolveTrackerValidationError = (tracker: TrackerConfig): string | undefined => {
+    if (tracker.name.trim() === '') {
+      return 'Enter a display name to add this tracker.'
+    }
+
     if (
       tracker.providerId === ProviderIdMapper.CLAUDE &&
       tracker.accessTokenSource === ClaudeAccessTokenSource.SYSTEM

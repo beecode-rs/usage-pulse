@@ -12,6 +12,7 @@ import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
 import { errorUtil } from '#src/renderer/src/util/error-util'
 import { type MobileConnectedDevice } from '#src/shared/business/model/mobile-api-model'
 import { type SettingsData, SettingsModel } from '#src/shared/business/model/settings-model'
+import { constant } from '#src/shared/util/constant'
 
 export const MobilePage = (): ReactElement => {
   const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
@@ -98,7 +99,12 @@ export const MobilePage = (): ReactElement => {
       return
     }
 
-    if (!Number.isFinite(port)) {
+    const isPortInRange = port >= constant.mobileServer.minPort && port <= constant.mobileServer.maxPort
+
+    if (!isPortInRange) {
+      setErrorMessage(
+        `Port must be between ${String(constant.mobileServer.minPort)} and ${String(constant.mobileServer.maxPort)}.`,
+      )
       setPortText(String(settings.mobileServerPort))
 
       return

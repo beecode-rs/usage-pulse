@@ -33,7 +33,9 @@ export const UsageDashboard = (): ReactElement => {
     setSnapshot(currentSnapshot)
   }
 
-  const refreshTracker = async (trackerId: string): Promise<void> => {
+  const refreshTracker = async (params: { trackerId: string }): Promise<void> => {
+    const { trackerId } = params
+
     setRefreshingTrackerIds((currentIds) => {
       return [...currentIds, trackerId]
     })
@@ -133,7 +135,7 @@ export const UsageDashboard = (): ReactElement => {
                 setOpenTrackerId(providerSnapshot.trackerId)
               }}
               onRefresh={() => {
-                void refreshTracker(providerSnapshot.trackerId)
+                void refreshTracker({ trackerId: providerSnapshot.trackerId })
               }}
               onToggleAutoRefresh={() => {
                 void toggleTrackerAutoRefresh({

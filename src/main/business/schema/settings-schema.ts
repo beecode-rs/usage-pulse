@@ -235,3 +235,105 @@ export const appSettingsSchema = z.object({
   triggers: triggersSchema,
   waitingSoundId: soundIdSchema.catch(constant.waitingSound.defaultId),
 })
+
+const boundedIntSchema = (params: { max: number; min: number }): z.ZodType<number> => {
+  const { max, min } = params
+
+  return z.number().int().max(max).min(min)
+}
+
+const strictAccessTokenSchema = z.string()
+const strictAccessTokenSourceSchema = z.enum(ClaudeAccessTokenSource)
+const strictIdSchema = z.string().min(1)
+const strictSshHostSchema = z.object({
+  id: strictIdSchema,
+  isEnabled: z.boolean(),
+  url: trimmedNonEmptyStringSchema,
+})
+const strictTriggerDaysSchema = z
+  .array(triggerDaySchema)
+  .transform((days) => {
+    const selectedDays = new Set(days)
+
+    return constant.scheduleTrigger.days.filter((day) => {
+      return selectedDays.has(day)
+    })
+  })
+  .refine((days) => {
+    return days.length > 0
+  })
+const strictTriggerTimesSchema = z
+  .array(triggerTimeSchema)
+  .transform((times) => {
+    return [...new Set(times)].sort()
+  })
+  .refine((times) => {
+    return times.length > 0
+  })
+const strictTriggerSchema = z.object({
+  command: trimmedNonEmptyStringSchema,
+  createdAt: z.number(),
+  days: strictTriggerDaysSchema,
+  id: strictIdSchema,
+  isEnabled: z.boolean(),
+  name: trimmedNonEmptyStringSchema,
+  timeoutMs: boundedIntSchema({
+    max: constant.scheduleTrigger.timeout.maxMs,
+    min: constant.scheduleTrigger.timeout.minMs,
+  }),
+  times: strictTriggerTimesSchema,
+})
+const strictClaudeTrackerSchema = z.object({
+  accessToken: strictAccessTokenSchema,
+  accessTokenRefreshCommand: trimmedNonEmptyStringSchema,
+  accessTokenSource: strictAccessTokenSourceSchema,
+  id: strictIdSchema,
+  isAccessTokenRefreshEnabled: z.boolean(),
+  isAutoRefreshPaused: z.boolean(),
+  name: trimmedNonEmptyStringSchema,
+  providerId: z.literal(ProviderIdMapper.CLAUDE),
+  refreshIntervalMs: boundedIntSchema({
+    max: constant.trackerRefreshInterval.maxMs,
+    min: constant.trackerRefreshInterval.minMs,
+  }),
+})
+const strictZaiTrackerSchema = z.object({
+  accessToken: strictAccessTokenSchema,
+  id: strictIdSchema,
+  isAutoRefreshPaused: z.boolean(),
+  name: trimmedNonEmptyStringSchema,
+  providerId: z.literal(ProviderIdMapper.ZAI),
+  refreshIntervalMs: boundedIntSchema({
+    max: constant.trackerRefreshInterval.maxMs,
+    min: constant.trackerRefreshInterval.minMs,
+  }),
+})
+const strictTrackerSchema = z.discriminatedUnion('providerId', [strictClaudeTrackerSchema, strictZaiTrackerSchema])
+
+export const appSettingsStrictSchema = z.object({
+  isMobileServerEnabled: z.boolean(),
+  isSchedulingEnabled: z.boolean(),
+  isSessionsAutoRefreshPaused: z.boolean(),
+  mobileServerPort: boundedIntSchema({
+    max: constant.mobileServer.maxPort,
+    min: constant.mobileServer.minPort,
+  }),
+  mobileServerToken: z.string(),
+  sessionFinishedPulseMs: boundedIntSchema({
+    max: constant.sessionFinishedPulse.maxMs,
+    min: constant.sessionFinishedPulse.minMs,
+  }),
+  sessionFinishedSoundId: soundIdSchema,
+  sessionsRefreshIntervalMs: boundedIntSchema({
+    max: constant.sessionsRefreshInterval.maxMs,
+    min: constant.sessionsRefreshInterval.minMs,
+  }),
+  soundVolumePercent: boundedIntSchema({
+    max: constant.soundVolume.maxPercent,
+    min: constant.soundVolume.minPercent,
+  }),
+  sshHosts: z.array(strictSshHostSchema),
+  trackers: z.array(strictTrackerSchema),
+  triggers: z.array(strictTriggerSchema),
+  waitingSoundId: soundIdSchema,
+})

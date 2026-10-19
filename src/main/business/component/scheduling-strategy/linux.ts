@@ -23,8 +23,8 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
   readonly isSupported: boolean
 
   protected readonly _homeDir: string
-  protected readonly _systemctlProbeTimeoutMs = config.systemctlProbeTimeoutMs
-  protected readonly _systemctlTimeoutMs = config.systemctlTimeoutMs
+  protected readonly _systemctlProbeTimeoutMs = config.systemctl.probeTimeoutMs
+  protected readonly _systemctlTimeoutMs = config.systemctl.timeoutMs
   protected readonly _systemdDayByTriggerDay: Record<ScheduleTriggerDayMapper, string> = {
     [ScheduleTriggerDayMapper.FRIDAY]: 'Fri',
     [ScheduleTriggerDayMapper.MONDAY]: 'Mon',
@@ -315,7 +315,7 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
   }
 
   protected _resolveDefaultUnitDir(): string {
-    return join(config.xdgConfigHome ?? join(this._homeDir, '.config'), 'systemd', 'user')
+    return join(config.xdg.configHome ?? join(this._homeDir, '.config'), 'systemd', 'user')
   }
 
   protected _resolveIsSystemdUserAvailable(): boolean {
