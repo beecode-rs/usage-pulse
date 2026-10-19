@@ -1,4 +1,4 @@
-# Contract for sessionStatusTransitionUtil.
+# Contract for sessionStatusTransitionService.
 # resolveStatusTransitionSessionIds answers "which sessions moved from one exact
 # status to another" (the finished-session transition is busy to idle): a session
 # matches only when the same sessionId had fromStatus in the previous snapshot and
@@ -8,10 +8,10 @@
 # resolveNewlyStatusSessionIds answers "which sessions have the status now without
 # having it before": any previous status (including absent from the previous
 # snapshot) counts, so a brand-new waiting session matches. The renderer
-# SessionSoundUtil delegates here, so its contract pins the same behavior end to
+# SessionSoundService delegates here, so its contract pins the same behavior end to
 # end.
-subject: sessionStatusTransitionUtil
-module: ./session-status-transition-util.js
+subject: sessionStatusTransitionService
+module: ./session-status-transition-service.js
 subjectType: function
 methods:
   resolveStatusTransitionSessionIds:

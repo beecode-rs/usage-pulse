@@ -1,4 +1,4 @@
-# Contract for sessionFinishedPulseUtil, the state behind the pulsing border a
+# Contract for sessionFinishedPulseService, the state behind the pulsing border a
 # session card shows right after its work finishes.
 #
 # resolveFinishedAtBySessionId folds one sessions snapshot into the map of
@@ -15,8 +15,8 @@
 # while less than pulseMs (milliseconds) have passed, done exactly at the boundary.
 # A session with no recorded timestamp never pulses, and a pulseMs of 0 (or lower)
 # turns the indicator off for everyone.
-subject: sessionFinishedPulseUtil
-module: ./session-finished-pulse-util.js
+subject: sessionFinishedPulseService
+module: ./session-finished-pulse-service.js
 subjectType: function
 methods:
   isPulsing:

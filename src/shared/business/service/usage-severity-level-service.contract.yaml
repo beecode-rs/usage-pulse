@@ -1,4 +1,4 @@
-# Contract for usageSeverityLevelUtil.
+# Contract for usageSeverityLevelService.
 # resolveSeverityLevel answers "how loaded is a usage window" as one of four bands over
 # the used percent: below the filling-up threshold nothing is reported; from that
 # threshold up to (excluding) the high-usage threshold the window is filling up; from
@@ -7,8 +7,8 @@
 # up, exactly 85 is high usage, exactly 95 is limit reached. The renderer severity
 # label maps from this level, so presentation and the main-process warning derivation
 # share one band definition.
-subject: usageSeverityLevelUtil
-module: ./usage-severity-level-util.js
+subject: usageSeverityLevelService
+module: ./usage-severity-level-service.js
 subjectType: function
 methods:
   resolveSeverityLevel:

@@ -1,6 +1,6 @@
 import { type CSSProperties, type ReactElement } from 'react'
 
-import { sessionFinishedPulseUtil } from '#src/renderer/src/util/session-finished-pulse-util'
+import { sessionFinishedPulseService } from '#src/renderer/src/business/service/session-finished-pulse-service'
 
 const resolvePulseStyle = (params: { pulseMs: number }): CSSProperties => {
   const { pulseMs } = params
@@ -13,7 +13,7 @@ export const SessionFinishedPulse = (props: {
   nowMs: number
   pulseMs: number
 }): ReactElement | undefined => {
-  if (!sessionFinishedPulseUtil.isPulsing(props)) {
+  if (!sessionFinishedPulseService.isPulsing(props)) {
     return undefined
   }
 

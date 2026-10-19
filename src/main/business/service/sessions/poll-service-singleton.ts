@@ -6,9 +6,9 @@ import { SessionTranscriptService } from '#src/main/business/service/session-tra
 import { sessionsServiceSingleton } from '#src/main/business/service/sessions/service-singleton'
 import { sessionsSshServiceSingleton } from '#src/main/business/service/sessions/ssh-service-singleton'
 import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
-import { errorUtil } from '#src/main/util/error-util'
 import { type SessionSnapshot } from '#src/shared/business/model/session-model'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'
+import { errorUtil } from '#src/shared/util/error-util'
 
 export class _SessionsPollService {
   protected _isWindowVisible = false

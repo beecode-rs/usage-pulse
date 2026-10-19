@@ -1,15 +1,15 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
+import { triggerValidationService } from '#src/renderer/src/business/service/trigger-validation-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { TriggerConfigFields } from '#src/renderer/src/ui-component/scheduling/trigger-config-fields'
-import { errorUtil } from '#src/renderer/src/util/error-util'
-import { triggerValidationUtil } from '#src/renderer/src/util/trigger-validation-util'
 import {
   type ScheduleTriggerConfig,
   type ScheduleTriggerPreset,
 } from '#src/shared/business/model/schedule-trigger-model'
 import { SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const DEFAULT_TRIGGER_COMMAND = 'claude -p "what is your name, only name"'
 
@@ -50,7 +50,7 @@ export const AddTriggerDialog = (props: {
       return
     }
 
-    const validationError = triggerValidationUtil.resolveValidationError({ trigger: newTrigger })
+    const validationError = triggerValidationService.resolveValidationError({ trigger: newTrigger })
 
     if (validationError !== undefined) {
       setErrorMessage(validationError)

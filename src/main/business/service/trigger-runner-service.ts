@@ -4,7 +4,6 @@ import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-sin
 import { TriggerRunLogRepo } from '#src/main/business/repo/trigger-run-log-repo'
 import { TriggerCommandService } from '#src/main/business/service/trigger-command-service'
 import { constant } from '#src/main/util/constant'
-import { errorUtil } from '#src/main/util/error-util'
 import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import { ScheduleTriggerRunPhaseMapper } from '#src/shared/business/enum/schedule-trigger-run-phase-mapper-enum'
 import { ScheduleTriggerRunSkipReasonMapper } from '#src/shared/business/enum/schedule-trigger-run-skip-reason-mapper-enum'
@@ -15,6 +14,7 @@ import {
 } from '#src/shared/business/model/schedule-trigger-model'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant as sharedConstant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 export class TriggerRunnerService {
   protected readonly _commandService = new TriggerCommandService()

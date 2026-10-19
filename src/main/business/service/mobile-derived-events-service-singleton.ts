@@ -9,8 +9,8 @@ import { UsageWarningReasonMapper } from '#src/shared/business/enum/usage-warnin
 import { type UsageWarning } from '#src/shared/business/model/mobile-api-model'
 import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
 import { type ProviderSnapshot, type UsageSnapshot } from '#src/shared/business/model/usage-model'
-import { sessionStatusTransitionUtil } from '#src/shared/util/session-status-transition-util'
-import { usageSeverityLevelUtil } from '#src/shared/util/usage-severity-level-util'
+import { sessionStatusTransitionService } from '#src/shared/business/service/session-status-transition-service'
+import { usageSeverityLevelService } from '#src/shared/business/service/usage-severity-level-service'
 
 const SEVERITY_LEVEL_RANK: Record<UsageSeverityLevel, number> = {
   [UsageSeverityLevel.FILLING_UP]: 1,
@@ -57,7 +57,7 @@ export class _MobileDerivedEventsService {
     const { snapshot } = params
     const previousSessions = this._previousSessionsSnapshot?.sessions
     const finishedSessionIds = this._resolveFinishedSessionIds({ currentSessions: snapshot.sessions, previousSessions })
-    const newlyWaitingSessionIds = sessionStatusTransitionUtil.resolveNewlyStatusSessionIds({
+    const newlyWaitingSessionIds = sessionStatusTransitionService.resolveNewlyStatusSessionIds({
       currentSessions: snapshot.sessions,
       previousSessions,
       status: SessionStatusMapper.WAITING,
@@ -82,13 +82,13 @@ export class _MobileDerivedEventsService {
     previousSessions?: SessionInfo[]
   }): string[] {
     const { currentSessions, previousSessions } = params
-    const busyToIdleSessionIds = sessionStatusTransitionUtil.resolveStatusTransitionSessionIds({
+    const busyToIdleSessionIds = sessionStatusTransitionService.resolveStatusTransitionSessionIds({
       currentSessions,
       fromStatus: SessionStatusMapper.BUSY,
       previousSessions,
       toStatus: SessionStatusMapper.IDLE,
     })
-    const waitingToIdleSessionIds = sessionStatusTransitionUtil.resolveStatusTransitionSessionIds({
+    const waitingToIdleSessionIds = sessionStatusTransitionService.resolveStatusTransitionSessionIds({
       currentSessions,
       fromStatus: SessionStatusMapper.WAITING,
       previousSessions,
@@ -157,7 +157,7 @@ export class _MobileDerivedEventsService {
     const usageWindows = provider.usage ?? []
 
     usageWindows.forEach((window) => {
-      const level = usageSeverityLevelUtil.resolveSeverityLevel({ usedPercent: window.usedPercent })
+      const level = usageSeverityLevelService.resolveSeverityLevel({ usedPercent: window.usedPercent })
       const previousLevel = this._previousSeverityByWindowKey.get(`${provider.trackerId}:${window.label}`)
 
       this._previousSeverityByWindowKey.set(`${provider.trackerId}:${window.label}`, level)

@@ -1,15 +1,15 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
+import { MenuStatusService } from '#src/renderer/src/business/service/menu-status-service'
+import { usageActivityStatusService } from '#src/renderer/src/business/service/usage-activity-status-service'
+import { UsageStalenessService } from '#src/renderer/src/business/service/usage-staleness-service'
+import { ZaiPeakService } from '#src/renderer/src/business/service/zai-peak-service'
 import { PeakIcon } from '#src/renderer/src/ui-component/icon/peak-icon'
 import { UsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
 import { dateUtil } from '#src/renderer/src/util/date-util'
-import { MenuStatusUtil } from '#src/renderer/src/util/menu-status-util'
-import { usageActivityStatusUtil } from '#src/renderer/src/util/usage-activity-status-util'
 import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
-import { UsageStalenessUtil } from '#src/renderer/src/util/usage-staleness-util'
 import { usageWindowUtil } from '#src/renderer/src/util/usage-window-util'
-import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
 
@@ -19,7 +19,7 @@ const resolveStatusMessage = (params: { providerSnapshot: ProviderSnapshot }): s
   const { providerSnapshot } = params
   switch (providerSnapshot.status) {
     case UsageActivityStatus.ERROR: {
-      return providerSnapshot.errorMessage ?? usageActivityStatusUtil.resolveStatusText(UsageActivityStatus.ERROR)
+      return providerSnapshot.errorMessage ?? usageActivityStatusService.resolveStatusText(UsageActivityStatus.ERROR)
     }
 
     case UsageActivityStatus.PENDING: {
@@ -56,24 +56,24 @@ export const DashboardUsageBox = (props: {
   }, [])
 
   const fiveHourWindow = (providerSnapshot.usage ?? [])[0]
-  const zaiPeakUtil = new ZaiPeakUtil()
-  const peakInfo = zaiPeakUtil.resolvePeakInfo({ nowMs: now, providerId: providerSnapshot.providerId })
-  const peakRemainingPercent = zaiPeakUtil.resolvePeakRemainingPercent({
+  const zaiPeakService = new ZaiPeakService()
+  const peakInfo = zaiPeakService.resolvePeakInfo({ nowMs: now, providerId: providerSnapshot.providerId })
+  const peakRemainingPercent = zaiPeakService.resolvePeakRemainingPercent({
     nowMs: now,
     providerId: providerSnapshot.providerId,
   })
-  const peakRemainingText = zaiPeakUtil.resolvePeakRemainingText({
+  const peakRemainingText = zaiPeakService.resolvePeakRemainingText({
     nowMs: now,
     providerId: providerSnapshot.providerId,
   })
 
-  const isWindowWarning = new MenuStatusUtil().isWindowWarning({
+  const isWindowWarning = new MenuStatusService().isWindowWarning({
     now,
     resetAt: fiveHourWindow?.resetAt,
     usedPercent: fiveHourWindow?.usedPercent ?? 0,
     windowMs: fiveHourWindow?.windowMs ?? usageResetUtil.fiveHourWindowMs,
   })
-  const isSnapshotStale = new UsageStalenessUtil().isSnapshotStale({
+  const isSnapshotStale = new UsageStalenessService().isSnapshotStale({
     nowMs: now,
     providerSnapshot,
     refreshIntervalMs,

@@ -12,7 +12,7 @@ type ZaiPeakInfo = {
   peakWindowText: string
 }
 
-export class ZaiPeakUtil {
+export class ZaiPeakService {
   resolvePeakInfo(params: { nowMs: number; providerId: ProviderIdMapper }): ZaiPeakInfo | undefined {
     const { nowMs, providerId } = params
     if (providerId !== ProviderIdMapper.ZAI) {

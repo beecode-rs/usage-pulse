@@ -1,13 +1,13 @@
 import { type ReactElement, useState } from 'react'
 
 import '#src/renderer/src/ui-component/development/development-page.css'
+import { usageSeverityService } from '#src/renderer/src/business/service/usage-severity-service'
+import { ZaiPeakService } from '#src/renderer/src/business/service/zai-peak-service'
 import { SelectField } from '#src/renderer/src/ui-component/development/select-field'
 import { SliderField } from '#src/renderer/src/ui-component/development/slider-field'
 import { ProviderUsageCard } from '#src/renderer/src/ui-component/usage-dashboard/provider-usage-card'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
-import { usageSeverityUtil } from '#src/renderer/src/util/usage-severity-util'
-import { ZaiPeakUtil } from '#src/renderer/src/util/zai-peak-util'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
@@ -51,7 +51,7 @@ export const DevelopmentPage = (props: {
 }): ReactElement => {
   const { elapsedMinutes, onElapsedMinutesChange, onUsedPercentChange, usedPercent } = props
 
-  const zaiPeakUtil = new ZaiPeakUtil()
+  const zaiPeakService = new ZaiPeakService()
 
   const [fetchedElapsedMinutes, setFetchedElapsedMinutes] = useState(DEFAULT_FETCHED_ELAPSED_MINUTES)
   const [minuteOfDay, setMinuteOfDay] = useState((): number => {
@@ -131,7 +131,7 @@ export const DevelopmentPage = (props: {
   }
 
   const resolveUsageValueText = (): string => {
-    const severityLabel = usageSeverityUtil.resolveSeverityLabel(usedPercent)
+    const severityLabel = usageSeverityService.resolveSeverityLabel(usedPercent)
     const percentText = `${String(usedPercent)}%`
 
     if (severityLabel === '') {
@@ -161,7 +161,7 @@ export const DevelopmentPage = (props: {
   }
 
   const resolvePeakHintText = (): string => {
-    const peakWindowText = zaiPeakUtil.resolvePeakInfo({
+    const peakWindowText = zaiPeakService.resolvePeakInfo({
       nowMs: Date.now(),
       providerId: ProviderIdMapper.ZAI,
     })?.peakWindowText

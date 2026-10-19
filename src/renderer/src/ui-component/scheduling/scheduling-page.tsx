@@ -2,6 +2,7 @@ import { typeUtil } from '@beecode/msh-util'
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { schedulingClientService } from '#src/renderer/src/business/service/scheduling-client-service'
+import { TriggerRunService, type TriggerRunSummary } from '#src/renderer/src/business/service/trigger-run-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { TerminalIcon } from '#src/renderer/src/ui-component/icon/terminal-icon'
 import { AddTriggerDialog } from '#src/renderer/src/ui-component/scheduling/add-trigger-dialog'
@@ -14,8 +15,6 @@ import '#src/renderer/src/ui-component/schedule/day-time-schedule-fields.css'
 import { DashboardAddButton } from '#src/renderer/src/ui-component/usage-dashboard/dashboard-add-button'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
 import { dateUtil } from '#src/renderer/src/util/date-util'
-import { errorUtil } from '#src/renderer/src/util/error-util'
-import { type TriggerRunSummary, TriggerRunUtil } from '#src/renderer/src/util/trigger-run-util'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import { ScheduleTriggerRunPhaseMapper } from '#src/shared/business/enum/schedule-trigger-run-phase-mapper-enum'
@@ -30,6 +29,7 @@ import type {
 } from '#src/shared/business/model/schedule-trigger-model'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const TRIGGER_DAY_LABELS: Record<ScheduleTriggerDayMapper, string> = {
   [ScheduleTriggerDayMapper.FRIDAY]: 'Fri',
@@ -457,7 +457,7 @@ export const SchedulingPage = (): ReactElement => {
       return <p className="trigger-run-empty">Loading runs…</p>
     }
 
-    const summaries = new TriggerRunUtil().groupRunsByEventId({ entries })
+    const summaries = new TriggerRunService().groupRunsByEventId({ entries })
 
     if (summaries.length === 0) {
       return <p className="trigger-run-empty">No runs recorded yet.</p>

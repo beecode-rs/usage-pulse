@@ -2,7 +2,7 @@ import { dateUtil } from '#src/renderer/src/util/date-util'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
 
-export const sessionPresentationUtil = {
+export const sessionPresentationService = {
   resolveLastActivityLabel: (params: { lastActivityAt: number; nowMs: number }): string => {
     const { lastActivityAt, nowMs } = params
 
@@ -40,7 +40,7 @@ export const sessionPresentationUtil = {
     }
 
     if (session.cwd !== '') {
-      return sessionPresentationUtil.resolveProjectLabel({ cwd: session.cwd })
+      return sessionPresentationService.resolveProjectLabel({ cwd: session.cwd })
     }
 
     return 'Unnamed session'

@@ -1,11 +1,11 @@
-# Contract for updateCheckErrorMessageUtil, the human-readable rendering of the
+# Contract for updateCheckErrorMessageService, the human-readable rendering of the
 # typed UpdateCheckError carried on UpdateStatus. Each error kind resolves to
 # exactly one user-facing sentence; HTTP_ERROR 404 is special-cased as the
 # "no release published yet" message. The rate-limit term with a reset epoch is
 # intentionally not covered here: it embeds a local-time string, so its wording
 # is time- and locale-dependent; only the reset-less variant is asserted.
-subject: updateCheckErrorMessageUtil
-module: ./update-check-error-message-util.js
+subject: updateCheckErrorMessageService
+module: ./update-check-error-message-service.js
 subjectType: function
 methods:
   resolveMessage:

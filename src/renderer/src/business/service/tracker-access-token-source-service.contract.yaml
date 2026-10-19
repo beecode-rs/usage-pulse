@@ -1,9 +1,9 @@
-# Contract for trackerAccessTokenSourceUtil.
+# Contract for trackerAccessTokenSourceService.
 # Terms cover the per-platform access-token-source decision rules for the tracker config UI:
 # the platform system-access-token option (label + hint), the effective selected source, and the
 # load-time normalization that keeps a stored system source on windows repairable.
-subject: trackerAccessTokenSourceUtil
-module: ./tracker-access-token-source-util.js
+subject: trackerAccessTokenSourceService
+module: ./tracker-access-token-source-service.js
 subjectType: function
 methods:
   normalizeConfig:

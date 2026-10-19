@@ -2,8 +2,8 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
-import { errorUtil } from '#src/renderer/src/util/error-util'
 import { SettingsModel, type SshHostConfig } from '#src/shared/business/model/settings-model'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const resolveTestMessageClassName = (hasError: boolean): string => {
   if (hasError) {

@@ -1,7 +1,7 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
-import { errorUtil } from '#src/renderer/src/util/error-util'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const resolveInstallButtonLabel = (params: { isInstalling: boolean }): string => {
   const { isInstalling } = params

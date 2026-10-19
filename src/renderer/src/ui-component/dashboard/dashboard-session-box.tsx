@@ -1,11 +1,11 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
+import { sessionPresentationService } from '#src/renderer/src/business/service/session-presentation-service'
 import { SessionFinishedPulse } from '#src/renderer/src/ui-component/sessions/session-finished-pulse'
 import { SessionFocusButton } from '#src/renderer/src/ui-component/sessions/session-focus-button'
 import { SessionOriginIcon } from '#src/renderer/src/ui-component/sessions/session-origin-icon'
 import { SessionTranscriptChips } from '#src/renderer/src/ui-component/sessions/session-transcript-chips'
 import { SessionWaitingPulse } from '#src/renderer/src/ui-component/sessions/session-waiting-pulse'
-import { sessionPresentationUtil } from '#src/renderer/src/util/session-presentation-util'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
 
@@ -43,9 +43,9 @@ export const DashboardSessionBox = (props: {
     }
   }, [])
 
-  const sessionTitle = sessionPresentationUtil.resolveSessionTitle({ session })
-  const sessionTitleParts = sessionPresentationUtil.resolveSessionTitleParts({ title: sessionTitle })
-  const statusPresentation = sessionPresentationUtil.resolveStatusPresentation({ status: session.status })
+  const sessionTitle = sessionPresentationService.resolveSessionTitle({ session })
+  const sessionTitleParts = sessionPresentationService.resolveSessionTitleParts({ title: sessionTitle })
+  const statusPresentation = sessionPresentationService.resolveStatusPresentation({ status: session.status })
 
   return (
     <article

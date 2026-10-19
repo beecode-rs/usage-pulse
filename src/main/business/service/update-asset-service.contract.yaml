@@ -1,11 +1,11 @@
-# Contract for updateAssetUtil.
+# Contract for updateAssetService.
 # resolveUpdateAsset picks the release asset whose file name ends with the preferred
 # suffix for the given OS, trying suffixes in priority order (.dmg for MACOS;
 # .AppImage before .deb for LINUX; .exe for WINDOWS). Matching is case-insensitive so
 # mixed-case asset names still resolve. No matching asset yields undefined, which keeps
 # the release page as the update fallback in UpdateStatus.
-subject: updateAssetUtil
-module: ./update-asset-util.js
+subject: updateAssetService
+module: ./update-asset-service.js
 subjectType: function
 methods:
   resolveUpdateAsset:

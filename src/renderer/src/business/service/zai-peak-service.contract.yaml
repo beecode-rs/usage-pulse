@@ -1,4 +1,4 @@
-# Contract for ZaiPeakUtil peak countdown methods.
+# Contract for ZaiPeakService peak countdown methods.
 # Terms pin the peak countdown: z.ai peak hours span 14:00-18:00 UTC+8, a 4-hour window.
 # resolvePeakRemainingPercent is the share of that window still remaining, so it reads
 # 100 the moment peak begins and drains toward 0 as peak ends. resolvePeakRemainingText
@@ -7,8 +7,8 @@
 # Instants outside the window clamp to the nearest bound. All terms use Wednesday
 # 2026-08-26's UTC+8 wall clock day, where peak starts at 1787724000000 (06:00 UTC)
 # and ends at 1787738400000 (10:00 UTC).
-subject: ZaiPeakUtil
-module: ./zai-peak-util.js
+subject: ZaiPeakService
+module: ./zai-peak-service.js
 subjectType: class
 constructor:
   # A fresh instance carries no own fields, so it serializes as an empty object.

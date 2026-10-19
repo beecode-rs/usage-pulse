@@ -1,10 +1,10 @@
 import { spawn } from 'node:child_process'
 import { homedir } from 'node:os'
 
-import { errorUtil } from '#src/main/util/error-util'
 import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { constant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const DEFAULT_GRACE_PERIOD_MS = 5000
 

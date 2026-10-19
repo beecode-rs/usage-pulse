@@ -1,19 +1,20 @@
 import { typeUtil } from '@beecode/msh-util'
 
 import { UsageSeverityLevel } from '#src/shared/business/enum/usage-severity-level-enum'
-import { usageSeverityLevelUtil } from '#src/shared/util/usage-severity-level-util'
+import { usageSeverityLevelService } from '#src/shared/business/service/usage-severity-level-service'
+import { constant } from '#src/shared/util/constant'
 
-export const usageSeverityUtil = {
+export const usageSeverityService = {
   resolveSeverityColorVar: (percent: number): string => {
-    if (percent < 70) {
+    if (percent < constant.usageSeverityThresholds.fillingUpPercent) {
       return 'var(--meter-accent)'
     }
 
-    if (percent < 85) {
+    if (percent < constant.usageSeverityThresholds.highUsagePercent) {
       return 'var(--meter-warning)'
     }
 
-    if (percent < 95) {
+    if (percent < constant.usageSeverityThresholds.limitReachedPercent) {
       return 'var(--meter-serious)'
     }
 
@@ -21,7 +22,7 @@ export const usageSeverityUtil = {
   },
 
   resolveSeverityLabel: (percent: number): string => {
-    const severityLevel = usageSeverityLevelUtil.resolveSeverityLevel({ usedPercent: percent })
+    const severityLevel = usageSeverityLevelService.resolveSeverityLevel({ usedPercent: percent })
 
     switch (severityLevel) {
       case UsageSeverityLevel.FILLING_UP: {

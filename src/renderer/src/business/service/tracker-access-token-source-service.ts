@@ -13,7 +13,7 @@ export type TrackerAccessTokenSelection = {
   systemAccessTokenOption?: TrackerSystemAccessTokenOption
 }
 
-export const trackerAccessTokenSourceUtil = {
+export const trackerAccessTokenSourceService = {
   normalizeConfig: (params: { config: TrackerConfig; osPlatform: OS }): TrackerConfig => {
     const { config, osPlatform } = params
     if (config.providerId !== ProviderIdMapper.CLAUDE || osPlatform !== OS.WINDOWS) {

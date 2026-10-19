@@ -1,7 +1,7 @@
 import { UsageSeverityLevel } from '#src/shared/business/enum/usage-severity-level-enum'
 import { constant } from '#src/shared/util/constant'
 
-export const usageSeverityLevelUtil = {
+export const usageSeverityLevelService = {
   resolveSeverityLevel(params: { usedPercent: number }): UsageSeverityLevel {
     const { usedPercent } = params
     if (usedPercent < constant.usageSeverityThresholds.fillingUpPercent) {

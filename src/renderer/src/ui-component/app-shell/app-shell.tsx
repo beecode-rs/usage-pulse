@@ -3,8 +3,12 @@ import { type ReactElement, useEffect, useRef, useState } from 'react'
 
 import { AppViewIdMapper } from '#src/renderer/src/business/enum/app-view-id-mapper-enum'
 import { MenuStatusDotMapper } from '#src/renderer/src/business/enum/menu-status-dot-mapper-enum'
+import { MenuStatusService } from '#src/renderer/src/business/service/menu-status-service'
+import { sessionFinishedPulseService } from '#src/renderer/src/business/service/session-finished-pulse-service'
+import { SessionSoundService } from '#src/renderer/src/business/service/session-sound-service'
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
+import { UsageStalenessService } from '#src/renderer/src/business/service/usage-staleness-service'
 import { AboutPage } from '#src/renderer/src/ui-component/about/about-page'
 import { AppFooter } from '#src/renderer/src/ui-component/app-shell/app-footer'
 import '#src/renderer/src/ui-component/app-shell/app-shell.css'
@@ -16,18 +20,14 @@ import { SessionsPage } from '#src/renderer/src/ui-component/sessions/sessions-p
 import { SideMenu, type SideMenuItem } from '#src/renderer/src/ui-component/side-menu/side-menu'
 import { UsageDashboard } from '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard'
 import { developmentPrefsUtil } from '#src/renderer/src/util/development-prefs-util'
-import { errorUtil } from '#src/renderer/src/util/error-util'
-import { MenuStatusUtil } from '#src/renderer/src/util/menu-status-util'
-import { sessionFinishedPulseUtil } from '#src/renderer/src/util/session-finished-pulse-util'
-import { SessionSoundUtil } from '#src/renderer/src/util/session-sound-util'
 import { sideMenuPrefsUtil } from '#src/renderer/src/util/side-menu-prefs-util'
-import { UsageStalenessUtil } from '#src/renderer/src/util/usage-staleness-util'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import type { SessionInfo, SessionSnapshot } from '#src/shared/business/model/session-model'
 import type { SettingsModel } from '#src/shared/business/model/settings-model'
 import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
 import { appTitleUtil } from '#src/shared/util/app-title-util'
 import { constant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const DEFAULT_ELAPSED_MINUTES = 60
 const DEFAULT_USED_PERCENT = 45
@@ -313,14 +313,14 @@ export const AppShell = (): ReactElement => {
   useEffect(() => {
     const playSessionSounds = (params: { nextSnapshot: SessionSnapshot; previousSessions?: SessionInfo[] }): void => {
       const { nextSnapshot, previousSessions } = params
-      const sessionSoundUtil = new SessionSoundUtil()
-      const newlyFinishedSessionIds = sessionSoundUtil.resolveStatusTransitionSessionIds({
+      const sessionSoundService = new SessionSoundService()
+      const newlyFinishedSessionIds = sessionSoundService.resolveStatusTransitionSessionIds({
         currentSessions: nextSnapshot.sessions,
         fromStatus: SessionStatusMapper.BUSY,
         previousSessions,
         toStatus: SessionStatusMapper.IDLE,
       })
-      const newlyWaitingSessionIds = sessionSoundUtil.resolveNewlyStatusSessionIds({
+      const newlyWaitingSessionIds = sessionSoundService.resolveNewlyStatusSessionIds({
         currentSessions: nextSnapshot.sessions,
         previousSessions,
         status: SessionStatusMapper.WAITING,
@@ -328,14 +328,14 @@ export const AppShell = (): ReactElement => {
       const soundVolumePercent = settingsRef.current?.soundVolumePercent ?? constant.soundVolume.defaultPercent
 
       if (newlyWaitingSessionIds.length > 0) {
-        sessionSoundUtil.playSessionSound({
+        sessionSoundService.playSessionSound({
           soundId: settingsRef.current?.waitingSoundId ?? constant.waitingSound.defaultId,
           volumePercent: soundVolumePercent,
         })
       }
 
       if (newlyFinishedSessionIds.length > 0) {
-        sessionSoundUtil.playSessionSound({
+        sessionSoundService.playSessionSound({
           soundId: settingsRef.current?.sessionFinishedSoundId ?? constant.sessionFinishedSound.defaultId,
           volumePercent: soundVolumePercent,
         })
@@ -348,7 +348,7 @@ export const AppShell = (): ReactElement => {
     }): void => {
       const { nextSnapshot, previousSessions } = params
       setFinishedAtBySessionId((currentFinishedAtBySessionId) => {
-        return sessionFinishedPulseUtil.resolveFinishedAtBySessionId({
+        return sessionFinishedPulseService.resolveFinishedAtBySessionId({
           currentSessions: nextSnapshot.sessions,
           finishedAtBySessionId: currentFinishedAtBySessionId,
           nowMs: Date.now(),
@@ -398,31 +398,35 @@ export const AppShell = (): ReactElement => {
   }, [])
 
   const finishedPulseMs = settings?.sessionFinishedPulseMs ?? constant.sessionFinishedPulse.defaultMs
-  const menuStatusUtil = new MenuStatusUtil()
-  const refreshIntervalMsByTrackerId = new UsageStalenessUtil().resolveRefreshIntervalMsByTrackerId({
+  const menuStatusService = new MenuStatusService()
+  const refreshIntervalMsByTrackerId = new UsageStalenessService().resolveRefreshIntervalMsByTrackerId({
     trackers: settings?.trackers ?? [],
   })
-  const peakStatusDot = menuStatusUtil.resolvePeakStatusDot({ now: nowMs, snapshot: usageSnapshot })
-  const sessionsStatusDot = menuStatusUtil.resolveSessionsStatusDot({
+  const peakStatusDot = menuStatusService.resolvePeakStatusDot({ now: nowMs, snapshot: usageSnapshot })
+  const sessionsStatusDot = menuStatusService.resolveSessionsStatusDot({
     hasLoadError: sessionsErrorMessage !== '',
     snapshot: sessionSnapshot,
   })
-  const staleStatusDot = menuStatusUtil.resolveStaleStatusDot({
+  const staleStatusDot = menuStatusService.resolveStaleStatusDot({
     now: nowMs,
     refreshIntervalMsByTrackerId,
     snapshot: usageSnapshot,
   })
-  const usageActivityStatusDot = menuStatusUtil.resolveCombinedStatusDot({
+  const usageActivityStatusDot = menuStatusService.resolveCombinedStatusDot({
     dots: [
-      menuStatusUtil.resolveUsageActivityStatusDot({ now: nowMs, snapshot: usageSnapshot }),
+      menuStatusService.resolveUsageActivityStatusDot({ now: nowMs, snapshot: usageSnapshot }),
       peakStatusDot,
       staleStatusDot,
     ],
   })
-  const dashboardStatusDot = menuStatusUtil.resolveCombinedStatusDot({
+  const dashboardStatusDot = menuStatusService.resolveCombinedStatusDot({
     dots: [usageActivityStatusDot, sessionsStatusDot],
   })
-  const developmentStatusDot = menuStatusUtil.resolveDevelopmentStatusDot({ elapsedMinutes, now: nowMs, usedPercent })
+  const developmentStatusDot = menuStatusService.resolveDevelopmentStatusDot({
+    elapsedMinutes,
+    now: nowMs,
+    usedPercent,
+  })
   const menuItems = resolveMenuItems({
     dashboardStatusDot,
     isMobileServerLive: isMobileServerLive({ settings }),
@@ -436,7 +440,7 @@ export const AppShell = (): ReactElement => {
     developmentStatusDot,
     isDevelopmentUnlocked,
   })
-  const brandStatusDot = menuStatusUtil.resolveCombinedStatusDot({
+  const brandStatusDot = menuStatusService.resolveCombinedStatusDot({
     dots: [...menuItems, ...footerMenuItems].map((item) => {
       return item.statusDot
     }),

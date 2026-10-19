@@ -5,13 +5,13 @@ vi.mock('electron', () => ({ app: { getPath: (): string => '/tmp' } }))
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
 import { _UsagePollService } from '#src/main/business/service/usage-poll-service-singleton'
 import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
-import { errorUtil } from '#src/main/util/error-util'
 import { type ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { SettingsModel, type TrackerConfig } from '#src/shared/business/model/settings-model'
 import { type ProviderSnapshot, type UsageWindow } from '#src/shared/business/model/usage-model'
 import { constant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 class ProbeUsagePollService extends _UsagePollService {
   protected _pollCount = 0

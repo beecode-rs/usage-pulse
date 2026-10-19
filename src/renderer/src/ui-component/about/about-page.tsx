@@ -2,12 +2,12 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import appIconUrl from '#resource/icon/app-icon.png'
 import { updateClientService } from '#src/renderer/src/business/service/update-client-service'
-import { errorUtil } from '#src/renderer/src/util/error-util'
 import '#src/renderer/src/ui-component/about/about-page.css'
 import type { UpdateStatus } from '#src/shared/business/model/update-model'
+import { updateCheckErrorMessageService } from '#src/shared/business/service/update-check-error-message-service'
 import { appTitleUtil } from '#src/shared/util/app-title-util'
 import { constant } from '#src/shared/util/constant'
-import { updateCheckErrorMessageUtil } from '#src/shared/util/update-check-error-message-util'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const APP_TITLE = appTitleUtil.resolve({ isDev: import.meta.env.DEV })
 const TITLE_CLICKS_TO_TOGGLE_DEVELOPMENT = 7
@@ -42,7 +42,7 @@ const resolveUpdateStatusText = (params: {
   }
 
   if (status.error !== undefined) {
-    return updateCheckErrorMessageUtil.resolveMessage({ error: status.error })
+    return updateCheckErrorMessageService.resolveMessage({ error: status.error })
   }
 
   if (status.isUpdateAvailable && status.latestVersion !== undefined) {

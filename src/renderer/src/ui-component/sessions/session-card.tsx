@@ -1,5 +1,6 @@
 import { type ReactElement } from 'react'
 
+import { sessionPresentationService } from '#src/renderer/src/business/service/session-presentation-service'
 import { ServerIcon } from '#src/renderer/src/ui-component/icon/server-icon'
 import { SessionExpandButton } from '#src/renderer/src/ui-component/sessions/session-expand-button'
 import { SessionFinishedPulse } from '#src/renderer/src/ui-component/sessions/session-finished-pulse'
@@ -8,7 +9,6 @@ import { SessionOriginIcon } from '#src/renderer/src/ui-component/sessions/sessi
 import { SessionTranscriptChips } from '#src/renderer/src/ui-component/sessions/session-transcript-chips'
 import { SessionWaitingPulse } from '#src/renderer/src/ui-component/sessions/session-waiting-pulse'
 import { dateUtil } from '#src/renderer/src/util/date-util'
-import { sessionPresentationUtil } from '#src/renderer/src/util/session-presentation-util'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo, type SessionTranscriptStats } from '#src/shared/business/model/session-model'
 
@@ -91,32 +91,32 @@ const renderTranscriptDetails = (params: {
         {transcript.contextSizeTokens !== undefined &&
           renderTranscriptStat({
             label: 'Context',
-            value: sessionPresentationUtil.resolveTokenCountLabel({ count: transcript.contextSizeTokens }),
+            value: sessionPresentationService.resolveTokenCountLabel({ count: transcript.contextSizeTokens }),
             valueTitle: String(transcript.contextSizeTokens),
           })}
         {renderTranscriptStat({
           label: 'Input tokens',
-          value: sessionPresentationUtil.resolveTokenCountLabel({ count: transcript.inputTokens }),
+          value: sessionPresentationService.resolveTokenCountLabel({ count: transcript.inputTokens }),
           valueTitle: String(transcript.inputTokens),
         })}
         {renderTranscriptStat({
           label: 'Output tokens',
-          value: sessionPresentationUtil.resolveTokenCountLabel({ count: transcript.outputTokens }),
+          value: sessionPresentationService.resolveTokenCountLabel({ count: transcript.outputTokens }),
           valueTitle: String(transcript.outputTokens),
         })}
         {renderTranscriptStat({
           label: 'Cache read tokens',
-          value: sessionPresentationUtil.resolveTokenCountLabel({ count: transcript.cacheReadTokens }),
+          value: sessionPresentationService.resolveTokenCountLabel({ count: transcript.cacheReadTokens }),
           valueTitle: String(transcript.cacheReadTokens),
         })}
         {renderTranscriptStat({
           label: 'Cache creation tokens',
-          value: sessionPresentationUtil.resolveTokenCountLabel({ count: transcript.cacheCreationTokens }),
+          value: sessionPresentationService.resolveTokenCountLabel({ count: transcript.cacheCreationTokens }),
           valueTitle: String(transcript.cacheCreationTokens),
         })}
         {renderTranscriptStat({
           label: 'Thinking tokens',
-          value: sessionPresentationUtil.resolveTokenCountLabel({ count: transcript.thinkingTokens }),
+          value: sessionPresentationService.resolveTokenCountLabel({ count: transcript.thinkingTokens }),
           valueTitle: String(transcript.thinkingTokens),
         })}
         {renderTranscriptStat({
@@ -151,9 +151,9 @@ export const SessionCard = (props: {
 }): ReactElement => {
   const { finishedAtMs, isExpanded, nowMs, onFocus, onToggle, pulseMs, session } = props
   const transcript = session.transcript
-  const sessionTitle = sessionPresentationUtil.resolveSessionTitle({ session })
-  const sessionTitleParts = sessionPresentationUtil.resolveSessionTitleParts({ title: sessionTitle })
-  const statusPresentation = sessionPresentationUtil.resolveStatusPresentation({ status: session.status })
+  const sessionTitle = sessionPresentationService.resolveSessionTitle({ session })
+  const sessionTitleParts = sessionPresentationService.resolveSessionTitleParts({ title: sessionTitle })
+  const statusPresentation = sessionPresentationService.resolveStatusPresentation({ status: session.status })
 
   return (
     <article
@@ -190,7 +190,7 @@ export const SessionCard = (props: {
         )}
       </header>
       <p className="session-card-project" title={session.cwd}>
-        {sessionPresentationUtil.resolveProjectLabel({ cwd: session.cwd })}
+        {sessionPresentationService.resolveProjectLabel({ cwd: session.cwd })}
       </p>
       {transcript !== undefined && <SessionTranscriptChips nowMs={nowMs} transcript={transcript} />}
       {isExpanded && transcript !== undefined && renderTranscriptDetails({ session, transcript })}

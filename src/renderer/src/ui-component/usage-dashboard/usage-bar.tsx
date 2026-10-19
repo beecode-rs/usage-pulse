@@ -1,6 +1,6 @@
 import { type CSSProperties, type ReactElement } from 'react'
 
-import { usageSeverityUtil } from '#src/renderer/src/util/usage-severity-util'
+import { usageSeverityService } from '#src/renderer/src/business/service/usage-severity-service'
 
 export const UsageBar = (props: {
   ariaLabel?: string
@@ -14,7 +14,7 @@ export const UsageBar = (props: {
   const { ariaLabel, fillAnchor, fillColor, label, percent, valueText, valueTooltip } = props
   const clampedPercent = Math.min(Math.max(percent, 0), 100)
   const resolvedAriaLabel = ariaLabel ?? `${label} usage`
-  const resolvedFillColor = fillColor ?? usageSeverityUtil.resolveSeverityColorVar(clampedPercent)
+  const resolvedFillColor = fillColor ?? usageSeverityService.resolveSeverityColorVar(clampedPercent)
   const resolvedValueText = valueText ?? `${String(Math.round(clampedPercent))}%`
 
   const resolveFillStyle = (): CSSProperties => {

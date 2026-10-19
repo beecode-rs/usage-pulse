@@ -2,7 +2,7 @@ import { objectUtil } from '#src/main/util/object-util'
 import { UpdateCheckErrorKind } from '#src/shared/business/enum/update-check-error-kind-enum'
 import { type UpdateCheckError } from '#src/shared/business/model/update-model'
 
-export const updateCheckErrorUtil = {
+export const updateCheckErrorService = {
   classifyResponse: (params: {
     rateLimitRemaining: string
     rateLimitReset: string

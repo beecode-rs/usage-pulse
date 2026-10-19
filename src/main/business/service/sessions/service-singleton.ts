@@ -13,10 +13,10 @@ import { SessionsFocusVsCodeService } from '#src/main/business/service/sessions/
 import { SessionsParserService } from '#src/main/business/service/sessions/parser-service'
 import { SessionsProcessService } from '#src/main/business/service/sessions/process-service'
 import { config } from '#src/main/util/config'
-import { errorUtil } from '#src/main/util/error-util'
 import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const GHOSTTY_OTHER_DESKTOP_MESSAGE =
   'the terminal is on another desktop or minimized; to let focus jump to it, enable "When switching to an application, switch to a Space with open windows for the application" in System Settings > Desktop & Dock'

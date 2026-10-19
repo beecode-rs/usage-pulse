@@ -1,9 +1,9 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { updateClientService } from '#src/renderer/src/business/service/update-client-service'
-import { errorUtil } from '#src/renderer/src/util/error-util'
 import '#src/renderer/src/ui-component/app-shell/app-footer.css'
 import type { UpdateStatus } from '#src/shared/business/model/update-model'
+import { errorUtil } from '#src/shared/util/error-util'
 
 type UpdateDownloadState = 'downloaded' | 'downloading' | 'idle'
 

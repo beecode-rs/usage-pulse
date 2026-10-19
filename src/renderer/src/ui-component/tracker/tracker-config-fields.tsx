@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 
-import { trackerAccessTokenSourceUtil } from '#src/renderer/src/util/tracker-access-token-source-util'
+import { trackerAccessTokenSourceService } from '#src/renderer/src/business/service/tracker-access-token-source-service'
 import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import type { OS } from '#src/shared/business/enum/os-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
@@ -21,7 +21,7 @@ export const TrackerConfigFields = (props: {
     return entry.id === config.providerId
   })
   const providerDisplayName = catalogEntry?.name ?? config.providerId
-  const { selectedAccessTokenSource, systemAccessTokenOption } = trackerAccessTokenSourceUtil.resolveSelection({
+  const { selectedAccessTokenSource, systemAccessTokenOption } = trackerAccessTokenSourceService.resolveSelection({
     config,
     osPlatform,
   })

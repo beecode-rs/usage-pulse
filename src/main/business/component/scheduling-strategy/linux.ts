@@ -11,11 +11,11 @@ import type {
 } from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
 import { config } from '#src/main/util/config'
 import { constant } from '#src/main/util/constant'
-import { errorUtil } from '#src/main/util/error-util'
 import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import { constant as sharedConstant } from '#src/shared/util/constant'
+import { errorUtil } from '#src/shared/util/error-util'
 
 const execFileAsync = promisify(execFile)
 
