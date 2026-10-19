@@ -55,8 +55,8 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
 
   async inspectRegistration(params: { triggerId: string }): Promise<SchedulingInspection> {
     const { triggerId } = params
-    const isPlistPresent = await this._resolveIsPlistPresent({ triggerId })
-    const isLabelLoaded = await this._resolveIsLabelLoaded({ triggerId })
+    const isPlistPresent = await this._isPlistPresent({ triggerId })
+    const isLabelLoaded = await this._isLabelLoaded({ triggerId })
 
     return { isRegistered: isPlistPresent && isLabelLoaded }
   }
@@ -140,7 +140,7 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
 
   protected async _bootoutIfLoaded(params: { triggerId: string }): Promise<void> {
     const { triggerId } = params
-    const isLabelLoaded = await this._resolveIsLabelLoaded({ triggerId })
+    const isLabelLoaded = await this._isLabelLoaded({ triggerId })
 
     if (!isLabelLoaded) {
       return
@@ -272,7 +272,7 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
     return `gui/${String(this._uid)}`
   }
 
-  protected async _resolveIsLabelLoaded(params: { triggerId: string }): Promise<boolean> {
+  protected async _isLabelLoaded(params: { triggerId: string }): Promise<boolean> {
     const { triggerId } = params
     try {
       await execFileAsync('launchctl', ['print', this._resolveServiceTarget({ triggerId })], {
@@ -285,7 +285,7 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
     }
   }
 
-  protected async _resolveIsPlistPresent(params: { triggerId: string }): Promise<boolean> {
+  protected async _isPlistPresent(params: { triggerId: string }): Promise<boolean> {
     const { triggerId } = params
     try {
       await stat(this._resolvePlistPath({ triggerId }))

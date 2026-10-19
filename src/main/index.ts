@@ -39,7 +39,7 @@ const bootstrapTriggerWorker = (params: { triggerId: string }): void => {
 
 const noSandboxReexecUtil = new NoSandboxReexecUtil()
 
-const shouldReexecWithoutSandbox = (): boolean => {
+const isReexecWithoutSandboxRequired = (): boolean => {
   return (
     osUtil.resolvePlatform() === OS.LINUX &&
     app.isPackaged &&
@@ -69,7 +69,7 @@ const handleBootstrapError = (error: unknown): void => {
   app.quit()
 }
 
-if (shouldReexecWithoutSandbox()) {
+if (isReexecWithoutSandboxRequired()) {
   reexecWithoutSandbox()
 } else if (process.argv.includes('--fire-trigger')) {
   const firedTriggerId = resolveFiredTriggerId()

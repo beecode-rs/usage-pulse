@@ -13,7 +13,7 @@ export const SessionFinishedPulse = (props: {
   nowMs: number
   pulseMs: number
 }): ReactElement | undefined => {
-  if (!sessionFinishedPulseUtil.resolveIsPulsing(props)) {
+  if (!sessionFinishedPulseUtil.isPulsing(props)) {
     return undefined
   }
 

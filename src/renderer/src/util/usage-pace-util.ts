@@ -6,12 +6,7 @@ const PACE_STEP_MAX_COUNT = 5
 const PACE_STEP_PERCENT = 20
 
 export class UsagePaceUtil {
-  resolveIsUsageOutpacingWindow(params: {
-    now: number
-    resetAt?: number
-    usedPercent: number
-    windowMs: number
-  }): boolean {
+  isUsageOutpacingWindow(params: { now: number; resetAt?: number; usedPercent: number; windowMs: number }): boolean {
     const diffPercent = this._resolveDiffPercent(params)
 
     if (diffPercent === undefined) {

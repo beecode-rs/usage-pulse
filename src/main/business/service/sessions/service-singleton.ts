@@ -24,7 +24,7 @@ const GHOSTTY_OTHER_DESKTOP_MESSAGE =
 export class _SessionsService {
   protected _ghosttyTtySupport: Promise<boolean> | undefined
   protected _inFlightSnapshot: Promise<SessionSnapshot> | undefined
-  protected _isFocusSupported: Promise<boolean> | undefined
+  protected _isFocusSupportedCache: Promise<boolean> | undefined
   protected readonly _isWaylandSessionOverride: boolean | undefined
   protected readonly _claudeQueryService = new SessionsClaudeQueryService()
   protected readonly _ghosttyCompatService = new SessionsFocusGhosttyCompatService()
@@ -57,9 +57,9 @@ export class _SessionsService {
   }
 
   isFocusSupported(): Promise<boolean> {
-    this._isFocusSupported ??= this._resolveIsFocusSupported()
+    this._isFocusSupportedCache ??= this._isFocusSupported()
 
-    return this._isFocusSupported
+    return this._isFocusSupportedCache
   }
 
   async installFocusTool(): Promise<void> {
@@ -75,7 +75,7 @@ export class _SessionsService {
       throw new Error(`installing xdotool failed: ${errorUtil.resolveMessage(error)}`)
     }
 
-    this._isFocusSupported = undefined
+    this._isFocusSupportedCache = undefined
   }
 
   protected _resolveFocusPlatform(): OS {
@@ -182,7 +182,7 @@ export class _SessionsService {
 
   protected async _resolveGhosttySessionTty(params: { pid: number }): Promise<string | undefined> {
     const { pid } = params
-    if (!(await this._resolveGhosttyTtySupport())) {
+    if (!(await this._isGhosttyTtySupported())) {
       return undefined
     }
 
@@ -267,10 +267,10 @@ export class _SessionsService {
 
   protected async _focusLinuxSession(params: { pid: number }): Promise<void> {
     const { pid } = params
-    await this._linuxService.focusSession({ isWaylandSession: this._resolveIsWaylandSession(), pid })
+    await this._linuxService.focusSession({ isWaylandSession: this._isWaylandSession(), pid })
   }
 
-  protected _resolveIsWaylandSession(): boolean {
+  protected _isWaylandSession(): boolean {
     if (this._isWaylandSessionOverride !== undefined) {
       return this._isWaylandSessionOverride
     }
@@ -278,7 +278,7 @@ export class _SessionsService {
     return config.xdg.sessionType === 'wayland' || config.waylandDisplay !== undefined
   }
 
-  protected async _resolveIsFocusSupported(): Promise<boolean> {
+  protected async _isFocusSupported(): Promise<boolean> {
     const platform = this._resolveFocusPlatform()
 
     if (platform !== OS.LINUX) {
@@ -357,7 +357,7 @@ export class _SessionsService {
     }
   }
 
-  protected _resolveGhosttyTtySupport(): Promise<boolean> {
+  protected _isGhosttyTtySupported(): Promise<boolean> {
     this._ghosttyTtySupport ??= this._ghosttyCompatService.isTtySupported()
 
     return this._ghosttyTtySupport

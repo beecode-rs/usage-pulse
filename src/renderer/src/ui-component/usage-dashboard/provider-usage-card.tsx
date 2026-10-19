@@ -52,7 +52,7 @@ export const ProviderUsageCard = (props: {
   const resolveCardClassName = (): string => {
     const classNames = ['provider-card']
 
-    if (peakInfo?.isPeakHour === true) {
+    if (peakInfo?.isPeakHour) {
       classNames.push('is-peak-hour')
     }
 

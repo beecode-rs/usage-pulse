@@ -4,7 +4,7 @@ import type { SoundNameMapper } from '#src/shared/business/enum/sound-name-mappe
 import type { ScheduleTriggerConfig } from '#src/shared/business/model/schedule-trigger-model'
 import { constant } from '#src/shared/util/constant'
 
-export interface TrackerConfigBase {
+export type TrackerConfigBase = {
   accessToken: string
   id: string
   isAutoRefreshPaused: boolean
@@ -12,14 +12,14 @@ export interface TrackerConfigBase {
   refreshIntervalMs: number
 }
 
-export interface ClaudeTrackerConfig extends TrackerConfigBase {
+export type ClaudeTrackerConfig = TrackerConfigBase & {
   accessTokenRefreshCommand: string
   accessTokenSource: ClaudeAccessTokenSource
   isAccessTokenRefreshEnabled: boolean
   providerId: ProviderIdMapper.CLAUDE
 }
 
-export interface ZaiTrackerConfig extends TrackerConfigBase {
+export type ZaiTrackerConfig = TrackerConfigBase & {
   providerId: ProviderIdMapper.ZAI
 }
 

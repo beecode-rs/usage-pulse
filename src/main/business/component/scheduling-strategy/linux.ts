@@ -70,7 +70,7 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
     this._assertLinuxOsPlatform()
     this._homeDir = homeDir ?? homedir()
     this._unitDir = configDir ?? this._resolveDefaultUnitDir()
-    this.isSupported = isSystemdUserAvailable ?? this._resolveIsSystemdUserAvailable()
+    this.isSupported = isSystemdUserAvailable ?? this._isSystemdUserAvailable()
   }
 
   getSchedulingPlatform(): OS {
@@ -79,8 +79,8 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
 
   async inspectRegistration(params: { triggerId: string }): Promise<SchedulingInspection> {
     const { triggerId } = params
-    const isTimerUnitFilePresent = await this._resolveIsTimerUnitFilePresent({ triggerId })
-    const isTimerActive = await this._resolveIsTimerActive({ triggerId })
+    const isTimerUnitFilePresent = await this._isTimerUnitFilePresent({ triggerId })
+    const isTimerActive = await this._isTimerActive({ triggerId })
 
     return { isRegistered: isTimerUnitFilePresent && isTimerActive }
   }
@@ -228,7 +228,7 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
 
   protected async _disableTimerToleratingAbsence(params: { triggerId: string }): Promise<void> {
     const { triggerId } = params
-    const isTimerUnitFilePresent = await this._resolveIsTimerUnitFilePresent({ triggerId })
+    const isTimerUnitFilePresent = await this._isTimerUnitFilePresent({ triggerId })
 
     if (!isTimerUnitFilePresent) {
       return
@@ -240,7 +240,7 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
         errorMessage: `disabling the systemd user timer for trigger '${triggerId}' failed`,
       })
     } catch (error) {
-      if (!this._resolveIsUnitAbsentError(error)) {
+      if (!this._isUnitAbsentError(error)) {
         throw error
       }
     }
@@ -318,7 +318,7 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
     return join(config.xdg.configHome ?? join(this._homeDir, '.config'), 'systemd', 'user')
   }
 
-  protected _resolveIsSystemdUserAvailable(): boolean {
+  protected _isSystemdUserAvailable(): boolean {
     const result = spawnSync('systemctl', ['--user', 'is-system-running'], { timeout: this._systemctlProbeTimeoutMs })
     const hasAcceptableStatus =
       result.status === 0 ||
@@ -327,7 +327,7 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
     return result.error === undefined && hasAcceptableStatus
   }
 
-  protected async _resolveIsTimerActive(params: { triggerId: string }): Promise<boolean> {
+  protected async _isTimerActive(params: { triggerId: string }): Promise<boolean> {
     const { triggerId } = params
     try {
       await execFileAsync('systemctl', ['--user', 'is-active', this._resolveTimerUnitName({ triggerId })], {
@@ -340,7 +340,7 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
     }
   }
 
-  protected async _resolveIsTimerUnitFilePresent(params: { triggerId: string }): Promise<boolean> {
+  protected async _isTimerUnitFilePresent(params: { triggerId: string }): Promise<boolean> {
     const { triggerId } = params
     try {
       await stat(this._resolveTimerUnitPath({ triggerId }))
@@ -351,7 +351,7 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
     }
   }
 
-  protected _resolveIsUnitAbsentError(error: unknown): boolean {
+  protected _isUnitAbsentError(error: unknown): boolean {
     const message = errorUtil.resolveMessage(error).toLowerCase()
 
     return message.includes('not found') || message.includes('not loaded') || message.includes('does not exist')

@@ -5,7 +5,8 @@ import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { UsageSeverityLevel } from '#src/shared/business/enum/usage-severity-level-enum'
-import { type UsageWarning, UsageWarningReason } from '#src/shared/business/model/mobile-api-model'
+import { UsageWarningReasonMapper } from '#src/shared/business/enum/usage-warning-reason-mapper-enum'
+import { type UsageWarning } from '#src/shared/business/model/mobile-api-model'
 import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
 import { type ProviderSnapshot, type UsageSnapshot } from '#src/shared/business/model/usage-model'
 import { sessionStatusTransitionUtil } from '#src/shared/util/session-status-transition-util'
@@ -139,7 +140,7 @@ export class _MobileDerivedEventsService {
     }
 
     const warning: UsageWarning = {
-      reason: UsageWarningReason.PROVIDER_ERROR,
+      reason: UsageWarningReasonMapper.PROVIDER_ERROR,
       trackerId: provider.trackerId,
       trackerName: provider.trackerName,
     }
@@ -182,13 +183,13 @@ export class _MobileDerivedEventsService {
     })
   }
 
-  protected _resolvePercentWarningReason(params: { level: UsageSeverityLevel }): UsageWarningReason {
+  protected _resolvePercentWarningReason(params: { level: UsageSeverityLevel }): UsageWarningReasonMapper {
     const { level } = params
     if (level === UsageSeverityLevel.LIMIT_REACHED) {
-      return UsageWarningReason.LIMIT_REACHED
+      return UsageWarningReasonMapper.LIMIT_REACHED
     }
 
-    return UsageWarningReason.HIGH_USAGE
+    return UsageWarningReasonMapper.HIGH_USAGE
   }
 }
 
