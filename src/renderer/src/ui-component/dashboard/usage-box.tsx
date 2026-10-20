@@ -1,3 +1,4 @@
+import { typeUtil } from '@beecode/msh-util'
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { MenuStatusService } from '#src/renderer/src/business/service/menu-status-service'
@@ -5,15 +6,14 @@ import { usageActivityStatusService } from '#src/renderer/src/business/service/u
 import { UsageStalenessService } from '#src/renderer/src/business/service/usage-staleness-service'
 import { ZaiPeakService } from '#src/renderer/src/business/service/zai-peak-service'
 import { PeakIcon } from '#src/renderer/src/ui-component/icon/peak-icon'
-import { UsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
+import { UsageDashboardUsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
+import { constant } from '#src/renderer/src/util/constant'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { usageWindowUtil } from '#src/renderer/src/util/usage-window-util'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
-
-const TICK_INTERVAL_MS = 30_000
 
 const resolveStatusMessage = (params: { providerSnapshot: ProviderSnapshot }): string => {
   const { providerSnapshot } = params
@@ -26,12 +26,16 @@ const resolveStatusMessage = (params: { providerSnapshot: ProviderSnapshot }): s
       return 'Loading usage…'
     }
 
+    case UsageActivityStatus.OK: {
+      return 'No usage windows returned.'
+    }
+
     case UsageActivityStatus.UNCONFIGURED: {
       return 'Add an access token to track usage.'
     }
 
     default: {
-      return 'No usage windows returned.'
+      throw typeUtil.exhaustiveError('unsupported usage activity status [status]', providerSnapshot.status)
     }
   }
 }
@@ -48,7 +52,7 @@ export const DashboardUsageBox = (props: {
   useEffect(() => {
     const intervalId = setInterval(() => {
       setNow(Date.now())
-    }, TICK_INTERVAL_MS)
+    }, constant.ui.nowTickIntervalMs)
 
     return () => {
       clearInterval(intervalId)
@@ -171,7 +175,7 @@ export const DashboardUsageBox = (props: {
 
     if (resetAt === undefined) {
       return (
-        <UsageBar
+        <UsageDashboardUsageBar
           ariaLabel={`${providerSnapshot.trackerName} reset inactive`}
           label="Reset"
           percent={0}
@@ -183,7 +187,7 @@ export const DashboardUsageBox = (props: {
     const remainingMs = usageResetUtil.resolveRemainingMs({ now, resetAt })
 
     return (
-      <UsageBar
+      <UsageDashboardUsageBar
         ariaLabel={`time until ${providerSnapshot.trackerName} reset`}
         fillAnchor="right"
         fillColor={paceFillColor}
@@ -210,7 +214,7 @@ export const DashboardUsageBox = (props: {
 
     return (
       <div className="dashboard-box-bars">
-        <UsageBar
+        <UsageDashboardUsageBar
           ariaLabel={`${providerSnapshot.trackerName} usage`}
           fillColor={paceFillColor}
           label="Usage"

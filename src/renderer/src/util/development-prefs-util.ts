@@ -1,11 +1,13 @@
-const STORAGE_KEY = 'development.is-unlocked'
+import { constant } from '#src/renderer/src/util/constant'
+import { prefsUtil } from '#src/renderer/src/util/prefs-util'
 
 export const developmentPrefsUtil = {
   loadIsUnlocked: (): boolean => {
-    return window.localStorage.getItem(STORAGE_KEY) === 'true'
+    return prefsUtil.loadBoolean({ key: constant.localStorage.developmentIsUnlockedKey })
   },
   saveIsUnlocked: (params: { isUnlocked: boolean }): void => {
     const { isUnlocked } = params
-    window.localStorage.setItem(STORAGE_KEY, String(isUnlocked))
+
+    prefsUtil.saveBoolean({ isSet: isUnlocked, key: constant.localStorage.developmentIsUnlockedKey })
   },
 }

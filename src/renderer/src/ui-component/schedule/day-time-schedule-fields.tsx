@@ -1,19 +1,10 @@
 import type { ReactElement } from 'react'
 
 import '#src/renderer/src/ui-component/schedule/day-time-schedule-fields.css'
-import { DayTimeSelect } from '#src/renderer/src/ui-component/schedule/day-time-select'
+import { ScheduleDayTimeSelect } from '#src/renderer/src/ui-component/schedule/day-time-select'
+import { constant } from '#src/renderer/src/util/constant'
 import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
-import { constant } from '#src/shared/util/constant'
-
-const TRIGGER_DAY_LABELS: Record<ScheduleTriggerDayMapper, string> = {
-  [ScheduleTriggerDayMapper.FRIDAY]: 'Fri',
-  [ScheduleTriggerDayMapper.MONDAY]: 'Mon',
-  [ScheduleTriggerDayMapper.SATURDAY]: 'Sat',
-  [ScheduleTriggerDayMapper.SUNDAY]: 'Sun',
-  [ScheduleTriggerDayMapper.THURSDAY]: 'Thu',
-  [ScheduleTriggerDayMapper.TUESDAY]: 'Tue',
-  [ScheduleTriggerDayMapper.WEDNESDAY]: 'Wed',
-}
+import { constant as sharedConstant } from '#src/shared/util/constant'
 
 const WEEKDAY_DAYS: ScheduleTriggerDayMapper[] = [
   ScheduleTriggerDayMapper.MONDAY,
@@ -24,7 +15,7 @@ const WEEKDAY_DAYS: ScheduleTriggerDayMapper[] = [
 ]
 const WEEKEND_DAYS: ScheduleTriggerDayMapper[] = [ScheduleTriggerDayMapper.SATURDAY, ScheduleTriggerDayMapper.SUNDAY]
 
-export const DayTimeScheduleFields = (props: {
+export const ScheduleDayTimeScheduleFields = (props: {
   days: ScheduleTriggerDayMapper[]
   onChange: (schedule: { days: ScheduleTriggerDayMapper[]; times: string[] }) => void
   times: string[]
@@ -49,7 +40,7 @@ export const DayTimeScheduleFields = (props: {
     }
 
     onChange({
-      days: constant.scheduleTrigger.days.filter((candidateDay) => {
+      days: sharedConstant.scheduleTrigger.days.filter((candidateDay) => {
         return selectedDays.has(candidateDay)
       }),
       times,
@@ -91,7 +82,7 @@ export const DayTimeScheduleFields = (props: {
       <div className="settings-field">
         <span className="settings-field-label">Days</span>
         <div className="trigger-card-chips">
-          {constant.scheduleTrigger.days.map((day) => {
+          {sharedConstant.scheduleTrigger.days.map((day) => {
             return (
               <button
                 className={resolveChipClassName(day)}
@@ -101,7 +92,7 @@ export const DayTimeScheduleFields = (props: {
                 }}
                 type="button"
               >
-                {TRIGGER_DAY_LABELS[day]}
+                {constant.scheduleTrigger.dayLabels[day]}
               </button>
             )
           })}
@@ -128,7 +119,7 @@ export const DayTimeScheduleFields = (props: {
           <button
             className="button"
             onClick={() => {
-              handleSelectDays([...constant.scheduleTrigger.days])
+              handleSelectDays([...sharedConstant.scheduleTrigger.days])
             }}
             type="button"
           >
@@ -141,7 +132,7 @@ export const DayTimeScheduleFields = (props: {
         {times.map((time, index) => {
           return (
             <div className="trigger-time-row" key={`${time}-${String(index)}`}>
-              <DayTimeSelect
+              <ScheduleDayTimeSelect
                 onChange={(nextTime) => {
                   handleTimeChange(index, nextTime)
                 }}

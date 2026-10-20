@@ -115,13 +115,3 @@ export const mobileWsMessageSchema: z.ZodType<MobileWsMessage> = z.discriminated
   usageSnapshotMessageSchema,
   usageWarningMessageSchema,
 ])
-
-export const mobileHealthResponseSchema = z.object({
-  appVersion: z.string(),
-  ok: z.boolean(),
-})
-
-export const mobileStateResponseSchema = z.object({
-  sessions: sessionSnapshotSchema.nullable(),
-  usage: usageSnapshotSchema,
-})

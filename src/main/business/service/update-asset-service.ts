@@ -6,7 +6,7 @@ export const updateAssetService = {
   resolveUpdateAsset: (params: { assets: UpdateAsset[]; platform: OS }): UpdateAsset | undefined => {
     const { assets, platform } = params
 
-    return constant.updateAssetSuffixesByOs[platform]
+    return constant.update.assetSuffixesByOs[platform]
       .map((suffix) => {
         return assets.find((asset) => {
           return asset.name.toLowerCase().endsWith(suffix.toLowerCase())

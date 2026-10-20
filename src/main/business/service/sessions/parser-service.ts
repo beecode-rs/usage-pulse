@@ -1,12 +1,8 @@
 import { z } from 'zod'
 
+import { constant } from '#src/main/util/constant'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
-
-const SESSION_ORIGIN_ORDER = {
-  local: 0,
-  ssh: 1,
-}
 
 const sessionEntrySchema = z.object({
   cwd: z.string().catch(''),
@@ -43,7 +39,9 @@ export class SessionsParserService {
     return parsedSessions.data
   }
 
-  sortSessions(sessions: SessionInfo[]): SessionInfo[] {
+  sortSessions(params: { sessions: SessionInfo[] }): SessionInfo[] {
+    const { sessions } = params
+
     return [...sessions].sort((left, right) => {
       const originOrderDiff = this._resolveSessionOriginOrder(left) - this._resolveSessionOriginOrder(right)
 
@@ -57,10 +55,10 @@ export class SessionsParserService {
 
   protected _resolveSessionOriginOrder(session: SessionInfo): number {
     if (session.hostId === undefined) {
-      return SESSION_ORIGIN_ORDER.local
+      return constant.sessions.originOrder.local
     }
 
-    return SESSION_ORIGIN_ORDER.ssh
+    return constant.sessions.originOrder.ssh
   }
 
   protected _tryParseSessionsJson(params: { stdout: string }): unknown {

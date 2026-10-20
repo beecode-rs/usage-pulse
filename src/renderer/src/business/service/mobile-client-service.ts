@@ -8,6 +8,6 @@ export const mobileClientService = {
   subscribeToDeviceUpdates: (params: { onUpdate: MobileDevicesUpdateListener }): (() => void) => {
     const { onUpdate } = params
 
-    return window.usageApi.onMobileDevicesUpdate(onUpdate)
+    return window.usageApi.onMobileDevicesUpdate({ onUpdate })
   },
 }

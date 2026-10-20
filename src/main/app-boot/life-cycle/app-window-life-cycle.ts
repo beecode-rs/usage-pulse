@@ -24,6 +24,8 @@ export class AppWindowLifeCycle extends LifeCycle<void> {
   }
 
   protected _destroyFn(): Promise<void> {
+    appWindowStoreSingleton().closeWindow()
+
     return Promise.resolve()
   }
 }

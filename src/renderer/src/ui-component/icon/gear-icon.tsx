@@ -1,9 +1,9 @@
 import type { ReactElement } from 'react'
 
-const DEFAULT_ICON_SIZE = 15
+import { constant } from '#src/renderer/src/util/constant'
 
 export const GearIcon = (props: { size?: number }): ReactElement => {
-  const { size = DEFAULT_ICON_SIZE } = props
+  const { size = constant.icon.defaultSizePx } = props
 
   return (
     <svg

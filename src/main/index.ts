@@ -1,84 +1,28 @@
-import { app, dialog } from 'electron'
+import { app } from 'electron'
 
-import { DesktopApp } from '#src/main/app-boot/desktop-app'
-import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
-import { TriggerRunnerService } from '#src/main/business/service/trigger-runner-service'
-import { devDesktopEntry } from '#src/main/lib/dev-desktop-entry'
+import { appBootstrap } from '#src/main/app-boot/app-bootstrap'
+import { triggerWorker } from '#src/main/app-boot/trigger-worker'
 import { NoSandboxReexecUtil } from '#src/main/util/no-sandbox-reexec-util'
-import { osUtil } from '#src/main/util/os-util'
-import { OS } from '#src/shared/business/enum/os-enum'
-import { ScheduleTriggerRunSourceMapper } from '#src/shared/business/enum/schedule-trigger-run-source-mapper-enum'
-import { errorUtil } from '#src/shared/util/error-util'
-
-const resolveFiredTriggerId = (): string | undefined => {
-  const flagIndex = process.argv.indexOf('--fire-trigger')
-
-  if (flagIndex < 0) {
-    return undefined
-  }
-
-  return process.argv[flagIndex + 1]
-}
-
-const bootstrapTriggerWorker = (params: { triggerId: string }): void => {
-  const { triggerId } = params
-  app.dock?.hide()
-
-  void settingsRepoSingleton()
-    .init()
-    .then(() => {
-      return new TriggerRunnerService().runTrigger({ source: ScheduleTriggerRunSourceMapper.OS_SCHEDULE, triggerId })
-    })
-    .then(({ exitCode }) => {
-      app.exit(exitCode)
-    })
-    .catch(() => {
-      app.exit(1)
-    })
-}
 
 const noSandboxReexecUtil = new NoSandboxReexecUtil()
 
-const isReexecWithoutSandboxRequired = (): boolean => {
-  return (
-    osUtil.resolvePlatform() === OS.LINUX &&
-    app.isPackaged &&
-    !process.argv.includes('--no-sandbox') &&
-    !noSandboxReexecUtil.isDone
-  )
-}
-
-const reexecWithoutSandbox = (): void => {
-  noSandboxReexecUtil.markDone()
-  app.relaunch({ args: [...process.argv.slice(1), '--no-sandbox'] })
-  app.exit(0)
-}
-
-const bootstrapApp = async (): Promise<void> => {
-  app.on('window-all-closed', () => {
-    app.quit()
-  })
-
-  devDesktopEntry.install()
-
-  await new DesktopApp().create()
-}
-
-const handleBootstrapError = (error: unknown): void => {
-  dialog.showErrorBox('Usage Pulse failed to start', errorUtil.resolveMessage(error))
-  app.quit()
-}
-
-if (isReexecWithoutSandboxRequired()) {
-  reexecWithoutSandbox()
+if (noSandboxReexecUtil.isRequired()) {
+  noSandboxReexecUtil.reexec()
 } else if (process.argv.includes('--fire-trigger')) {
-  const firedTriggerId = resolveFiredTriggerId()
+  const firedTriggerId = triggerWorker.resolveFiredTriggerId()
 
   if (firedTriggerId === undefined) {
     app.exit(1)
   } else {
-    bootstrapTriggerWorker({ triggerId: firedTriggerId })
+    triggerWorker.bootstrap({ triggerId: firedTriggerId })
   }
 } else {
-  void app.whenReady().then(bootstrapApp).catch(handleBootstrapError)
+  void app
+    .whenReady()
+    .then(() => {
+      return appBootstrap.run()
+    })
+    .catch((error: unknown) => {
+      appBootstrap.handleError(error)
+    })
 }

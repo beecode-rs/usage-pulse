@@ -2,17 +2,17 @@ import { type ReactElement } from 'react'
 
 import { sessionPresentationService } from '#src/renderer/src/business/service/session-presentation-service'
 import { ServerIcon } from '#src/renderer/src/ui-component/icon/server-icon'
-import { SessionExpandButton } from '#src/renderer/src/ui-component/sessions/session-expand-button'
-import { SessionFinishedPulse } from '#src/renderer/src/ui-component/sessions/session-finished-pulse'
-import { SessionFocusButton } from '#src/renderer/src/ui-component/sessions/session-focus-button'
-import { SessionOriginIcon } from '#src/renderer/src/ui-component/sessions/session-origin-icon'
-import { SessionTranscriptChips } from '#src/renderer/src/ui-component/sessions/session-transcript-chips'
-import { SessionWaitingPulse } from '#src/renderer/src/ui-component/sessions/session-waiting-pulse'
+import { SessionsSessionExpandButton } from '#src/renderer/src/ui-component/sessions/session-expand-button'
+import { SessionsSessionFinishedPulse } from '#src/renderer/src/ui-component/sessions/session-finished-pulse'
+import { SessionsSessionFocusButton } from '#src/renderer/src/ui-component/sessions/session-focus-button'
+import { SessionsSessionOriginIcon } from '#src/renderer/src/ui-component/sessions/session-origin-icon'
+import { SessionsSessionTranscriptChips } from '#src/renderer/src/ui-component/sessions/session-transcript-chips'
+import { SessionsSessionWaitingPulse } from '#src/renderer/src/ui-component/sessions/session-waiting-pulse'
+import { constant } from '#src/renderer/src/util/constant'
 import { dateUtil } from '#src/renderer/src/util/date-util'
+import { SessionKindMapper } from '#src/shared/business/enum/session-kind-mapper-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo, type SessionTranscriptStats } from '#src/shared/business/model/session-model'
-
-const LAST_PROMPT_PREVIEW_MAX_LENGTH = 200
 
 const resolveCardClassName = (params: { isRemote: boolean; status: SessionStatusMapper }): string => {
   const { isRemote, status } = params
@@ -27,11 +27,11 @@ const resolveCardClassName = (params: { isRemote: boolean; status: SessionStatus
 
 const resolveKindLabel = (kind: string): string => {
   switch (kind) {
-    case 'background': {
+    case SessionKindMapper.BACKGROUND: {
       return 'Background'
     }
 
-    case 'interactive': {
+    case SessionKindMapper.INTERACTIVE: {
       return 'Interactive'
     }
 
@@ -48,13 +48,13 @@ const resolveUptimeLabel = (params: { nowMs: number; startedAt: number }): strin
 }
 
 const resolveLastPromptPreview = (lastPrompt: string): string => {
-  const collapsedPrompt = lastPrompt.replace(/\s+/g, ' ').trim()
+  const collapsedPrompt = lastPrompt.replace(constant.regex.whitespaceCollapseRegex, ' ').trim()
 
-  if (collapsedPrompt.length <= LAST_PROMPT_PREVIEW_MAX_LENGTH) {
+  if (collapsedPrompt.length <= constant.sessionCard.lastPromptMaxLength) {
     return collapsedPrompt
   }
 
-  return `${collapsedPrompt.slice(0, LAST_PROMPT_PREVIEW_MAX_LENGTH)}…`
+  return `${collapsedPrompt.slice(0, constant.sessionCard.lastPromptMaxLength)}…`
 }
 
 const resolveExpandButtonLabel = (params: { isExpanded: boolean; title: string }): string => {
@@ -140,7 +140,7 @@ const renderTranscriptDetails = (params: {
   )
 }
 
-export const SessionCard = (props: {
+export const SessionsSessionCard = (props: {
   finishedAtMs?: number
   isExpanded: boolean
   nowMs: number
@@ -160,12 +160,12 @@ export const SessionCard = (props: {
       className={resolveCardClassName({ isRemote: session.hostId !== undefined, status: session.status })}
       title={session.cwd}
     >
-      <SessionFinishedPulse finishedAtMs={finishedAtMs} nowMs={nowMs} pulseMs={pulseMs} />
-      <SessionWaitingPulse isWaiting={session.status === SessionStatusMapper.WAITING} />
+      <SessionsSessionFinishedPulse finishedAtMs={finishedAtMs} nowMs={nowMs} pulseMs={pulseMs} />
+      <SessionsSessionWaitingPulse isWaiting={session.status === SessionStatusMapper.WAITING} />
       <header className="session-card-header">
         <div className="session-card-heading">
           <span className="session-card-origin">
-            <SessionOriginIcon isRemote={session.hostId !== undefined} />
+            <SessionsSessionOriginIcon isRemote={session.hostId !== undefined} />
           </span>
           <h2 className="session-card-title">
             {sessionTitleParts.name}
@@ -179,10 +179,10 @@ export const SessionCard = (props: {
           {statusPresentation.label}
         </span>
         {session.hostId === undefined && (
-          <SessionFocusButton label={`Focus terminal for ${sessionTitle}`} onClick={onFocus} />
+          <SessionsSessionFocusButton label={`Focus terminal for ${sessionTitle}`} onClick={onFocus} />
         )}
         {transcript !== undefined && (
-          <SessionExpandButton
+          <SessionsSessionExpandButton
             isExpanded={isExpanded}
             label={resolveExpandButtonLabel({ isExpanded, title: sessionTitle })}
             onClick={onToggle}
@@ -192,7 +192,7 @@ export const SessionCard = (props: {
       <p className="session-card-project" title={session.cwd}>
         {sessionPresentationService.resolveProjectLabel({ cwd: session.cwd })}
       </p>
-      {transcript !== undefined && <SessionTranscriptChips nowMs={nowMs} transcript={transcript} />}
+      {transcript !== undefined && <SessionsSessionTranscriptChips nowMs={nowMs} transcript={transcript} />}
       {isExpanded && transcript !== undefined && renderTranscriptDetails({ session, transcript })}
       <footer className="session-card-footer">
         {session.hostId !== undefined && (

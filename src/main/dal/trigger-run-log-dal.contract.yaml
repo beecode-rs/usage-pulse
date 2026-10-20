@@ -1,53 +1,46 @@
-# Contract for TriggerRunLogDal, the JSONL trigger run log: appended and
-# written entries persist as one JSON object per line, and readLogEntries
-# safeParses every line against the ScheduleTriggerRunLogEntry zod schema,
-# dropping blank lines, JSON-invalid lines and schema-invalid lines. A term
-# can only make a single call while the dal is stateful across calls, so the
-# terms drive the scenario functions in __tests__/_trigger-run-log-dal-contract-harness.ts.
-# Every scenario constructs its own dal pinned to a fresh temp file via the
+# Contract for TriggerRunLogDal, the JSONL trigger run log storage: appended
+# and written entries persist as one JSON object per line, and readLogLines
+# returns the stored lines raw - one trimmed-nonblank string per line, in file
+# order - without parsing, validating or filtering any of them. Line validity
+# is the repo's concern (trigger-run-log-repo.contract.yaml); invalid and
+# truncated lines pass through verbatim here. A term can only make a single
+# call while the dal is stateful across calls, so the terms drive the scenario
+# functions in __tests__/_trigger-run-log-dal-contract-harness.ts. Every
+# scenario constructs its own dal pinned to a fresh temp file via the
 # logFilePath constructor param, so nothing written in one term can leak into
-# another. readEntriesOnRawLines pre-writes arbitrary lines (string lines land
-# verbatim, entry objects are serialized) to reach the parser with input the
-# dal itself would never produce.
+# another. readLinesOnRawLines pre-writes arbitrary lines (string lines land
+# verbatim, entry objects are serialized) to reach the read with input the dal
+# itself would never produce.
 subject: triggerRunLogDalContractHarness
 module: ./__tests__/_trigger-run-log-dal-contract-harness.js
 subjectType: function
 methods:
-  readEntriesAfterAppend:
+  readLinesAfterAppend:
     terms:
-      # appendLogEntry then readLogEntries round-trips one finished entry,
-      # including the empty-string skipReason the schema allows.
+      # appendLogEntry then readLogLines returns the entry as its one stored
+      # JSONL line, including the empty-string skipReason the model allows.
       - params:
           - entries:
               - durationMs: 1250
-                eventId: evt-42
+                eventId: evt-1
                 exitCode: 0
-                outputSnippet: build finished
+                outputSnippet: build done
                 phase: finished
                 skipReason: ''
                 slot: '07:00'
                 timestamp: '2026-09-15T07:00:00.000Z'
                 trigger: os-schedule
-                triggerId: trigger-morning
-                triggerName: Morning build
+                triggerId: trig-a
+                triggerName: Morning
         result:
-          - durationMs: 1250
-            eventId: evt-42
-            exitCode: 0
-            outputSnippet: build finished
-            phase: finished
-            skipReason: ''
-            slot: '07:00'
-            timestamp: '2026-09-15T07:00:00.000Z'
-            trigger: os-schedule
-            triggerId: trigger-morning
-            triggerName: Morning build
+          - '{"durationMs":1250,"eventId":"evt-1","exitCode":0,"outputSnippet":"build
+            done","phase":"finished","skipReason":"","slot":"07:00","timestamp":"2026-09-15T07:00:00.000Z","trigger":"os-schedule","triggerId":"trig-a","triggerName":"Morning"}'
       # A skipped entry with a real skipReason and the manual trigger source
       # round-trips too, covering every enum union member.
       - params:
           - entries:
               - durationMs: 0
-                eventId: evt-43
+                eventId: evt-3
                 exitCode: 0
                 outputSnippet: ''
                 phase: skipped
@@ -55,36 +48,26 @@ methods:
                 slot: '12:02'
                 timestamp: '2026-09-15T12:02:00.000Z'
                 trigger: manual
-                triggerId: trigger-evening
-                triggerName: Evening sync
+                triggerId: trig-c
+                triggerName: Noon
         result:
-          - durationMs: 0
-            eventId: evt-43
-            exitCode: 0
-            outputSnippet: ''
-            phase: skipped
-            skipReason: not-scheduled-day
-            slot: '12:02'
-            timestamp: '2026-09-15T12:02:00.000Z'
-            trigger: manual
-            triggerId: trigger-evening
-            triggerName: Evening sync
-      # Sequential appends accumulate: both entries come back in write order.
+          - '{"durationMs":0,"eventId":"evt-3","exitCode":0,"outputSnippet":"","phase":"skipped","skipReason":"not-scheduled-day","slot":"12:02","timestamp":"2026-09-15T12:02:00.000Z","trigger":"manual","triggerId":"trig-c","triggerName":"Noon"}'
+      # Sequential appends accumulate: both lines come back in write order.
       - params:
           - entries:
               - durationMs: 1250
-                eventId: evt-42
+                eventId: evt-1
                 exitCode: 0
-                outputSnippet: build finished
+                outputSnippet: build done
                 phase: finished
                 skipReason: ''
                 slot: '07:00'
                 timestamp: '2026-09-15T07:00:00.000Z'
                 trigger: os-schedule
-                triggerId: trigger-morning
-                triggerName: Morning build
+                triggerId: trig-a
+                triggerName: Morning
               - durationMs: 500
-                eventId: evt-44
+                eventId: evt-2
                 exitCode: 0
                 outputSnippet: starting up
                 phase: started
@@ -92,51 +75,33 @@ methods:
                 slot: '17:05'
                 timestamp: '2026-09-15T17:05:00.000Z'
                 trigger: os-schedule
-                triggerId: trigger-evening
-                triggerName: Evening sync
+                triggerId: trig-b
+                triggerName: Evening
         result:
-          - durationMs: 1250
-            eventId: evt-42
-            exitCode: 0
-            outputSnippet: build finished
-            phase: finished
-            skipReason: ''
-            slot: '07:00'
-            timestamp: '2026-09-15T07:00:00.000Z'
-            trigger: os-schedule
-            triggerId: trigger-morning
-            triggerName: Morning build
-          - durationMs: 500
-            eventId: evt-44
-            exitCode: 0
-            outputSnippet: starting up
-            phase: started
-            skipReason: ''
-            slot: '17:05'
-            timestamp: '2026-09-15T17:05:00.000Z'
-            trigger: os-schedule
-            triggerId: trigger-evening
-            triggerName: Evening sync
-  readEntriesAfterAppendWithRotation:
+          - '{"durationMs":1250,"eventId":"evt-1","exitCode":0,"outputSnippet":"build
+            done","phase":"finished","skipReason":"","slot":"07:00","timestamp":"2026-09-15T07:00:00.000Z","trigger":"os-schedule","triggerId":"trig-a","triggerName":"Morning"}'
+          - '{"durationMs":500,"eventId":"evt-2","exitCode":0,"outputSnippet":"starting
+            up","phase":"started","skipReason":"","slot":"17:05","timestamp":"2026-09-15T17:05:00.000Z","trigger":"os-schedule","triggerId":"trig-b","triggerName":"Evening"}'
+  readLinesAfterAppendWithRotation:
     terms:
       # With rotateMaxBytes at 1 byte every append rotates, and rotation keeps
       # only the last rotateKeepLineCount non-blank lines: appending three
-      # entries with a keep count of 2 leaves the last two readable.
+      # entries with a keep count of 2 leaves the last two lines readable.
       - params:
           - entries:
               - durationMs: 1250
-                eventId: evt-42
+                eventId: evt-1
                 exitCode: 0
-                outputSnippet: build finished
+                outputSnippet: build done
                 phase: finished
                 skipReason: ''
                 slot: '07:00'
                 timestamp: '2026-09-15T07:00:00.000Z'
                 trigger: os-schedule
-                triggerId: trigger-morning
-                triggerName: Morning build
+                triggerId: trig-a
+                triggerName: Morning
               - durationMs: 0
-                eventId: evt-43
+                eventId: evt-3
                 exitCode: 0
                 outputSnippet: ''
                 phase: skipped
@@ -144,10 +109,10 @@ methods:
                 slot: '12:02'
                 timestamp: '2026-09-15T12:02:00.000Z'
                 trigger: manual
-                triggerId: trigger-evening
-                triggerName: Evening sync
+                triggerId: trig-c
+                triggerName: Noon
               - durationMs: 500
-                eventId: evt-44
+                eventId: evt-2
                 exitCode: 0
                 outputSnippet: starting up
                 phase: started
@@ -155,51 +120,32 @@ methods:
                 slot: '17:05'
                 timestamp: '2026-09-15T17:05:00.000Z'
                 trigger: os-schedule
-                triggerId: trigger-evening
-                triggerName: Evening sync
+                triggerId: trig-b
+                triggerName: Evening
             rotateKeepLineCount: 2
         result:
-          - durationMs: 0
-            eventId: evt-43
-            exitCode: 0
-            outputSnippet: ''
-            phase: skipped
-            skipReason: not-scheduled-day
-            slot: '12:02'
-            timestamp: '2026-09-15T12:02:00.000Z'
-            trigger: manual
-            triggerId: trigger-evening
-            triggerName: Evening sync
-          - durationMs: 500
-            eventId: evt-44
-            exitCode: 0
-            outputSnippet: starting up
-            phase: started
-            skipReason: ''
-            slot: '17:05'
-            timestamp: '2026-09-15T17:05:00.000Z'
-            trigger: os-schedule
-            triggerId: trigger-evening
-            triggerName: Evening sync
-  readEntriesAfterWrite:
+          - '{"durationMs":0,"eventId":"evt-3","exitCode":0,"outputSnippet":"","phase":"skipped","skipReason":"not-scheduled-day","slot":"12:02","timestamp":"2026-09-15T12:02:00.000Z","trigger":"manual","triggerId":"trig-c","triggerName":"Noon"}'
+          - '{"durationMs":500,"eventId":"evt-2","exitCode":0,"outputSnippet":"starting
+            up","phase":"started","skipReason":"","slot":"17:05","timestamp":"2026-09-15T17:05:00.000Z","trigger":"os-schedule","triggerId":"trig-b","triggerName":"Evening"}'
+  readLinesAfterWrite:
     terms:
-      # writeLogEntries replaces the whole file and the entries read back
-      # exactly as written.
+      # writeLogEntries replaces the whole file and the entries read back as
+      # their one stored JSONL line each, in write order.
       - params:
           - entries:
               - durationMs: 1250
-                eventId: evt-42
+                eventId: evt-1
                 exitCode: 0
-                outputSnippet: build finished
+                outputSnippet: build done
                 phase: finished
                 skipReason: ''
                 slot: '07:00'
                 timestamp: '2026-09-15T07:00:00.000Z'
                 trigger: os-schedule
-                triggerId: trigger-morning
-                triggerName: Morning build
+                triggerId: trig-a
+                triggerName: Morning
               - durationMs: 500
-                eventId: evt-44
+                eventId: evt-2
                 exitCode: 0
                 outputSnippet: starting up
                 phase: started
@@ -207,165 +153,76 @@ methods:
                 slot: '17:05'
                 timestamp: '2026-09-15T17:05:00.000Z'
                 trigger: os-schedule
-                triggerId: trigger-evening
-                triggerName: Evening sync
+                triggerId: trig-b
+                triggerName: Evening
         result:
-          - durationMs: 1250
-            eventId: evt-42
-            exitCode: 0
-            outputSnippet: build finished
-            phase: finished
-            skipReason: ''
-            slot: '07:00'
-            timestamp: '2026-09-15T07:00:00.000Z'
-            trigger: os-schedule
-            triggerId: trigger-morning
-            triggerName: Morning build
-          - durationMs: 500
-            eventId: evt-44
-            exitCode: 0
-            outputSnippet: starting up
-            phase: started
-            skipReason: ''
-            slot: '17:05'
-            timestamp: '2026-09-15T17:05:00.000Z'
-            trigger: os-schedule
-            triggerId: trigger-evening
-            triggerName: Evening sync
-  readEntriesAfterWriteEmptyEntries:
+          - '{"durationMs":1250,"eventId":"evt-1","exitCode":0,"outputSnippet":"build
+            done","phase":"finished","skipReason":"","slot":"07:00","timestamp":"2026-09-15T07:00:00.000Z","trigger":"os-schedule","triggerId":"trig-a","triggerName":"Morning"}'
+          - '{"durationMs":500,"eventId":"evt-2","exitCode":0,"outputSnippet":"starting
+            up","phase":"started","skipReason":"","slot":"17:05","timestamp":"2026-09-15T17:05:00.000Z","trigger":"os-schedule","triggerId":"trig-b","triggerName":"Evening"}'
+  readLinesAfterWriteEmptyEntries:
     terms:
       # Writing no entries empties the file, and reading an empty file yields
-      # no entries rather than an error.
+      # no lines rather than an error.
       - params: []
         result: []
-  readEntriesOnMissingFile:
+  readLinesOnMissingFile:
     terms:
-      # A log file that does not exist yet reads as no entries.
+      # A log file that does not exist yet reads as no lines.
       - params: []
         result: []
-  readEntriesOnRawLines:
+  readLinesOnRawLines:
     terms:
-      # One valid JSONL line parses into the entry.
+      # One stored entry line reads back as its raw string.
       - params:
           - lines:
               - durationMs: 1250
-                eventId: evt-42
+                eventId: evt-1
                 exitCode: 0
-                outputSnippet: build finished
+                outputSnippet: build done
                 phase: finished
                 skipReason: ''
                 slot: '07:00'
                 timestamp: '2026-09-15T07:00:00.000Z'
                 trigger: os-schedule
-                triggerId: trigger-morning
-                triggerName: Morning build
+                triggerId: trig-a
+                triggerName: Morning
         result:
-          - durationMs: 1250
-            eventId: evt-42
-            exitCode: 0
-            outputSnippet: build finished
-            phase: finished
-            skipReason: ''
-            slot: '07:00'
-            timestamp: '2026-09-15T07:00:00.000Z'
-            trigger: os-schedule
-            triggerId: trigger-morning
-            triggerName: Morning build
-      # A valid entry surrounded by a blank line, a valid-JSON wrong-shape
-      # line and a truncated-JSON line: only the valid entry survives.
+          - '{"durationMs":1250,"eventId":"evt-1","exitCode":0,"outputSnippet":"build
+            done","phase":"finished","skipReason":"","slot":"07:00","timestamp":"2026-09-15T07:00:00.000Z","trigger":"os-schedule","triggerId":"trig-a","triggerName":"Morning"}'
+      # Blank lines are dropped, and every non-blank line passes through
+      # verbatim - valid-JSON wrong-shape lines and truncated-JSON lines
+      # included, side by side with the one valid entry line.
       - params:
           - lines:
               - ''
               - '{"junk":"value"}'
               - '{"durationMs": 1250'
               - durationMs: 1250
-                eventId: evt-42
+                eventId: evt-1
                 exitCode: 0
-                outputSnippet: build finished
+                outputSnippet: build done
                 phase: finished
                 skipReason: ''
                 slot: '07:00'
                 timestamp: '2026-09-15T07:00:00.000Z'
                 trigger: os-schedule
-                triggerId: trigger-morning
-                triggerName: Morning build
+                triggerId: trig-a
+                triggerName: Morning
               - ''
         result:
-          - durationMs: 1250
-            eventId: evt-42
-            exitCode: 0
-            outputSnippet: build finished
-            phase: finished
-            skipReason: ''
-            slot: '07:00'
-            timestamp: '2026-09-15T07:00:00.000Z'
-            trigger: os-schedule
-            triggerId: trigger-morning
-            triggerName: Morning build
-      # Blank, wrong-shape and truncated lines alone yield no entries.
+          - '{"junk":"value"}'
+          - '{"durationMs": 1250'
+          - '{"durationMs":1250,"eventId":"evt-1","exitCode":0,"outputSnippet":"build
+            done","phase":"finished","skipReason":"","slot":"07:00","timestamp":"2026-09-15T07:00:00.000Z","trigger":"os-schedule","triggerId":"trig-a","triggerName":"Morning"}'
+      # Blank, wrong-shape and truncated lines alone come back verbatim with
+      # the blanks dropped.
       - params:
           - lines:
               - ''
               - ''
               - '{"junk":"value"}'
               - '{"durationMs": 1250'
-        result: []
-      # A schema-valid line carrying an unknown extra key survives with the
-      # extra key stripped by the zod object schema.
-      - params:
-          - lines:
-              - durationMs: 1250
-                eventId: evt-42
-                exitCode: 0
-                outputSnippet: build finished
-                phase: finished
-                skipReason: ''
-                slot: '07:00'
-                timestamp: '2026-09-15T07:00:00.000Z'
-                trigger: os-schedule
-                triggerId: trigger-morning
-                triggerName: Morning build
-                unexpectedField: surprise
         result:
-          - durationMs: 1250
-            eventId: evt-42
-            exitCode: 0
-            outputSnippet: build finished
-            phase: finished
-            skipReason: ''
-            slot: '07:00'
-            timestamp: '2026-09-15T07:00:00.000Z'
-            trigger: os-schedule
-            triggerId: trigger-morning
-            triggerName: Morning build
-      # A valid-JSON line whose phase is outside the enum is dropped.
-      - params:
-          - lines:
-              - durationMs: 1250
-                eventId: evt-42
-                exitCode: 0
-                outputSnippet: build finished
-                phase: running
-                skipReason: ''
-                slot: '07:00'
-                timestamp: '2026-09-15T07:00:00.000Z'
-                trigger: os-schedule
-                triggerId: trigger-morning
-                triggerName: Morning build
-        result: []
-      # A valid-JSON line with a string-typed exitCode fails the schema and is
-      # dropped.
-      - params:
-          - lines:
-              - durationMs: 1250
-                eventId: evt-42
-                exitCode: '0'
-                outputSnippet: build finished
-                phase: finished
-                skipReason: ''
-                slot: '07:00'
-                timestamp: '2026-09-15T07:00:00.000Z'
-                trigger: os-schedule
-                triggerId: trigger-morning
-                triggerName: Morning build
-        result: []
+          - '{"junk":"value"}'
+          - '{"durationMs": 1250'

@@ -36,19 +36,17 @@ const resolveLinesContent = (params: { lines: LogLine[] }): string => {
 }
 
 export const triggerRunLogDalContractHarness = {
-  readEntriesAfterAppend: async (params: {
-    entries: ScheduleTriggerRunLogEntry[]
-  }): Promise<ScheduleTriggerRunLogEntry[]> => {
+  readLinesAfterAppend: async (params: { entries: ScheduleTriggerRunLogEntry[] }): Promise<string[]> => {
     const { entries } = params
     const dal = new TriggerRunLogDal({ logFilePath: resolveTempLogFilePath() })
     await appendEntriesSequentially({ dal, entries })
 
-    return await dal.readLogEntries()
+    return await dal.readLogLines()
   },
-  readEntriesAfterAppendWithRotation: async (params: {
+  readLinesAfterAppendWithRotation: async (params: {
     entries: ScheduleTriggerRunLogEntry[]
     rotateKeepLineCount: number
-  }): Promise<ScheduleTriggerRunLogEntry[]> => {
+  }): Promise<string[]> => {
     const { entries, rotateKeepLineCount } = params
     const dal = new TriggerRunLogDal({
       logFilePath: resolveTempLogFilePath(),
@@ -57,31 +55,29 @@ export const triggerRunLogDalContractHarness = {
     })
     await appendEntriesSequentially({ dal, entries })
 
-    return await dal.readLogEntries()
+    return await dal.readLogLines()
   },
-  readEntriesAfterWrite: async (params: {
-    entries: ScheduleTriggerRunLogEntry[]
-  }): Promise<ScheduleTriggerRunLogEntry[]> => {
+  readLinesAfterWrite: async (params: { entries: ScheduleTriggerRunLogEntry[] }): Promise<string[]> => {
     const { entries } = params
     const dal = new TriggerRunLogDal({ logFilePath: resolveTempLogFilePath() })
     await dal.writeLogEntries({ entries })
 
-    return await dal.readLogEntries()
+    return await dal.readLogLines()
   },
-  readEntriesAfterWriteEmptyEntries: async (): Promise<ScheduleTriggerRunLogEntry[]> => {
+  readLinesAfterWriteEmptyEntries: async (): Promise<string[]> => {
     const dal = new TriggerRunLogDal({ logFilePath: resolveTempLogFilePath() })
     await dal.writeLogEntries({ entries: [] })
 
-    return await dal.readLogEntries()
+    return await dal.readLogLines()
   },
-  readEntriesOnMissingFile: async (): Promise<ScheduleTriggerRunLogEntry[]> => {
-    return await new TriggerRunLogDal({ logFilePath: resolveTempLogFilePath() }).readLogEntries()
+  readLinesOnMissingFile: async (): Promise<string[]> => {
+    return await new TriggerRunLogDal({ logFilePath: resolveTempLogFilePath() }).readLogLines()
   },
-  readEntriesOnRawLines: async (params: { lines: LogLine[] }): Promise<ScheduleTriggerRunLogEntry[]> => {
+  readLinesOnRawLines: async (params: { lines: LogLine[] }): Promise<string[]> => {
     const { lines } = params
     const logFilePath = resolveTempLogFilePath()
     writeFileSync(logFilePath, resolveLinesContent({ lines }), 'utf8')
 
-    return await new TriggerRunLogDal({ logFilePath }).readLogEntries()
+    return await new TriggerRunLogDal({ logFilePath }).readLogLines()
   },
 }

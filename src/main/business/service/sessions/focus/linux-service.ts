@@ -2,17 +2,10 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 import { SessionsProcessService } from '#src/main/business/service/sessions/process-service'
+import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
 
 const execFileAsync = promisify(execFile)
-
-const FOCUS_TOOL_CHECK_TIMEOUT_MS = 5_000
-
-const FOCUS_TOOL_INSTALL_TIMEOUT_MS = 300_000
-
-const MAX_ANCESTOR_HOPS = 12
-
-const XDOTOOL_TIMEOUT_MS = 5_000
 
 export class SessionsFocusLinuxService {
   protected readonly _processService = new SessionsProcessService()
@@ -30,7 +23,7 @@ export class SessionsFocusLinuxService {
 
   async isFocusToolInstalled(): Promise<boolean> {
     try {
-      await execFileAsync('xdotool', ['version'], { timeout: FOCUS_TOOL_CHECK_TIMEOUT_MS })
+      await execFileAsync('xdotool', ['version'], { timeout: constant.sessions.focus.linux.focusTool.checkTimeoutMs })
 
       return true
     } catch (error) {
@@ -45,7 +38,7 @@ export class SessionsFocusLinuxService {
   async installFocusTool(): Promise<void> {
     // TODO we should not install anything without check from user, check this. Remove TODO after checking
     await execFileAsync('pkexec', ['apt', 'install', '-y', 'xdotool'], {
-      timeout: FOCUS_TOOL_INSTALL_TIMEOUT_MS,
+      timeout: constant.sessions.focus.linux.focusTool.installTimeoutMs,
     })
   }
 
@@ -60,7 +53,7 @@ export class SessionsFocusLinuxService {
 
   protected async _resolveLinuxWindowId(params: { hopCount: number; pid: number }): Promise<string | undefined> {
     const { hopCount, pid } = params
-    if (hopCount >= MAX_ANCESTOR_HOPS) {
+    if (hopCount >= constant.sessions.processAncestry.maxHops) {
       return undefined
     }
 
@@ -100,7 +93,7 @@ export class SessionsFocusLinuxService {
     const { args } = params
     try {
       const { stdout } = await execFileAsync('xdotool', args, {
-        timeout: XDOTOOL_TIMEOUT_MS,
+        timeout: constant.sessions.focus.linux.xdotoolTimeoutMs,
       })
 
       return this._parseFirstWindowId({ stdout })
@@ -130,7 +123,7 @@ export class SessionsFocusLinuxService {
     const { windowId } = params
     try {
       await execFileAsync('xdotool', ['windowactivate', windowId], {
-        timeout: XDOTOOL_TIMEOUT_MS,
+        timeout: constant.sessions.focus.linux.xdotoolTimeoutMs,
       })
     } catch (error) {
       throw new Error(`activating window ${windowId} failed: ${errorUtil.resolveMessage(error)}`)

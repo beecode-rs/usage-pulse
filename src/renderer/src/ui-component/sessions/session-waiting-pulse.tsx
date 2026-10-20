@@ -1,7 +1,9 @@
 import { type ReactElement } from 'react'
 
-export const SessionWaitingPulse = (props: { isWaiting: boolean }): ReactElement | undefined => {
-  if (!props.isWaiting) {
+export const SessionsSessionWaitingPulse = (props: { isWaiting: boolean }): ReactElement | undefined => {
+  const { isWaiting } = props
+
+  if (!isWaiting) {
     return undefined
   }
 

@@ -28,7 +28,7 @@ export const sessionsClientService = {
   subscribeToSessionsUpdates: (params: { onUpdate: SessionsUpdateListener }): (() => void) => {
     const { onUpdate } = params
 
-    return window.usageApi.onSessionsUpdate(onUpdate)
+    return window.usageApi.onSessionsUpdate({ onUpdate })
   },
   testSshHost: (params: { url: string }): Promise<void> => {
     return window.usageApi.testSshHost(params)

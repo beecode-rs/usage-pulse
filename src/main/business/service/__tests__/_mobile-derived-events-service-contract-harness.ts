@@ -1,6 +1,6 @@
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { _MobileDerivedEventsService } from '#src/main/business/service/mobile-derived-events-service-singleton'
-import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { type UsageWarning } from '#src/shared/business/model/mobile-api-model'
 import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
 import { type UsageSnapshot } from '#src/shared/business/model/usage-model'

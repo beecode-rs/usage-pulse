@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 
-export const SessionFocusButton = (props: { label: string; onClick: () => void }): ReactElement => {
+export const SessionsSessionFocusButton = (props: { label: string; onClick: () => void }): ReactElement => {
   const { label, onClick } = props
 
   return (

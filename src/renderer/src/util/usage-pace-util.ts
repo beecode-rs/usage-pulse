@@ -1,9 +1,5 @@
+import { constant } from '#src/renderer/src/util/constant'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
-
-const OUTPACING_MIN_DRIFT_PERCENT = 10
-const PACE_ON_PACE_BAND_PERCENT = 5
-const PACE_STEP_MAX_COUNT = 5
-const PACE_STEP_PERCENT = 20
 
 export class UsagePaceUtil {
   isUsageOutpacingWindow(params: { now: number; resetAt?: number; usedPercent: number; windowMs: number }): boolean {
@@ -13,7 +9,7 @@ export class UsagePaceUtil {
       return false
     }
 
-    return diffPercent >= OUTPACING_MIN_DRIFT_PERCENT
+    return diffPercent >= constant.usagePace.minDriftPercent
   }
 
   resolvePaceColor(params: {
@@ -52,7 +48,7 @@ export class UsagePaceUtil {
   protected _resolvePaceColorForDiff(params: { diffPercent: number }): string {
     const { diffPercent } = params
 
-    if (Math.abs(diffPercent) <= PACE_ON_PACE_BAND_PERCENT) {
+    if (Math.abs(diffPercent) <= constant.usagePace.onPaceBandPercent) {
       return 'var(--meter-accent)'
     }
 
@@ -74,8 +70,8 @@ export class UsagePaceUtil {
   protected _resolvePaceStepCount(params: { diffPercent: number }): number {
     const { diffPercent } = params
 
-    const driftBeyondBandPercent = Math.abs(diffPercent) - PACE_ON_PACE_BAND_PERCENT
+    const driftBeyondBandPercent = Math.abs(diffPercent) - constant.usagePace.onPaceBandPercent
 
-    return Math.min(Math.ceil(driftBeyondBandPercent / PACE_STEP_PERCENT), PACE_STEP_MAX_COUNT)
+    return Math.min(Math.ceil(driftBeyondBandPercent / constant.usagePace.stepPercent), constant.usagePace.maxStepCount)
   }
 }

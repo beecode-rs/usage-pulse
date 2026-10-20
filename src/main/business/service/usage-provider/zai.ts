@@ -1,20 +1,12 @@
 import { z } from 'zod'
 
-import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
+import { clampedPercentSchema } from '#src/main/business/schema/usage-provider-schema'
+import { type UsageProvider } from '#src/main/business/service/usage-provider/index'
 import { httpUtil } from '#src/main/util/http-util'
 import { objectUtil } from '#src/main/util/object-util'
-import { percentUtil } from '#src/main/util/percent-util'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import type { UsageWindow } from '#src/shared/business/model/usage-model'
 import { constant } from '#src/shared/util/constant'
-
-const limitPercentageSchema = z
-  .number()
-  .transform((value) => {
-    return percentUtil.roundPercentToOneDecimal(percentUtil.clampPercent(value))
-  })
-  .optional()
-  .catch(undefined)
 
 const limitNextResetTimeSchema = z
   .union([z.string(), z.number()])
@@ -38,7 +30,7 @@ const limitRecordSchema = z.object({
   currentValue: z.number().optional().catch(undefined),
   nextResetTime: limitNextResetTimeSchema,
   number: z.number().optional().catch(undefined),
-  percentage: limitPercentageSchema,
+  percentage: clampedPercentSchema,
   type: z.string().optional().catch(undefined),
   unit: z.number().optional().catch(undefined),
   usage: z.number().optional().catch(undefined),

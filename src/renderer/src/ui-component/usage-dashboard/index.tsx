@@ -1,15 +1,14 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
-import { AddTrackerDialog } from '#src/renderer/src/ui-component/tracker/add-tracker-dialog'
-import { TrackerSettingsDialog } from '#src/renderer/src/ui-component/tracker/tracker-settings-dialog'
-import { DashboardAddButton } from '#src/renderer/src/ui-component/usage-dashboard/dashboard-add-button'
-import { ProviderUsageCard } from '#src/renderer/src/ui-component/usage-dashboard/provider-usage-card'
+import { TrackerAddTrackerDialog } from '#src/renderer/src/ui-component/tracker/add-tracker-dialog'
+import { TrackerSettingsDialog } from '#src/renderer/src/ui-component/tracker/settings-dialog'
+import { UsageDashboardAddButton } from '#src/renderer/src/ui-component/usage-dashboard/add-button'
+import { UsageDashboardProviderUsageCard } from '#src/renderer/src/ui-component/usage-dashboard/provider-usage-card'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
+import { constant } from '#src/renderer/src/util/constant'
 import type { SettingsModel } from '#src/shared/business/model/settings-model'
 import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
-
-const NOW_TICK_INTERVAL_MS = 1000
 
 export const UsageDashboard = (): ReactElement => {
   const [snapshot, setSnapshot] = useState<UsageSnapshot | undefined>(undefined)
@@ -93,7 +92,7 @@ export const UsageDashboard = (): ReactElement => {
   useEffect(() => {
     const intervalId = setInterval(() => {
       setNowMs(Date.now())
-    }, NOW_TICK_INTERVAL_MS)
+    }, constant.ui.fastNowTickIntervalMs)
 
     return () => {
       clearInterval(intervalId)
@@ -112,7 +111,7 @@ export const UsageDashboard = (): ReactElement => {
           <p className="dashboard-subtitle">Track usage limits for your coding plans</p>
         </div>
         <div className="dashboard-actions">
-          <DashboardAddButton
+          <UsageDashboardAddButton
             label="Add tracker"
             onClick={() => {
               setIsAddOpen(true)
@@ -127,7 +126,7 @@ export const UsageDashboard = (): ReactElement => {
           })
 
           return (
-            <ProviderUsageCard
+            <UsageDashboardProviderUsageCard
               key={providerSnapshot.trackerId}
               isAutoRefreshPaused={trackerConfig?.isAutoRefreshPaused ?? false}
               nowMs={nowMs}
@@ -168,7 +167,7 @@ export const UsageDashboard = (): ReactElement => {
         )}
       </main>
       {isAddOpen && (
-        <AddTrackerDialog
+        <TrackerAddTrackerDialog
           onClose={() => {
             setIsAddOpen(false)
           }}

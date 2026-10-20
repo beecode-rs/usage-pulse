@@ -1,6 +1,6 @@
 import { LifeCycle } from '@beecode/msh-app-boot'
 
-import { rxjsBusRouterSingleton } from '#src/main/controller/rxjs-bus/router'
+import { rxjsBusRouterSingleton } from '#src/main/controller/rxjs-bus/rxjs-bus-router-singleton'
 
 export class RxjsBusLifeCycle extends LifeCycle<void> {
   constructor() {

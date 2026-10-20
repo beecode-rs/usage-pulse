@@ -3,23 +3,12 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 import { SessionsParserService } from '#src/main/business/service/sessions/parser-service'
+import { constant } from '#src/main/util/constant'
 import { type SessionInfo, type SessionSnapshot, type UnreachableHost } from '#src/shared/business/model/session-model'
 import { type SshHostConfig } from '#src/shared/business/model/settings-model'
 import { errorUtil } from '#src/shared/util/error-util'
 
 const execFileAsync = promisify(execFile)
-
-const SSH_CONNECT_TIMEOUT_SECONDS = 5
-
-const SSH_HOST_CACHE_TTL_MS = 15_000
-
-const SSH_QUERY_TIMEOUT_MS = 10_000
-
-const SSH_TEST_TIMEOUT_MS = 8_000
-
-const REMOTE_AGENTS_COMMAND = String.raw`bash -lc 'PATH="$HOME/.local/bin:$PATH" claude agents --json'`
-
-const REMOTE_PROBE_COMMAND = 'true'
 
 type SshTarget = {
   destination: string
@@ -27,7 +16,7 @@ type SshTarget = {
   user?: string
 }
 
-export type SshHostFetchResult = {
+type SshHostFetchResult = {
   errorMessage?: string
   host: SshHostConfig
   sessions: SessionInfo[]
@@ -83,7 +72,9 @@ export class _SessionsSshService {
 
     return {
       fetchedAt: Date.now(),
-      sessions: new SessionsParserService().sortSessions([...localSnapshot.sessions, ...remoteSessions]),
+      sessions: new SessionsParserService().sortSessions({
+        sessions: [...localSnapshot.sessions, ...remoteSessions],
+      }),
       unreachableHosts,
     }
   }
@@ -97,8 +88,8 @@ export class _SessionsSshService {
     }
 
     try {
-      await execFileAsync('ssh', this._buildSshArgs({ command: REMOTE_PROBE_COMMAND, target }), {
-        timeout: SSH_TEST_TIMEOUT_MS,
+      await execFileAsync('ssh', this._buildSshArgs({ command: constant.sessions.ssh.remoteProbeCommand, target }), {
+        timeout: constant.sessions.ssh.testTimeoutMs,
       })
     } catch (error) {
       throw new Error(`connecting to '${url}' failed: ${this._resolveSshErrorMessage(error)}`)
@@ -139,7 +130,7 @@ export class _SessionsSshService {
       return undefined
     }
 
-    if (Date.now() - cacheEntry.fetchedAt >= SSH_HOST_CACHE_TTL_MS) {
+    if (Date.now() - cacheEntry.fetchedAt >= constant.sessions.ssh.hostCacheTtlMs) {
       return undefined
     }
 
@@ -180,9 +171,13 @@ export class _SessionsSshService {
     }
 
     try {
-      const { stdout } = await execFileAsync('ssh', this._buildSshArgs({ command: REMOTE_AGENTS_COMMAND, target }), {
-        timeout: SSH_QUERY_TIMEOUT_MS,
-      })
+      const { stdout } = await execFileAsync(
+        'ssh',
+        this._buildSshArgs({ command: constant.sessions.ssh.remoteAgentsCommand, target }),
+        {
+          timeout: constant.sessions.ssh.queryTimeoutMs,
+        },
+      )
 
       return {
         host,
@@ -203,7 +198,7 @@ export class _SessionsSshService {
       '-o',
       'BatchMode=yes',
       '-o',
-      `ConnectTimeout=${String(SSH_CONNECT_TIMEOUT_SECONDS)}`,
+      `ConnectTimeout=${String(constant.sessions.ssh.connectTimeoutMs / 1000)}`,
       '-o',
       'StrictHostKeyChecking=accept-new',
       '-o',
@@ -295,13 +290,13 @@ export class _SessionsSshService {
 
   protected _resolvePort(params: { value: string }): number | undefined {
     const { value } = params
-    if (!/^\d+$/.test(value)) {
+    if (!constant.digitsOnlyRegex.test(value)) {
       return undefined
     }
 
     const port = Number(value)
 
-    if (port < 1 || port > 65535) {
+    if (port < constant.tcpPort.min || port > constant.tcpPort.max) {
       return undefined
     }
 

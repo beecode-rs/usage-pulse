@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react'
 
-import { MobileDeviceCard } from '#src/renderer/src/ui-component/mobile/mobile-device-card'
+import { MobileDeviceCard } from '#src/renderer/src/ui-component/mobile/device-card'
 import { type MobileConnectedDevice } from '#src/shared/business/model/mobile-api-model'
 
 export const MobileDeviceList = (props: { devices: MobileConnectedDevice[] }): ReactElement => {

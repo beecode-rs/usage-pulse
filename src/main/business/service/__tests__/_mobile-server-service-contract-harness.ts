@@ -10,9 +10,9 @@ vi.mock('electron', () => ({
 
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { _MobileServerService } from '#src/main/business/service/mobile-server-service-singleton'
 import { usagePollServiceSingleton } from '#src/main/business/service/usage-poll-service-singleton'
-import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'

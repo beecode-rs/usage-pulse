@@ -10,9 +10,9 @@ export class SettingsDal extends CommonFileDal implements ISettingsDal {
   protected readonly _memoryDal = new CommonMemoryDal<SettingsModel>()
   protected readonly _settingsFilePath?: string
 
-  constructor(params?: { settingsFilePath?: string }) {
+  constructor(params: { settingsFilePath?: string } = {}) {
     super()
-    const { settingsFilePath } = params ?? {}
+    const { settingsFilePath } = params
     this._settingsFilePath = settingsFilePath
   }
 

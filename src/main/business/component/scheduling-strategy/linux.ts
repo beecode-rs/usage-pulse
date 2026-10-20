@@ -8,12 +8,12 @@ import type {
   SchedulingInspection,
   SchedulingRegistrationParams,
   SchedulingStrategy,
-} from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
+} from '#src/main/business/component/scheduling-strategy/index'
 import { config } from '#src/main/util/config'
 import { constant } from '#src/main/util/constant'
 import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
-import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
+import { type ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import { constant as sharedConstant } from '#src/shared/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
 
@@ -25,44 +25,11 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
   protected readonly _homeDir: string
   protected readonly _systemctlProbeTimeoutMs = config.systemctl.probeTimeoutMs
   protected readonly _systemctlTimeoutMs = config.systemctl.timeoutMs
-  protected readonly _systemdDayByTriggerDay: Record<ScheduleTriggerDayMapper, string> = {
-    [ScheduleTriggerDayMapper.FRIDAY]: 'Fri',
-    [ScheduleTriggerDayMapper.MONDAY]: 'Mon',
-    [ScheduleTriggerDayMapper.SATURDAY]: 'Sat',
-    [ScheduleTriggerDayMapper.SUNDAY]: 'Sun',
-    [ScheduleTriggerDayMapper.THURSDAY]: 'Thu',
-    [ScheduleTriggerDayMapper.TUESDAY]: 'Tue',
-    [ScheduleTriggerDayMapper.WEDNESDAY]: 'Wed',
-  }
+  protected readonly _systemdDayByTriggerDay = constant.scheduling.systemd.dayByTriggerDay
 
-  protected readonly _systemdExecQuoteTriggerCharacters = new Set([
-    ' ',
-    '\t',
-    '"',
-    "'",
-    '\\',
-    ';',
-    ',',
-    '?',
-    '*',
-    '[',
-    ']',
-    '{',
-    '}',
-    '$',
-    '&',
-    '<',
-    '>',
-    '|',
-    '(',
-    ')',
-    '`',
-    '!',
-    '#',
-    '~',
-  ])
+  protected readonly _systemdExecQuoteTriggerCharacters = constant.scheduling.systemd.execQuoteTriggerCharacters
 
-  protected readonly _systemdUnitNamePrefix = 'usage-pulse-trigger-'
+  protected readonly _systemdUnitNamePrefix = constant.scheduling.systemd.unitNamePrefix
   protected readonly _unitDir: string
 
   constructor(params: { configDir?: string; homeDir?: string; isSystemdUserAvailable?: boolean } = {}) {
@@ -130,7 +97,7 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
 
   protected _assertRegistrationParams(params: SchedulingRegistrationParams): void {
     const { days, executableArgs, executablePath, times, triggerId } = params
-    if (!/^[A-Za-z0-9_-]+$/.test(triggerId)) {
+    if (!constant.scheduleTrigger.idRegex.test(triggerId)) {
       throw new Error(`Invalid trigger id '${triggerId}': only alphanumerics, underscores and hyphens are allowed`)
     }
 
@@ -321,8 +288,7 @@ export class SchedulingStrategyLinux implements SchedulingStrategy {
   protected _isSystemdUserAvailable(): boolean {
     const result = spawnSync('systemctl', ['--user', 'is-system-running'], { timeout: this._systemctlProbeTimeoutMs })
     const hasAcceptableStatus =
-      result.status === 0 ||
-      /^(running|degraded|starting|initializing|stopping|maintenance)/.test(String(result.stdout).trim())
+      result.status === 0 || constant.scheduling.systemd.runningStateRegex.test(String(result.stdout).trim())
 
     return result.error === undefined && hasAcceptableStatus
   }

@@ -2,19 +2,16 @@ import { execFile } from 'node:child_process'
 import { basename } from 'node:path'
 import { promisify } from 'node:util'
 
+import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
 
 const execFileAsync = promisify(execFile)
-
-const OPEN_APP_TIMEOUT_MS = 5_000
-
-const VSCODE_BUNDLE_BASENAME = 'Visual Studio Code.app'
 
 export class SessionsFocusMacOsService {
   async activateAppBundle(params: { bundlePath: string }): Promise<void> {
     const { bundlePath } = params
     try {
-      await execFileAsync('open', ['-a', bundlePath], { timeout: OPEN_APP_TIMEOUT_MS })
+      await execFileAsync('open', ['-a', bundlePath], { timeout: constant.sessions.focus.macOs.openAppTimeoutMs })
     } catch (error) {
       throw new Error(`activating '${bundlePath}' failed: ${errorUtil.resolveMessage(error)}`)
     }
@@ -29,6 +26,6 @@ export class SessionsFocusMacOsService {
   isVsCodeBundle(params: { bundlePath: string }): boolean {
     const { bundlePath } = params
 
-    return basename(bundlePath) === VSCODE_BUNDLE_BASENAME
+    return basename(bundlePath) === constant.sessions.focus.vscode.bundleBasename
   }
 }

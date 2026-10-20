@@ -4,8 +4,8 @@ export const updateClientService = {
   checkForUpdate: (): Promise<UpdateStatus> => {
     return window.usageApi.checkForUpdate()
   },
-  downloadUpdate: (): Promise<string> => {
-    return window.usageApi.downloadUpdate()
+  downloadUpdateAndOpenInstaller: (): Promise<string> => {
+    return window.usageApi.downloadUpdateAndOpenInstaller()
   },
   getStatus: (): Promise<UpdateStatus> => {
     return window.usageApi.getUpdateStatus()
@@ -16,6 +16,6 @@ export const updateClientService = {
   subscribeToUpdateStatus: (params: { onUpdate: UpdateStatusListener }): (() => void) => {
     const { onUpdate } = params
 
-    return window.usageApi.onUpdateStatus(onUpdate)
+    return window.usageApi.onUpdateStatus({ onUpdate })
   },
 }

@@ -2,18 +2,17 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 import { processEnvWithUserLocalBinPath } from '#src/main/util/config'
+import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
 
 const execFileAsync = promisify(execFile)
-
-const SESSIONS_QUERY_TIMEOUT_MS = 10_000
 
 export class SessionsClaudeQueryService {
   async runAgentsQuery(): Promise<string> {
     try {
       const { stdout } = await execFileAsync('claude', ['agents', '--json'], {
         env: processEnvWithUserLocalBinPath(),
-        timeout: SESSIONS_QUERY_TIMEOUT_MS,
+        timeout: constant.sessions.claudeQuery.timeoutMs,
       })
 
       return stdout

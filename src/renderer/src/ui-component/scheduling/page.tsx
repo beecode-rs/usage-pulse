@@ -5,15 +5,16 @@ import { schedulingClientService } from '#src/renderer/src/business/service/sche
 import { TriggerRunService, type TriggerRunSummary } from '#src/renderer/src/business/service/trigger-run-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { TerminalIcon } from '#src/renderer/src/ui-component/icon/terminal-icon'
-import { AddTriggerDialog } from '#src/renderer/src/ui-component/scheduling/add-trigger-dialog'
-import { ClearRunsDialog } from '#src/renderer/src/ui-component/scheduling/clear-runs-dialog'
+import { SchedulingAddTriggerDialog } from '#src/renderer/src/ui-component/scheduling/add-trigger-dialog'
+import { SchedulingClearRunsDialog } from '#src/renderer/src/ui-component/scheduling/clear-runs-dialog'
 import '#src/renderer/src/ui-component/scheduling/scheduling.css'
-import { TriggerPlannerDialog } from '#src/renderer/src/ui-component/scheduling/trigger-planner-dialog'
-import { TriggerSettingsDialog } from '#src/renderer/src/ui-component/scheduling/trigger-settings-dialog'
-import { TriggerWindowExplainer } from '#src/renderer/src/ui-component/scheduling/trigger-window-explainer'
+import { SchedulingTriggerPlannerDialog } from '#src/renderer/src/ui-component/scheduling/trigger-planner-dialog'
+import { SchedulingTriggerSettingsDialog } from '#src/renderer/src/ui-component/scheduling/trigger-settings-dialog'
+import { SchedulingTriggerWindowExplainer } from '#src/renderer/src/ui-component/scheduling/trigger-window-explainer'
 import '#src/renderer/src/ui-component/schedule/day-time-schedule-fields.css'
-import { DashboardAddButton } from '#src/renderer/src/ui-component/usage-dashboard/dashboard-add-button'
+import { UsageDashboardAddButton } from '#src/renderer/src/ui-component/usage-dashboard/add-button'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
+import { constant } from '#src/renderer/src/util/constant'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
@@ -28,18 +29,8 @@ import type {
   SchedulingInfo,
 } from '#src/shared/business/model/schedule-trigger-model'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'
-import { constant } from '#src/shared/util/constant'
+import { constant as sharedConstant } from '#src/shared/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
-
-const TRIGGER_DAY_LABELS: Record<ScheduleTriggerDayMapper, string> = {
-  [ScheduleTriggerDayMapper.FRIDAY]: 'Fri',
-  [ScheduleTriggerDayMapper.MONDAY]: 'Mon',
-  [ScheduleTriggerDayMapper.SATURDAY]: 'Sat',
-  [ScheduleTriggerDayMapper.SUNDAY]: 'Sun',
-  [ScheduleTriggerDayMapper.THURSDAY]: 'Thu',
-  [ScheduleTriggerDayMapper.TUESDAY]: 'Tue',
-  [ScheduleTriggerDayMapper.WEDNESDAY]: 'Wed',
-}
 
 const resolvePlatformLabel = (platform: OS): string => {
   switch (platform) {
@@ -67,7 +58,7 @@ const resolveFinishedOutcome = (params: { exitCode: number }): { className: stri
     return { className: 'trigger-run-badge is-ok', label: 'OK' }
   }
 
-  if (exitCode === constant.scheduleTrigger.run.exitCodeTimedOut) {
+  if (exitCode === sharedConstant.scheduleTrigger.run.exitCodeTimedOut) {
     return { className: 'trigger-run-badge is-failed', label: 'Timed out' }
   }
 
@@ -544,7 +535,7 @@ export const SchedulingPage = (): ReactElement => {
           >
             Plan windows
           </button>
-          <DashboardAddButton
+          <UsageDashboardAddButton
             label="Add trigger"
             onClick={() => {
               setIsAddOpen(true)
@@ -600,10 +591,10 @@ export const SchedulingPage = (): ReactElement => {
                 </label>
               </header>
               <div className="trigger-card-chips">
-                {constant.scheduleTrigger.days.map((day) => {
+                {sharedConstant.scheduleTrigger.days.map((day) => {
                   return (
                     <span className={resolveDayChipClassName(trigger.days, day)} key={day}>
-                      {TRIGGER_DAY_LABELS[day]}
+                      {constant.scheduleTrigger.dayLabels[day]}
                     </span>
                   )
                 })}
@@ -685,11 +676,11 @@ export const SchedulingPage = (): ReactElement => {
             {renderPlusIcon()}
             Max 5h windows
           </button>
-          <TriggerWindowExplainer />
+          <SchedulingTriggerWindowExplainer />
         </div>
       </footer>
       {isAddOpen && (
-        <AddTriggerDialog
+        <SchedulingAddTriggerDialog
           initialPreset={plannerPreset}
           onClose={() => {
             setIsAddOpen(false)
@@ -699,7 +690,7 @@ export const SchedulingPage = (): ReactElement => {
         />
       )}
       {isPlannerOpen && (
-        <TriggerPlannerDialog
+        <SchedulingTriggerPlannerDialog
           onClose={() => {
             setIsPlannerOpen(false)
           }}
@@ -707,7 +698,7 @@ export const SchedulingPage = (): ReactElement => {
         />
       )}
       {openTriggerId !== undefined && (
-        <TriggerSettingsDialog
+        <SchedulingTriggerSettingsDialog
           onClose={() => {
             setOpenTriggerId(undefined)
           }}
@@ -716,7 +707,7 @@ export const SchedulingPage = (): ReactElement => {
         />
       )}
       {clearingTriggerId !== undefined && (
-        <ClearRunsDialog
+        <SchedulingClearRunsDialog
           onClose={() => {
             setClearingTriggerId(undefined)
           }}

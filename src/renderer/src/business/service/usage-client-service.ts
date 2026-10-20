@@ -19,7 +19,7 @@ export const usageClientService = {
   saveSettings: (params: { settings: SettingsModel }): Promise<SettingsModel> => {
     const { settings } = params
 
-    return window.usageApi.saveSettings(settings)
+    return window.usageApi.saveSettings({ settings })
   },
   setTrackerPaused: (params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<SettingsModel> => {
     const { isAutoRefreshPaused, trackerId } = params
@@ -32,11 +32,11 @@ export const usageClientService = {
   subscribeToSettingsUpdates: (params: { onUpdate: SettingsUpdateListener }): (() => void) => {
     const { onUpdate } = params
 
-    return window.usageApi.onSettingsUpdate(onUpdate)
+    return window.usageApi.onSettingsUpdate({ onUpdate })
   },
   subscribeToUsageUpdates: (params: { onUpdate: UsageUpdateListener }): (() => void) => {
     const { onUpdate } = params
 
-    return window.usageApi.onUsageUpdate(onUpdate)
+    return window.usageApi.onUsageUpdate({ onUpdate })
   },
 }

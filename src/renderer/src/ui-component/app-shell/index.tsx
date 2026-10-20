@@ -9,43 +9,55 @@ import { SessionSoundService } from '#src/renderer/src/business/service/session-
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { UsageStalenessService } from '#src/renderer/src/business/service/usage-staleness-service'
-import { AboutPage } from '#src/renderer/src/ui-component/about/about-page'
-import { AppFooter } from '#src/renderer/src/ui-component/app-shell/app-footer'
+import { AboutPage } from '#src/renderer/src/ui-component/about/page'
+import { AppShellFooter } from '#src/renderer/src/ui-component/app-shell/footer'
 import '#src/renderer/src/ui-component/app-shell/app-shell.css'
-import { DashboardPage } from '#src/renderer/src/ui-component/dashboard/dashboard-page'
-import { DevelopmentPage } from '#src/renderer/src/ui-component/development/development-page'
-import { MobilePage } from '#src/renderer/src/ui-component/mobile/mobile-page'
-import { SchedulingPage } from '#src/renderer/src/ui-component/scheduling/scheduling-page'
-import { SessionsPage } from '#src/renderer/src/ui-component/sessions/sessions-page'
-import { SideMenu, type SideMenuItem } from '#src/renderer/src/ui-component/side-menu/side-menu'
-import { UsageDashboard } from '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard'
+import { DashboardPage } from '#src/renderer/src/ui-component/dashboard/page'
+import { DevelopmentPage } from '#src/renderer/src/ui-component/development/page'
+import { MobilePage } from '#src/renderer/src/ui-component/mobile/page'
+import { SchedulingPage } from '#src/renderer/src/ui-component/scheduling/page'
+import { SessionsPage } from '#src/renderer/src/ui-component/sessions/page'
+import { SideMenu, type SideMenuItem } from '#src/renderer/src/ui-component/side-menu/index'
+import { UsageDashboard } from '#src/renderer/src/ui-component/usage-dashboard/index'
+import { constant } from '#src/renderer/src/util/constant'
 import { developmentPrefsUtil } from '#src/renderer/src/util/development-prefs-util'
 import { sideMenuPrefsUtil } from '#src/renderer/src/util/side-menu-prefs-util'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import type { SessionInfo, SessionSnapshot } from '#src/shared/business/model/session-model'
 import type { SettingsModel } from '#src/shared/business/model/settings-model'
 import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
+import { sessionStatusTransitionService } from '#src/shared/business/service/session-status-transition-service'
 import { appTitleUtil } from '#src/shared/util/app-title-util'
-import { constant } from '#src/shared/util/constant'
+import { constant as sharedConstant } from '#src/shared/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
-
-const DEFAULT_ELAPSED_MINUTES = 60
-const DEFAULT_USED_PERCENT = 45
-const NOW_TICK_INTERVAL_MS = 30_000
-const PEAK_STATUS_DOT_TITLE = 'z.ai peak hours: premium models bill at 3× credits (weekdays 14:00–18:00 UTC+8)'
-const WARNING_STATUS_DOT_TITLE = 'Usage warning: tracker data is stale or usage is outpacing the reset window'
 
 const resolveStatusDotTitle = (params: { statusDot?: MenuStatusDotMapper }): string | undefined => {
   const { statusDot } = params
-  if (statusDot === MenuStatusDotMapper.PEAK) {
-    return PEAK_STATUS_DOT_TITLE
+  if (statusDot === undefined) {
+    return undefined
   }
 
-  if (statusDot === MenuStatusDotMapper.WARNING) {
-    return WARNING_STATUS_DOT_TITLE
-  }
+  switch (statusDot) {
+    case MenuStatusDotMapper.PEAK: {
+      return constant.menuStatusDot.peakTitle
+    }
 
-  return undefined
+    case MenuStatusDotMapper.WARNING: {
+      return constant.menuStatusDot.warningTitle
+    }
+
+    case MenuStatusDotMapper.ERROR: {
+      return undefined
+    }
+
+    case MenuStatusDotMapper.WAITING: {
+      return undefined
+    }
+
+    default: {
+      throw typeUtil.exhaustiveError('unsupported menu status dot [statusDot]', statusDot)
+    }
+  }
 }
 
 const MENU_ICONS: Record<AppViewIdMapper, ReactElement> = {
@@ -255,7 +267,7 @@ const isMobileServerLive = (params: { settings?: SettingsModel }): boolean => {
 
 export const AppShell = (): ReactElement => {
   const [activeViewId, setActiveViewId] = useState<AppViewIdMapper>(AppViewIdMapper.DASHBOARD)
-  const [elapsedMinutes, setElapsedMinutes] = useState<number>(DEFAULT_ELAPSED_MINUTES)
+  const [elapsedMinutes, setElapsedMinutes] = useState<number>(constant.development.defaultElapsedMinutes)
   const [finishedAtBySessionId, setFinishedAtBySessionId] = useState<Record<string, number>>({})
   const [isCollapsed, setIsCollapsed] = useState<boolean>(sideMenuPrefsUtil.loadIsCollapsed)
   const [isDevelopmentUnlocked, setIsDevelopmentUnlocked] = useState<boolean>(developmentPrefsUtil.loadIsUnlocked)
@@ -266,7 +278,7 @@ export const AppShell = (): ReactElement => {
   const [sessionsErrorMessage, setSessionsErrorMessage] = useState('')
   const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [usageSnapshot, setUsageSnapshot] = useState<UsageSnapshot | undefined>(undefined)
-  const [usedPercent, setUsedPercent] = useState<number>(DEFAULT_USED_PERCENT)
+  const [usedPercent, setUsedPercent] = useState<number>(constant.development.defaultUsedPercent)
   const previousSessionsRef = useRef<SessionInfo[] | undefined>(undefined)
   const settingsRef = useRef<SettingsModel | undefined>(undefined)
 
@@ -314,29 +326,29 @@ export const AppShell = (): ReactElement => {
     const playSessionSounds = (params: { nextSnapshot: SessionSnapshot; previousSessions?: SessionInfo[] }): void => {
       const { nextSnapshot, previousSessions } = params
       const sessionSoundService = new SessionSoundService()
-      const newlyFinishedSessionIds = sessionSoundService.resolveStatusTransitionSessionIds({
+      const newlyFinishedSessionIds = sessionStatusTransitionService.resolveStatusTransitionSessionIds({
         currentSessions: nextSnapshot.sessions,
         fromStatus: SessionStatusMapper.BUSY,
         previousSessions,
         toStatus: SessionStatusMapper.IDLE,
       })
-      const newlyWaitingSessionIds = sessionSoundService.resolveNewlyStatusSessionIds({
+      const newlyWaitingSessionIds = sessionStatusTransitionService.resolveNewlyStatusSessionIds({
         currentSessions: nextSnapshot.sessions,
         previousSessions,
         status: SessionStatusMapper.WAITING,
       })
-      const soundVolumePercent = settingsRef.current?.soundVolumePercent ?? constant.soundVolume.defaultPercent
+      const soundVolumePercent = settingsRef.current?.soundVolumePercent ?? sharedConstant.soundVolume.defaultPercent
 
       if (newlyWaitingSessionIds.length > 0) {
         sessionSoundService.playSessionSound({
-          soundId: settingsRef.current?.waitingSoundId ?? constant.waitingSound.defaultId,
+          soundId: settingsRef.current?.waitingSoundId ?? sharedConstant.waitingSound.defaultId,
           volumePercent: soundVolumePercent,
         })
       }
 
       if (newlyFinishedSessionIds.length > 0) {
         sessionSoundService.playSessionSound({
-          soundId: settingsRef.current?.sessionFinishedSoundId ?? constant.sessionFinishedSound.defaultId,
+          soundId: settingsRef.current?.sessionFinishedSoundId ?? sharedConstant.sessionFinishedSound.defaultId,
           volumePercent: soundVolumePercent,
         })
       }
@@ -390,14 +402,14 @@ export const AppShell = (): ReactElement => {
   useEffect(() => {
     const tickIntervalId = setInterval(() => {
       setNowMs(Date.now())
-    }, NOW_TICK_INTERVAL_MS)
+    }, constant.ui.nowTickIntervalMs)
 
     return () => {
       clearInterval(tickIntervalId)
     }
   }, [])
 
-  const finishedPulseMs = settings?.sessionFinishedPulseMs ?? constant.sessionFinishedPulse.defaultMs
+  const finishedPulseMs = settings?.sessionFinishedPulseMs ?? sharedConstant.sessionFinishedPulse.defaultMs
   const menuStatusService = new MenuStatusService()
   const refreshIntervalMsByTrackerId = new UsageStalenessService().resolveRefreshIntervalMsByTrackerId({
     trackers: settings?.trackers ?? [],
@@ -528,7 +540,7 @@ export const AppShell = (): ReactElement => {
       />
       <div className="app-shell-main">
         <div className="app-shell-content">{renderActiveView()}</div>
-        <AppFooter />
+        <AppShellFooter />
       </div>
     </div>
   )

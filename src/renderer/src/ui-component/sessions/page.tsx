@@ -1,26 +1,26 @@
+import { typeUtil } from '@beecode/msh-util'
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
-import { SessionCard } from '#src/renderer/src/ui-component/sessions/session-card'
-import { SessionsAutoRefreshButton } from '#src/renderer/src/ui-component/sessions/sessions-auto-refresh-button'
-import { SessionsAutoRefreshStatus } from '#src/renderer/src/ui-component/sessions/sessions-auto-refresh-status'
-import { SessionsFocusSupportFooter } from '#src/renderer/src/ui-component/sessions/sessions-focus-support-footer'
-import { SessionsRefreshButton } from '#src/renderer/src/ui-component/sessions/sessions-refresh-button'
-import { SessionsRefreshProgressBar } from '#src/renderer/src/ui-component/sessions/sessions-refresh-progress-bar'
-import { SessionsSettingsButton } from '#src/renderer/src/ui-component/sessions/sessions-settings-button'
-import { SessionsSettingsDialog } from '#src/renderer/src/ui-component/sessions/sessions-settings-dialog'
-import { SshHostsButton } from '#src/renderer/src/ui-component/sessions/ssh-hosts-button'
-import { SshHostsDialog } from '#src/renderer/src/ui-component/sessions/ssh-hosts-dialog'
+import { SessionsAutoRefreshButton } from '#src/renderer/src/ui-component/sessions/auto-refresh-button'
+import { SessionsAutoRefreshStatus } from '#src/renderer/src/ui-component/sessions/auto-refresh-status'
+import { SessionsFocusSupportFooter } from '#src/renderer/src/ui-component/sessions/focus-support-footer'
+import { SessionsRefreshButton } from '#src/renderer/src/ui-component/sessions/refresh-button'
+import { SessionsRefreshProgressBar } from '#src/renderer/src/ui-component/sessions/refresh-progress-bar'
+import { SessionsSessionCard } from '#src/renderer/src/ui-component/sessions/session-card'
+import { SessionsSettingsButton } from '#src/renderer/src/ui-component/sessions/settings-button'
+import { SessionsSettingsDialog } from '#src/renderer/src/ui-component/sessions/settings-dialog'
+import { SessionsSshHostsButton } from '#src/renderer/src/ui-component/sessions/ssh-hosts-button'
+import { SessionsSshHostsDialog } from '#src/renderer/src/ui-component/sessions/ssh-hosts-dialog'
 import '#src/renderer/src/ui-component/sessions/sessions.css'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
+import { constant } from '#src/renderer/src/util/constant'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo, type SessionSnapshot, type UnreachableHost } from '#src/shared/business/model/session-model'
 import { SettingsModel } from '#src/shared/business/model/settings-model'
-import { constant } from '#src/shared/util/constant'
+import { constant as sharedConstant } from '#src/shared/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
-
-const NOW_TICK_INTERVAL_MS = 1000
 
 const resolveSessionKey = (session: SessionInfo): string => {
   const hostId = session.hostId ?? 'local'
@@ -71,19 +71,27 @@ const resolveDisplayedErrorMessage = (params: {
 const resolveSummaryLabel = (sessions: SessionInfo[]): string => {
   const counts = sessions.reduce<{ busy: number; idle: number; unknown: number; waiting: number }>(
     (statusCounts, session) => {
-      if (session.status === SessionStatusMapper.BUSY) {
-        return { ...statusCounts, busy: statusCounts.busy + 1 }
-      }
+      switch (session.status) {
+        case SessionStatusMapper.BUSY: {
+          return { ...statusCounts, busy: statusCounts.busy + 1 }
+        }
 
-      if (session.status === SessionStatusMapper.WAITING) {
-        return { ...statusCounts, waiting: statusCounts.waiting + 1 }
-      }
+        case SessionStatusMapper.IDLE: {
+          return { ...statusCounts, idle: statusCounts.idle + 1 }
+        }
 
-      if (session.status === SessionStatusMapper.IDLE) {
-        return { ...statusCounts, idle: statusCounts.idle + 1 }
-      }
+        case SessionStatusMapper.UNKNOWN: {
+          return { ...statusCounts, unknown: statusCounts.unknown + 1 }
+        }
 
-      return { ...statusCounts, unknown: statusCounts.unknown + 1 }
+        case SessionStatusMapper.WAITING: {
+          return { ...statusCounts, waiting: statusCounts.waiting + 1 }
+        }
+
+        default: {
+          throw typeUtil.exhaustiveError('unsupported session status [status]', session.status)
+        }
+      }
     },
     { busy: 0, idle: 0, unknown: 0, waiting: 0 },
   )
@@ -200,7 +208,7 @@ export const SessionsPage = (props: {
     })
   }
 
-  const refreshIntervalMs = settings?.sessionsRefreshIntervalMs ?? constant.sessionsRefreshInterval.defaultMs
+  const refreshIntervalMs = settings?.sessionsRefreshIntervalMs ?? sharedConstant.sessionsRefreshInterval.defaultMs
   const isAutoRefreshPaused = settings?.isSessionsAutoRefreshPaused ?? false
 
   useEffect(() => {
@@ -223,7 +231,7 @@ export const SessionsPage = (props: {
   useEffect(() => {
     const tickIntervalId = setInterval(() => {
       setNowMs(Date.now())
-    }, NOW_TICK_INTERVAL_MS)
+    }, constant.ui.fastNowTickIntervalMs)
 
     return () => {
       clearInterval(tickIntervalId)
@@ -256,7 +264,7 @@ export const SessionsPage = (props: {
               void loadSessions()
             }}
           />
-          <SshHostsButton
+          <SessionsSshHostsButton
             label="Manage SSH hosts"
             onClick={() => {
               setIsHostsOpen(true)
@@ -296,7 +304,7 @@ export const SessionsPage = (props: {
           const sessionKey = resolveSessionKey(session)
 
           return (
-            <SessionCard
+            <SessionsSessionCard
               finishedAtMs={finishedAtBySessionId[session.sessionId]}
               isExpanded={expandedSessionKeys.has(sessionKey)}
               key={sessionKey}
@@ -315,7 +323,7 @@ export const SessionsPage = (props: {
       </main>
       <SessionsFocusSupportFooter />
       {isHostsOpen && (
-        <SshHostsDialog
+        <SessionsSshHostsDialog
           onClose={() => {
             setIsHostsOpen(false)
           }}

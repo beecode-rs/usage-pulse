@@ -1,5 +1,5 @@
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
-import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { appWindowStoreSingleton } from '#src/main/lib/app-window-store-singleton'
 import { IpcChannelMapper } from '#src/shared/business/enum/ipc-channel-mapper-enum'
 

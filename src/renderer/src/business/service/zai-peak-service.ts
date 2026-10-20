@@ -1,11 +1,6 @@
+import { constant } from '#src/renderer/src/util/constant'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
-
-const PEAK_END_MINUTE_OF_DAY = 18 * 60
-const PEAK_START_MINUTE_OF_DAY = 14 * 60
-const WEEKDAY_FIRST = 1
-const WEEKDAY_LAST = 5
-const ZAI_UTC_OFFSET_MINUTES = 8 * 60
 
 type ZaiPeakInfo = {
   isPeakHour: boolean
@@ -20,9 +15,11 @@ export class ZaiPeakService {
     }
 
     const wallClock = this._resolveUtc8WallClock({ nowMs })
-    const isWeekday = wallClock.weekday >= WEEKDAY_FIRST && wallClock.weekday <= WEEKDAY_LAST
+    const isWeekday =
+      wallClock.weekday >= constant.zaiPeak.weekdayFirst && wallClock.weekday <= constant.zaiPeak.weekdayLast
     const isWithinPeakHours =
-      wallClock.minuteOfDay >= PEAK_START_MINUTE_OF_DAY && wallClock.minuteOfDay < PEAK_END_MINUTE_OF_DAY
+      wallClock.minuteOfDay >= constant.zaiPeak.startMinuteOfDay &&
+      wallClock.minuteOfDay < constant.zaiPeak.endMinuteOfDay
     const { peakEndMs, peakStartMs } = this._resolvePeakBounds({ nowMs })
 
     return {
@@ -58,8 +55,8 @@ export class ZaiPeakService {
     const wallClock = this._resolveUtc8WallClock({ nowMs })
 
     return {
-      peakEndMs: wallClock.dayStartMs + PEAK_END_MINUTE_OF_DAY * 60_000,
-      peakStartMs: wallClock.dayStartMs + PEAK_START_MINUTE_OF_DAY * 60_000,
+      peakEndMs: wallClock.dayStartMs + constant.zaiPeak.endMinuteOfDay * 60_000,
+      peakStartMs: wallClock.dayStartMs + constant.zaiPeak.startMinuteOfDay * 60_000,
     }
   }
 
@@ -69,11 +66,11 @@ export class ZaiPeakService {
     weekday: number
   } {
     const { nowMs } = params
-    const shiftedDate = new Date(nowMs + ZAI_UTC_OFFSET_MINUTES * 60_000)
+    const shiftedDate = new Date(nowMs + constant.zaiPeak.utcOffsetMinutes * 60_000)
     const utc8DayStartMs = Date.UTC(shiftedDate.getUTCFullYear(), shiftedDate.getUTCMonth(), shiftedDate.getUTCDate())
 
     return {
-      dayStartMs: utc8DayStartMs - ZAI_UTC_OFFSET_MINUTES * 60_000,
+      dayStartMs: utc8DayStartMs - constant.zaiPeak.utcOffsetMinutes * 60_000,
       minuteOfDay: shiftedDate.getUTCHours() * 60 + shiftedDate.getUTCMinutes(),
       weekday: shiftedDate.getUTCDay(),
     }

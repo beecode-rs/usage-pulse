@@ -1,5 +1,3 @@
-import { shell } from 'electron'
-
 import { updateServiceSingleton } from '#src/main/business/service/update-service-singleton'
 import { type UpdateStatus } from '#src/shared/business/model/update-model'
 
@@ -9,7 +7,7 @@ export const ipcUpdate = {
   },
 
   download: async (): Promise<string> => {
-    return await updateServiceSingleton().downloadUpdate()
+    return await updateServiceSingleton().downloadUpdateAndOpenInstaller()
   },
 
   getStatus: (): UpdateStatus => {
@@ -17,12 +15,6 @@ export const ipcUpdate = {
   },
 
   openRelease: (): void => {
-    const releaseUrl = updateServiceSingleton().getStatus().releaseUrl
-
-    if (!releaseUrl?.startsWith('https://github.com/')) {
-      return
-    }
-
-    void shell.openExternal(releaseUrl)
+    updateServiceSingleton().openRelease()
   },
 }

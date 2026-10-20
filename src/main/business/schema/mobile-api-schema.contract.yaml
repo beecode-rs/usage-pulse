@@ -9,8 +9,7 @@
 # provider-error). Anything else fails: an unknown type never matches a
 # discriminator literal, a missing required section fails, a wrong primitive
 # for `at` fails, and enum fields (session status, warning reason) reject
-# values outside the enums. The state response mirrors the state message
-# payload; the health response is the fixed { ok, appVersion } pair.
+# values outside the enums.
 subject: mobileApiSchemaContractHarness
 module: ./__tests__/_mobile-api-schema-contract-harness.js
 subjectType: function
@@ -325,84 +324,5 @@ methods:
                     status: OK
                     trackerId: tracker-2
                     trackerName: z.ai
-        result:
-          success: false
-  parseStateResponse:
-    terms:
-      # Both sections present parses.
-      - params:
-          - response:
-              sessions:
-                fetchedAt: 1700000000000
-                sessions: []
-                unreachableHosts: []
-              usage:
-                providers: []
-        result:
-          data:
-            sessions:
-              fetchedAt: 1700000000000
-              sessions: []
-              unreachableHosts: []
-            usage:
-              providers: []
-          success: true
-      # sessions null parses (first sessions poll not completed yet).
-      - params:
-          - response:
-              sessions: null
-              usage:
-                providers: []
-        result:
-          data:
-            sessions: null
-            usage:
-              providers: []
-          success: true
-      # a provider carrying the paused flag parses.
-      - params:
-          - response:
-              sessions: null
-              usage:
-                providers:
-                  - isAutoRefreshPaused: true
-                    providerId: zai
-                    status: OK
-                    trackerId: tracker-2
-                    trackerName: z.ai
-        result:
-          data:
-            sessions: null
-            usage:
-              providers:
-                - isAutoRefreshPaused: true
-                  providerId: zai
-                  status: OK
-                  trackerId: tracker-2
-                  trackerName: z.ai
-          success: true
-      # Missing sessions section fails.
-      - params:
-          - response:
-              usage:
-                providers: []
-        result:
-          success: false
-  parseHealthResponse:
-    terms:
-      # The fixed health payload parses.
-      - params:
-          - response:
-              appVersion: '1.2.3'
-              ok: true
-        result:
-          data:
-            appVersion: '1.2.3'
-            ok: true
-          success: true
-      # Missing appVersion fails.
-      - params:
-          - response:
-              ok: true
         result:
           success: false

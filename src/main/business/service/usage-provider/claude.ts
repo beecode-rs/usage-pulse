@@ -1,9 +1,9 @@
 import { z } from 'zod'
 
-import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
+import { clampedPercentSchema } from '#src/main/business/schema/usage-provider-schema'
+import { type UsageProvider } from '#src/main/business/service/usage-provider/index'
 import { httpUtil } from '#src/main/util/http-util'
 import { objectUtil } from '#src/main/util/object-util'
-import { percentUtil } from '#src/main/util/percent-util'
 import { validationUtil } from '#src/main/util/validation-util'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import type { UsageWindow } from '#src/shared/business/model/usage-model'
@@ -27,18 +27,10 @@ const resetsAtSchema = z
   })
   .catch(undefined)
 
-const utilizationSchema = z
-  .number()
-  .transform((value) => {
-    return percentUtil.roundPercentToOneDecimal(percentUtil.clampPercent(value))
-  })
-  .optional()
-  .catch(undefined)
-
 const usageSectionSchema = z.object({
   // eslint-disable-next-line @typescript-eslint/naming-convention -- anthropic api field name
   resets_at: resetsAtSchema,
-  utilization: utilizationSchema,
+  utilization: clampedPercentSchema,
 })
 
 const usageResponseSchema = z.object({

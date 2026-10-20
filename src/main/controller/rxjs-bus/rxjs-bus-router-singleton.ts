@@ -2,7 +2,7 @@ import { singletonPattern } from '@beecode/msh-util'
 
 import { rxjsBusIpcForwarder } from '#src/main/controller/rxjs-bus/ipc-forwarder'
 
-export class RxjsBusRouter {
+export class _RxjsBusRouter {
   protected readonly _subscriptions: { unsubscribe: () => void }[] = []
 
   register(): void {
@@ -18,5 +18,5 @@ export class RxjsBusRouter {
 }
 
 export const rxjsBusRouterSingleton = singletonPattern(() => {
-  return new RxjsBusRouter()
+  return new _RxjsBusRouter()
 })

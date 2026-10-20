@@ -103,7 +103,7 @@ export class SessionTranscriptService {
     transcript: SessionTranscriptStats | undefined
   }): void {
     const { filePath, mtimeMs, transcript } = params
-    if (this._cacheByPath.size >= constant.sessionTranscriptCacheEntryLimit) {
+    if (this._cacheByPath.size >= constant.sessionTranscript.cacheEntryLimit) {
       this._cacheByPath.clear()
     }
 

@@ -1,15 +1,14 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { sessionPresentationService } from '#src/renderer/src/business/service/session-presentation-service'
-import { SessionFinishedPulse } from '#src/renderer/src/ui-component/sessions/session-finished-pulse'
-import { SessionFocusButton } from '#src/renderer/src/ui-component/sessions/session-focus-button'
-import { SessionOriginIcon } from '#src/renderer/src/ui-component/sessions/session-origin-icon'
-import { SessionTranscriptChips } from '#src/renderer/src/ui-component/sessions/session-transcript-chips'
-import { SessionWaitingPulse } from '#src/renderer/src/ui-component/sessions/session-waiting-pulse'
+import { SessionsSessionFinishedPulse } from '#src/renderer/src/ui-component/sessions/session-finished-pulse'
+import { SessionsSessionFocusButton } from '#src/renderer/src/ui-component/sessions/session-focus-button'
+import { SessionsSessionOriginIcon } from '#src/renderer/src/ui-component/sessions/session-origin-icon'
+import { SessionsSessionTranscriptChips } from '#src/renderer/src/ui-component/sessions/session-transcript-chips'
+import { SessionsSessionWaitingPulse } from '#src/renderer/src/ui-component/sessions/session-waiting-pulse'
+import { constant } from '#src/renderer/src/util/constant'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
-
-const TICK_INTERVAL_MS = 30_000
 
 const resolveBoxClassName = (params: { isRemote: boolean; status: SessionStatusMapper }): string => {
   const { isRemote, status } = params
@@ -36,7 +35,7 @@ export const DashboardSessionBox = (props: {
   useEffect(() => {
     const intervalId = setInterval(() => {
       setNowMs(Date.now())
-    }, TICK_INTERVAL_MS)
+    }, constant.ui.nowTickIntervalMs)
 
     return () => {
       clearInterval(intervalId)
@@ -52,12 +51,12 @@ export const DashboardSessionBox = (props: {
       className={resolveBoxClassName({ isRemote: session.hostId !== undefined, status: session.status })}
       title={session.cwd}
     >
-      <SessionFinishedPulse finishedAtMs={finishedAtMs} nowMs={nowMs} pulseMs={pulseMs} />
-      <SessionWaitingPulse isWaiting={session.status === SessionStatusMapper.WAITING} />
+      <SessionsSessionFinishedPulse finishedAtMs={finishedAtMs} nowMs={nowMs} pulseMs={pulseMs} />
+      <SessionsSessionWaitingPulse isWaiting={session.status === SessionStatusMapper.WAITING} />
       <header className="dashboard-session-box-header">
         <div className="dashboard-session-box-heading">
           <span className="dashboard-session-box-origin">
-            <SessionOriginIcon isRemote={session.hostId !== undefined} />
+            <SessionsSessionOriginIcon isRemote={session.hostId !== undefined} />
           </span>
           {session.hostId !== undefined && session.hostLabel !== undefined && (
             <span className="dashboard-session-box-host" title={session.hostLabel}>
@@ -71,7 +70,7 @@ export const DashboardSessionBox = (props: {
             {statusPresentation.label}
           </span>
           {session.hostId === undefined && (
-            <SessionFocusButton label={`Focus terminal for ${sessionTitle}`} onClick={onFocus} />
+            <SessionsSessionFocusButton label={`Focus terminal for ${sessionTitle}`} onClick={onFocus} />
           )}
         </div>
       </header>
@@ -81,7 +80,9 @@ export const DashboardSessionBox = (props: {
           <span className="dashboard-session-box-title-suffix"> ({sessionTitleParts.suffix})</span>
         )}
       </h2>
-      {session.transcript !== undefined && <SessionTranscriptChips nowMs={nowMs} transcript={session.transcript} />}
+      {session.transcript !== undefined && (
+        <SessionsSessionTranscriptChips nowMs={nowMs} transcript={session.transcript} />
+      )}
     </article>
   )
 }

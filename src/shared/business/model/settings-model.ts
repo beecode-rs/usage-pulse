@@ -52,8 +52,8 @@ export class SettingsModel {
   triggers: ScheduleTriggerConfig[] = []
   waitingSoundId = constant.waitingSound.defaultId
 
-  constructor(params?: { settings?: SettingsData }) {
-    const { settings } = params ?? {}
+  constructor(params: { settings?: SettingsData } = {}) {
+    const { settings } = params
 
     if (settings !== undefined) {
       Object.assign(this, settings)

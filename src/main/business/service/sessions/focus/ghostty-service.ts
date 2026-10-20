@@ -1,90 +1,9 @@
 import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus-outcome-mapper-enum'
 import { SessionsClaudeQueryService } from '#src/main/business/service/sessions/claude-query-service'
 import { SessionsOsascriptService } from '#src/main/business/service/sessions/osascript-service'
+import { constant } from '#src/main/util/constant'
 
-const GHOSTTY_BUNDLE_ID = 'com.mitchellh.ghostty'
-
-const GHOSTTY_AUTOMATION_DENIED_MESSAGE =
-  'to focus the exact Ghostty tab, allow this app to control Ghostty in System Settings > Privacy & Security > Automation'
-
-const GHOSTTY_FRONT_WINDOW_POLL_COUNT = 20
-
-const GHOSTTY_FRONT_WINDOW_POLL_DELAY_SECONDS = 0.1
-
-const GHOSTTY_FRONT_WINDOW_WAIT_SNIPPET = `    activate
-    repeat ${String(GHOSTTY_FRONT_WINDOW_POLL_COUNT)} times
-      delay ${String(GHOSTTY_FRONT_WINDOW_POLL_DELAY_SECONDS)}
-      if ((id of front window) as text) is targetWindowId then
-        return "focused"
-      end if
-    end repeat
-    return "hidden"`
-
-const GHOSTTY_TAB_FOCUS_SCRIPT = `on run argv
-  set sessionCwd to item 1 of argv
-  set matchRank to item 2 of argv as integer
-  set matchIndex to 0
-  set targetWindowId to ""
-  tell application id "${GHOSTTY_BUNDLE_ID}"
-    repeat with ghosttyWindow in windows
-      repeat with ghosttyTab in tabs of ghosttyWindow
-        repeat with ghosttyTerminal in terminals of ghosttyTab
-          set terminalCwd to working directory of ghosttyTerminal
-          if terminalCwd is sessionCwd or terminalCwd is sessionCwd & "/" then
-            if matchIndex is matchRank then
-              set targetWindowId to (id of ghosttyWindow) as text
-              select tab ghosttyTab
-              focus ghosttyTerminal
-              exit repeat
-            end if
-            set matchIndex to matchIndex + 1
-          end if
-        end repeat
-        if targetWindowId is not "" then
-          exit repeat
-        end if
-      end repeat
-      if targetWindowId is not "" then
-        exit repeat
-      end if
-    end repeat
-    if targetWindowId is "" then
-      return "missing"
-    end if
-${GHOSTTY_FRONT_WINDOW_WAIT_SNIPPET}
-  end tell
-end run`
-
-const GHOSTTY_TTY_FOCUS_SCRIPT = `on run argv
-  set sessionTty to item 1 of argv
-  set targetWindowId to ""
-  tell application id "${GHOSTTY_BUNDLE_ID}"
-    repeat with ghosttyWindow in windows
-      repeat with ghosttyTab in tabs of ghosttyWindow
-        repeat with ghosttyTerminal in terminals of ghosttyTab
-          if (tty of ghosttyTerminal) is sessionTty then
-            set targetWindowId to (id of ghosttyWindow) as text
-            select tab ghosttyTab
-            focus ghosttyTerminal
-            exit repeat
-          end if
-        end repeat
-        if targetWindowId is not "" then
-          exit repeat
-        end if
-      end repeat
-      if targetWindowId is not "" then
-        exit repeat
-      end if
-    end repeat
-    if targetWindowId is "" then
-      return "missing"
-    end if
-${GHOSTTY_FRONT_WINDOW_WAIT_SNIPPET}
-  end tell
-end run`
-
-export type GhosttyFocusPeer = {
+export type SessionsFocusGhosttyPeer = {
   hostPid: number
   hostStartedAtMs: number | undefined
   pid: number
@@ -99,7 +18,7 @@ export class SessionsFocusGhosttyService {
 
     return this._osascriptService.runOsascript({
       args: [cwd, String(matchRank)],
-      script: GHOSTTY_TAB_FOCUS_SCRIPT,
+      script: constant.sessions.focus.ghostty.tabFocusScript,
     })
   }
 
@@ -108,23 +27,29 @@ export class SessionsFocusGhosttyService {
 
     return this._osascriptService.runOsascript({
       args: [sessionTty],
-      script: GHOSTTY_TTY_FOCUS_SCRIPT,
+      script: constant.sessions.focus.ghostty.ttyFocusScript,
     })
   }
 
   parseGhosttyFocusOutcome(params: { stdout: string }): GhosttyFocusOutcomeMapper {
     const { stdout } = params
-    switch (stdout.trim()) {
-      case 'focused': {
+    const outcome = stdout.trim()
+
+    switch (outcome) {
+      case GhosttyFocusOutcomeMapper.FOCUSED: {
         return GhosttyFocusOutcomeMapper.FOCUSED
       }
 
-      case 'hidden': {
+      case GhosttyFocusOutcomeMapper.HIDDEN: {
         return GhosttyFocusOutcomeMapper.HIDDEN
       }
 
-      default: {
+      case GhosttyFocusOutcomeMapper.MISSING: {
         return GhosttyFocusOutcomeMapper.MISSING
+      }
+
+      default: {
+        throw new Error(`the Ghostty focus script printed unexpected output: '${outcome}'`)
       }
     }
   }
@@ -132,13 +57,13 @@ export class SessionsFocusGhosttyService {
   resolveFocusErrorMessage(params: { error: unknown }): string {
     const { error } = params
     if (this._osascriptService.isAutomationDenied({ error })) {
-      return GHOSTTY_AUTOMATION_DENIED_MESSAGE
+      return constant.sessions.focus.ghostty.automationDeniedMessage
     }
 
     return `focusing the Ghostty tab failed: ${this._claudeQueryService.resolveQueryErrorMessage({ error })}`
   }
 
-  resolvePeerRank(params: { peers: GhosttyFocusPeer[]; pid: number }): number {
+  resolvePeerRank(params: { peers: SessionsFocusGhosttyPeer[]; pid: number }): number {
     const { peers, pid } = params
     const orderedPeers = [...peers].sort((left, right) => {
       const startDiff = this._resolvePeerStartMs(left) - this._resolvePeerStartMs(right)
@@ -160,7 +85,7 @@ export class SessionsFocusGhosttyService {
     return position
   }
 
-  protected _resolvePeerStartMs(peer: GhosttyFocusPeer): number {
+  protected _resolvePeerStartMs(peer: SessionsFocusGhosttyPeer): number {
     if (peer.hostStartedAtMs === undefined) {
       return Number.MAX_SAFE_INTEGER
     }

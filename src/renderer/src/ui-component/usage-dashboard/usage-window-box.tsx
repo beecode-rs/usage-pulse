@@ -1,15 +1,14 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { MenuStatusService } from '#src/renderer/src/business/service/menu-status-service'
-import { UsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
+import { UsageDashboardUsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
+import { constant } from '#src/renderer/src/util/constant'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { usageWindowUtil } from '#src/renderer/src/util/usage-window-util'
 
-const TICK_INTERVAL_MS = 30_000
-
-export const UsageWindowBox = (props: {
+export const UsageDashboardUsageWindowBox = (props: {
   resetAt?: number
   title: string
   totalAmount?: number
@@ -25,7 +24,7 @@ export const UsageWindowBox = (props: {
   useEffect(() => {
     const intervalId = setInterval(() => {
       setNow(Date.now())
-    }, TICK_INTERVAL_MS)
+    }, constant.ui.nowTickIntervalMs)
 
     return () => {
       clearInterval(intervalId)
@@ -47,11 +46,18 @@ export const UsageWindowBox = (props: {
 
   const renderResetBar = (): ReactElement => {
     if (resetAt === undefined) {
-      return <UsageBar ariaLabel={`${title} reset inactive`} label="Reset" percent={0} valueText="no active window" />
+      return (
+        <UsageDashboardUsageBar
+          ariaLabel={`${title} reset inactive`}
+          label="Reset"
+          percent={0}
+          valueText="no active window"
+        />
+      )
     }
 
     return (
-      <UsageBar
+      <UsageDashboardUsageBar
         ariaLabel={`time until ${title} reset`}
         fillAnchor="right"
         fillColor={paceFillColor}
@@ -66,7 +72,7 @@ export const UsageWindowBox = (props: {
   return (
     <div className={resolveBoxClassName()}>
       <span className="usage-window-box-title">{title}</span>
-      <UsageBar
+      <UsageDashboardUsageBar
         ariaLabel={`${title} usage`}
         fillColor={paceFillColor}
         label="Usage"

@@ -1,19 +1,12 @@
 import { type ChangeEvent, type ReactElement } from 'react'
 
 import { TriggerPlannerService } from '#src/renderer/src/business/service/trigger-planner-service'
+import { constant } from '#src/renderer/src/util/constant'
 import { dayTimeMsUtil } from '#src/renderer/src/util/day-time-ms-util'
 
 const triggerPlannerService = new TriggerPlannerService()
 
-const HOUR_OPTIONS = Array.from({ length: 24 }, (_unused, hour) => {
-  return String(hour).padStart(2, '0')
-})
-
-const MINUTE_OPTIONS = Array.from({ length: 60 }, (_unused, minute) => {
-  return String(minute).padStart(2, '0')
-})
-
-export const DayTimeSelect = (props: { onChange: (time: string) => void; time: string }): ReactElement => {
+export const ScheduleDayTimeSelect = (props: { onChange: (time: string) => void; time: string }): ReactElement => {
   const { onChange, time } = props
 
   const dayMs = dayTimeMsUtil.resolveDayMs(time)
@@ -37,7 +30,7 @@ export const DayTimeSelect = (props: { onChange: (time: string) => void; time: s
   return (
     <>
       <select aria-label="Hour" className="settings-field-input" onChange={handleHourChange} value={hourValue}>
-        {HOUR_OPTIONS.map((hourOption) => {
+        {constant.dayTimeSelect.hourOptions.map((hourOption) => {
           return (
             <option key={hourOption} value={hourOption}>
               {hourOption}
@@ -46,7 +39,7 @@ export const DayTimeSelect = (props: { onChange: (time: string) => void; time: s
         })}
       </select>
       <select aria-label="Minute" className="settings-field-input" onChange={handleMinuteChange} value={minuteValue}>
-        {MINUTE_OPTIONS.map((minuteOption) => {
+        {constant.dayTimeSelect.minuteOptions.map((minuteOption) => {
           return (
             <option key={minuteOption} value={minuteOption}>
               {minuteOption}

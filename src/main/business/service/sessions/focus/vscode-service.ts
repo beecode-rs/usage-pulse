@@ -1,41 +1,6 @@
 import { SessionsClaudeQueryService } from '#src/main/business/service/sessions/claude-query-service'
 import { SessionsOsascriptService } from '#src/main/business/service/sessions/osascript-service'
-
-const MAX_VSCODE_WORKSPACE_NAME_CANDIDATES = 3
-
-const VSCODE_ACCESSIBILITY_DENIED_MESSAGE =
-  'to focus the exact VS Code window, allow this app to control your computer in System Settings > Privacy & Security > Accessibility'
-
-const VSCODE_SYSTEM_EVENTS_DENIED_MESSAGE =
-  'to focus the exact VS Code window, allow this app to control System Events in System Settings > Privacy & Security > Automation'
-
-const VSCODE_TITLE_SEPARATOR = ' — '
-
-const VSCODE_WINDOW_RAISE_SCRIPT = `on run argv
-  set appBundlePath to item 1 of argv
-  set windowIndex to item 2 of argv as integer
-  set appId to id of application appBundlePath
-  tell application "System Events"
-    tell (first application process whose bundle identifier is appId)
-      set frontmost to true
-      perform action "AXRaise" of window windowIndex
-    end tell
-  end tell
-end run`
-
-const VSCODE_WINDOW_TITLES_SCRIPT = `on run argv
-  set appBundlePath to item 1 of argv
-  set appId to id of application appBundlePath
-  tell application "System Events"
-    tell (first application process whose bundle identifier is appId)
-      set originalDelimiters to AppleScript's text item delimiters
-      set AppleScript's text item delimiters to linefeed
-      set windowNames to (name of every window) as text
-      set AppleScript's text item delimiters to originalDelimiters
-      return windowNames
-    end tell
-  end tell
-end run`
+import { constant } from '#src/main/util/constant'
 
 export class SessionsFocusVsCodeService {
   protected readonly _claudeQueryService = new SessionsClaudeQueryService()
@@ -58,7 +23,7 @@ export class SessionsFocusVsCodeService {
     try {
       const stdout = await this._osascriptService.runOsascript({
         args: [bundlePath],
-        script: VSCODE_WINDOW_TITLES_SCRIPT,
+        script: constant.sessions.focus.vscode.windowTitlesScript,
       })
 
       return this._parseWindowTitles({ stdout })
@@ -108,7 +73,7 @@ export class SessionsFocusVsCodeService {
 
   protected _resolveWorkspaceName(params: { windowTitle: string }): string {
     const { windowTitle } = params
-    const titleParts = windowTitle.split(VSCODE_TITLE_SEPARATOR)
+    const titleParts = windowTitle.split(constant.sessions.focus.vscode.titleSeparator)
     const lastTitlePart = titleParts[titleParts.length - 1]
 
     if (lastTitlePart === undefined) {
@@ -126,7 +91,7 @@ export class SessionsFocusVsCodeService {
       .filter((pathPart) => {
         return pathPart !== ''
       })
-      .slice(-MAX_VSCODE_WORKSPACE_NAME_CANDIDATES)
+      .slice(-constant.sessions.focus.vscode.workspaceNameCandidateLimit)
       .reverse()
   }
 
@@ -135,7 +100,7 @@ export class SessionsFocusVsCodeService {
     try {
       await this._osascriptService.runOsascript({
         args: [bundlePath, String(windowIndex)],
-        script: VSCODE_WINDOW_RAISE_SCRIPT,
+        script: constant.sessions.focus.vscode.windowRaiseScript,
       })
     } catch (error) {
       const deniedMessage = this._resolvePermissionDeniedMessage({ error })
@@ -153,11 +118,11 @@ export class SessionsFocusVsCodeService {
   protected _resolvePermissionDeniedMessage(params: { error: unknown }): string | undefined {
     const { error } = params
     if (this._osascriptService.isAutomationDenied({ error })) {
-      return VSCODE_SYSTEM_EVENTS_DENIED_MESSAGE
+      return constant.sessions.focus.vscode.systemEventsDeniedMessage
     }
 
     if (this._osascriptService.isAssistiveAccessDenied({ error })) {
-      return VSCODE_ACCESSIBILITY_DENIED_MESSAGE
+      return constant.sessions.focus.vscode.accessibilityDeniedMessage
     }
 
     return undefined

@@ -2,33 +2,32 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import { triggerValidationService } from '#src/renderer/src/business/service/trigger-validation-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
-import { TriggerConfigFields } from '#src/renderer/src/ui-component/scheduling/trigger-config-fields'
+import { SchedulingTriggerConfigFields } from '#src/renderer/src/ui-component/scheduling/trigger-config-fields'
+import { constant } from '#src/renderer/src/util/constant'
 import {
   type ScheduleTriggerConfig,
   type ScheduleTriggerPreset,
 } from '#src/shared/business/model/schedule-trigger-model'
 import { SettingsModel } from '#src/shared/business/model/settings-model'
-import { constant } from '#src/shared/util/constant'
+import { constant as sharedConstant } from '#src/shared/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
 
-const DEFAULT_TRIGGER_COMMAND = 'claude -p "what is your name, only name"'
-
-export const AddTriggerDialog = (props: {
+export const SchedulingAddTriggerDialog = (props: {
   initialPreset?: ScheduleTriggerPreset
   onClose: () => void
   onSaved: () => void
 }): ReactElement => {
-  const { initialPreset = constant.maxWindowScheduleTriggerPreset, onClose, onSaved } = props
+  const { initialPreset = sharedConstant.maxWindowScheduleTriggerPreset, onClose, onSaved } = props
   const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [newTrigger, setNewTrigger] = useState<ScheduleTriggerConfig>((): ScheduleTriggerConfig => {
     return {
-      command: DEFAULT_TRIGGER_COMMAND,
+      command: constant.scheduleTrigger.defaultCommand,
       createdAt: Date.now(),
       days: [...initialPreset.days],
       id: crypto.randomUUID(),
       isEnabled: true,
       name: '',
-      timeoutMs: constant.scheduleTrigger.timeout.defaultMs,
+      timeoutMs: sharedConstant.scheduleTrigger.timeout.defaultMs,
       times: [...initialPreset.times],
     }
   })
@@ -100,7 +99,7 @@ export const AddTriggerDialog = (props: {
           </button>
         </header>
         <div className="settings-panel-body">
-          <TriggerConfigFields config={newTrigger} onChange={setNewTrigger} />
+          <SchedulingTriggerConfigFields config={newTrigger} onChange={setNewTrigger} />
           {errorMessage !== '' && <p className="settings-error">{errorMessage}</p>}
         </div>
         <div className="settings-dialog-actions">

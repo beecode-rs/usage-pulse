@@ -1,7 +1,9 @@
+import { typeUtil } from '@beecode/msh-util'
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { updateClientService } from '#src/renderer/src/business/service/update-client-service'
 import '#src/renderer/src/ui-component/app-shell/app-footer.css'
+import { constant } from '#src/renderer/src/util/constant'
 import type { UpdateStatus } from '#src/shared/business/model/update-model'
 import { errorUtil } from '#src/shared/util/error-util'
 
@@ -13,8 +15,6 @@ type UpdateDownload = {
   state: UpdateDownloadState
 }
 
-const DOWNLOAD_IDLE: UpdateDownload = { errorMessage: '', filePath: '', state: 'idle' }
-
 const resolveUpdateButtonLabel = (params: {
   download: UpdateDownload
   hasDownloadableAsset: boolean
@@ -22,19 +22,27 @@ const resolveUpdateButtonLabel = (params: {
 }): string => {
   const { download, hasDownloadableAsset, latestVersion } = params
 
-  if (download.state === 'downloading') {
-    return 'Downloading…'
-  }
+  switch (download.state) {
+    case 'downloading': {
+      return 'Downloading…'
+    }
 
-  if (download.state === 'downloaded') {
-    return 'Installer opened'
-  }
+    case 'downloaded': {
+      return 'Installer opened'
+    }
 
-  if (hasDownloadableAsset) {
-    return `Download v${latestVersion}`
-  }
+    case 'idle': {
+      if (hasDownloadableAsset) {
+        return `Download v${latestVersion}`
+      }
 
-  return `Update available · v${latestVersion}`
+      return `Update available · v${latestVersion}`
+    }
+
+    default: {
+      throw typeUtil.exhaustiveError('unsupported update download state [state]', download.state)
+    }
+  }
 }
 
 const resolveUpdateButtonTitle = (params: {
@@ -49,23 +57,31 @@ const resolveUpdateButtonTitle = (params: {
     return download.errorMessage
   }
 
-  if (download.state === 'downloading') {
-    return 'Downloading the update'
-  }
+  switch (download.state) {
+    case 'downloading': {
+      return 'Downloading the update'
+    }
 
-  if (download.state === 'downloaded') {
-    return `Installer saved to ${download.filePath}`
-  }
+    case 'downloaded': {
+      return `Installer saved to ${download.filePath}`
+    }
 
-  if (hasDownloadableAsset) {
-    return `Version ${latestVersion} available (current ${currentVersion})`
-  }
+    case 'idle': {
+      if (hasDownloadableAsset) {
+        return `Version ${latestVersion} available (current ${currentVersion})`
+      }
 
-  return 'Open the GitHub release page'
+      return 'Open the GitHub release page'
+    }
+
+    default: {
+      throw typeUtil.exhaustiveError('unsupported update download state [state]', download.state)
+    }
+  }
 }
 
-export const AppFooter = (): ReactElement => {
-  const [download, setDownload] = useState<UpdateDownload>(DOWNLOAD_IDLE)
+export const AppShellFooter = (): ReactElement => {
+  const [download, setDownload] = useState<UpdateDownload>(constant.appFooter.idleDownload)
   const [status, setStatus] = useState<UpdateStatus | undefined>(undefined)
 
   useEffect(() => {
@@ -103,12 +119,12 @@ export const AppFooter = (): ReactElement => {
     setDownload({ errorMessage: '', filePath: '', state: 'downloading' })
 
     void updateClientService
-      .downloadUpdate()
+      .downloadUpdateAndOpenInstaller()
       .then((filePath) => {
         setDownload({ errorMessage: '', filePath, state: 'downloaded' })
       })
       .catch((error: unknown) => {
-        setDownload({ ...DOWNLOAD_IDLE, errorMessage: errorUtil.resolveMessage(error) })
+        setDownload({ ...constant.appFooter.idleDownload, errorMessage: errorUtil.resolveMessage(error) })
       })
   }
 

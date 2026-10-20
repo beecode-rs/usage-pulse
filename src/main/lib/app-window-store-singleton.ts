@@ -9,6 +9,17 @@ export class _AppWindowStore {
     this._window = window
   }
 
+  closeWindow(): void {
+    const window = this._window
+    this._window = undefined
+
+    if (window === undefined || window.isDestroyed()) {
+      return
+    }
+
+    window.close()
+  }
+
   sendToRenderer(params: { channel: string; payload: unknown }): void {
     const { channel, payload } = params
     if (this._window === undefined || this._window.isDestroyed()) {

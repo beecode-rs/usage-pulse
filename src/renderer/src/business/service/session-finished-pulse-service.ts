@@ -1,6 +1,6 @@
-import { SessionSoundService } from '#src/renderer/src/business/service/session-sound-service'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
+import { sessionStatusTransitionService } from '#src/shared/business/service/session-status-transition-service'
 
 export const sessionFinishedPulseService = {
   isPulsing: (params: { finishedAtMs?: number; nowMs: number; pulseMs: number }): boolean => {
@@ -31,7 +31,7 @@ export const sessionFinishedPulseService = {
     const keptEntries = Object.entries(finishedAtBySessionId).filter(([sessionId]) => {
       return idleSessionIds.has(sessionId)
     })
-    const finishedEntries = new SessionSoundService()
+    const finishedEntries = sessionStatusTransitionService
       .resolveStatusTransitionSessionIds({
         currentSessions,
         fromStatus: SessionStatusMapper.BUSY,

@@ -1,7 +1,8 @@
 import { singletonPattern } from '@beecode/msh-util'
 
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
-import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
+import { constant } from '#src/main/util/constant'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { UsageSeverityLevel } from '#src/shared/business/enum/usage-severity-level-enum'
@@ -11,13 +12,6 @@ import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/mod
 import { type ProviderSnapshot, type UsageSnapshot } from '#src/shared/business/model/usage-model'
 import { sessionStatusTransitionService } from '#src/shared/business/service/session-status-transition-service'
 import { usageSeverityLevelService } from '#src/shared/business/service/usage-severity-level-service'
-
-const SEVERITY_LEVEL_RANK: Record<UsageSeverityLevel, number> = {
-  [UsageSeverityLevel.FILLING_UP]: 1,
-  [UsageSeverityLevel.HIGH_USAGE]: 2,
-  [UsageSeverityLevel.LIMIT_REACHED]: 3,
-  [UsageSeverityLevel.NONE]: 0,
-}
 
 export class _MobileDerivedEventsService {
   protected _previousSessionsSnapshot: SessionSnapshot | undefined
@@ -162,7 +156,10 @@ export class _MobileDerivedEventsService {
 
       this._previousSeverityByWindowKey.set(`${provider.trackerId}:${window.label}`, level)
 
-      if (previousLevel === undefined || SEVERITY_LEVEL_RANK[level] <= SEVERITY_LEVEL_RANK[previousLevel]) {
+      if (
+        previousLevel === undefined ||
+        constant.usageSeverityLevelRank[level] <= constant.usageSeverityLevelRank[previousLevel]
+      ) {
         return
       }
 

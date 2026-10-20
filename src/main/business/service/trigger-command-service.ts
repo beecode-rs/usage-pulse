@@ -1,12 +1,11 @@
 import { spawn } from 'node:child_process'
 import { homedir } from 'node:os'
 
+import { constant } from '#src/main/util/constant'
 import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
-import { constant } from '#src/shared/util/constant'
+import { constant as sharedConstant } from '#src/shared/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
-
-const DEFAULT_GRACE_PERIOD_MS = 5000
 
 export type TriggerCommandResult = {
   durationMs: number
@@ -18,19 +17,16 @@ export type TriggerCommandResult = {
 export class TriggerCommandService {
   protected readonly _gracePeriodMs: number
   protected readonly _maxOutputLength: number
-  protected readonly _spawnImpl: typeof spawn
 
   constructor(
-    params: { gracePeriodMs: number; maxOutputLength: number; spawnImpl: typeof spawn } = {
-      gracePeriodMs: DEFAULT_GRACE_PERIOD_MS,
-      maxOutputLength: constant.scheduleTrigger.run.log.snippetMaxLength,
-      spawnImpl: spawn,
+    params: { gracePeriodMs: number; maxOutputLength: number } = {
+      gracePeriodMs: constant.scheduleTrigger.gracePeriodMs,
+      maxOutputLength: sharedConstant.scheduleTrigger.run.log.snippetMaxLength,
     },
   ) {
-    const { gracePeriodMs, maxOutputLength, spawnImpl } = params
+    const { gracePeriodMs, maxOutputLength } = params
     this._gracePeriodMs = gracePeriodMs
     this._maxOutputLength = maxOutputLength
-    this._spawnImpl = spawnImpl
   }
 
   run(params: { command: string; timeoutMs: number }): Promise<TriggerCommandResult> {
@@ -41,7 +37,7 @@ export class TriggerCommandService {
       const stdoutChunks: string[] = []
       const stderrChunks: string[] = []
       const workerState = { isTimedOut: false }
-      const child = this._spawnImpl(this._resolveShellPath(), ['-l', '-c', command], {
+      const child = spawn(this._resolveShellPath(), ['-l', '-c', command], {
         cwd: homedir(),
         detached: true,
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -83,27 +79,34 @@ export class TriggerCommandService {
       })
 
       child.stdout.on('data', (chunk: Buffer) => {
-        this._captureChunk({ chunk, chunks: stdoutChunks })
+        const capturedChunk = this._captureChunk({ capturedChunks: stdoutChunks, chunk })
+
+        if (capturedChunk !== '') {
+          stdoutChunks.push(capturedChunk)
+        }
       })
 
       child.stderr.on('data', (chunk: Buffer) => {
-        this._captureChunk({ chunk, chunks: stderrChunks })
+        const capturedChunk = this._captureChunk({ capturedChunks: stderrChunks, chunk })
+
+        if (capturedChunk !== '') {
+          stderrChunks.push(capturedChunk)
+        }
       })
     })
   }
 
-  protected _captureChunk(params: { chunk: Buffer; chunks: string[] }): void {
-    const { chunk, chunks } = params
-    const capturedLength = chunks.reduce((total, chunk) => {
-      return total + chunk.length
+  protected _captureChunk(params: { capturedChunks: string[]; chunk: Buffer }): string {
+    const { capturedChunks, chunk } = params
+    const capturedLength = capturedChunks.reduce((total, capturedChunk) => {
+      return total + capturedChunk.length
     }, 0)
 
     if (capturedLength >= this._maxOutputLength) {
-      return
+      return ''
     }
 
-    const remainingLength = this._maxOutputLength - capturedLength
-    chunks.push(chunk.toString('utf8').slice(0, remainingLength))
+    return chunk.toString('utf8').slice(0, this._maxOutputLength - capturedLength)
   }
 
   protected _killProcessGroup(params: { pid: number | undefined; signal: NodeJS.Signals }): void {
@@ -122,7 +125,7 @@ export class TriggerCommandService {
   protected _resolveExitCode(params: { code: number | null; isTimedOut: boolean }): number {
     const { code, isTimedOut } = params
     if (isTimedOut) {
-      return constant.scheduleTrigger.run.exitCodeTimedOut
+      return sharedConstant.scheduleTrigger.run.exitCodeTimedOut
     }
 
     if (code !== null) {

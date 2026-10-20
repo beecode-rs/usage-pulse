@@ -2,7 +2,7 @@ import { type CSSProperties, type ReactElement } from 'react'
 
 import { usageSeverityService } from '#src/renderer/src/business/service/usage-severity-service'
 
-export const UsageBar = (props: {
+export const UsageDashboardUsageBar = (props: {
   ariaLabel?: string
   fillAnchor?: 'left' | 'right'
   fillColor?: string

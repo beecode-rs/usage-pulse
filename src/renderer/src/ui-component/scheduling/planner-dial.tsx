@@ -9,14 +9,6 @@ import { PlannerDialToneMapper } from '#src/renderer/src/business/enum/planner-d
 import { constant } from '#src/renderer/src/util/constant'
 import { PlannerDialUtil } from '#src/renderer/src/util/planner-dial-util'
 
-const DIAL_SIZE = 76
-
-const DIAL_CENTER = DIAL_SIZE / 2
-
-const DIAL_KNOB_RADIUS = 3.5
-
-const DIAL_RADIUS = DIAL_SIZE / 2 - 7
-
 const resolveDialClassName = (tone: PlannerDialToneMapper | undefined): string => {
   if (tone === undefined) {
     return 'planner-dial'
@@ -72,7 +64,7 @@ const resolveArcPath = (params: {
   ].join(' ')
 }
 
-export const PlannerDial = (props: {
+export const SchedulingPlannerDial = (props: {
   formatValue: (value: number) => string
   label: string
   max: number
@@ -82,27 +74,28 @@ export const PlannerDial = (props: {
   tone?: PlannerDialToneMapper
   value: number
 }): ReactElement => {
+  const { formatValue, label, max, min, onChange, step, tone, value } = props
   const svgRef = useRef<SVGSVGElement | null>(null)
   const isDraggingRef = useRef(false)
   const plannerDialUtil = new PlannerDialUtil()
 
   const valueAngleDegrees = plannerDialUtil.resolveValueAngleDegrees({
-    max: props.max,
-    min: props.min,
-    value: props.value,
+    max,
+    min,
+    value,
   })
   const knobPoint = resolvePointOnCircle({
     angleDegrees: valueAngleDegrees,
-    center: DIAL_CENTER,
-    radius: DIAL_RADIUS,
+    center: constant.plannerDial.centerPx,
+    radius: constant.plannerDial.radiusPx,
   })
 
   const publishValue = (nextValue: number): void => {
-    if (nextValue === props.value) {
+    if (nextValue === value) {
       return
     }
 
-    props.onChange(nextValue)
+    onChange(nextValue)
   }
 
   const publishPointerValue = (event: ReactPointerEvent<SVGSVGElement>): void => {
@@ -116,9 +109,9 @@ export const PlannerDial = (props: {
       plannerDialUtil.resolvePointerValue({
         dx: event.clientX - (rect.left + rect.width / 2),
         dy: event.clientY - (rect.top + rect.height / 2),
-        max: props.max,
-        min: props.min,
-        step: props.step,
+        max,
+        min,
+        step,
       }),
     )
   }
@@ -150,31 +143,31 @@ export const PlannerDial = (props: {
   const handleKeyDown = (event: ReactKeyboardEvent<SVGSVGElement>): void => {
     const nextValue = plannerDialUtil.resolveKeyboardValue({
       key: event.key,
-      max: props.max,
-      min: props.min,
-      step: props.step,
-      value: props.value,
+      max,
+      min,
+      step,
+      value,
     })
 
-    if (nextValue === props.value) {
+    if (nextValue === value) {
       return
     }
 
     event.preventDefault()
-    props.onChange(nextValue)
+    onChange(nextValue)
   }
 
   return (
-    <div className={resolveDialClassName(props.tone)}>
-      <span className="planner-dial-label">{props.label}</span>
+    <div className={resolveDialClassName(tone)}>
+      <span className="planner-dial-label">{label}</span>
       <svg
-        aria-label={props.label}
-        aria-valuemax={props.max}
-        aria-valuemin={props.min}
-        aria-valuenow={props.value}
-        aria-valuetext={props.formatValue(props.value)}
+        aria-label={label}
+        aria-valuemax={max}
+        aria-valuemin={min}
+        aria-valuenow={value}
+        aria-valuetext={formatValue(value)}
         className="planner-dial-svg"
-        height={DIAL_SIZE}
+        height={constant.plannerDial.sizePx}
         onKeyDown={handleKeyDown}
         onPointerCancel={handlePointerCancel}
         onPointerDown={handlePointerDown}
@@ -183,33 +176,39 @@ export const PlannerDial = (props: {
         ref={svgRef}
         role="slider"
         tabIndex={0}
-        viewBox={`0 0 ${String(DIAL_SIZE)} ${String(DIAL_SIZE)}`}
-        width={DIAL_SIZE}
+        viewBox={`0 0 ${String(constant.plannerDial.sizePx)} ${String(constant.plannerDial.sizePx)}`}
+        width={constant.plannerDial.sizePx}
       >
         <path
           className="planner-dial-track"
           d={resolveArcPath({
-            center: DIAL_CENTER,
-            endAngleDegrees: constant.plannerDialStartAngleDegrees + constant.plannerDialAngleRangeDegrees,
-            radius: DIAL_RADIUS,
-            startAngleDegrees: constant.plannerDialStartAngleDegrees,
+            center: constant.plannerDial.centerPx,
+            endAngleDegrees: constant.plannerDial.startAngleDegrees + constant.plannerDial.angleRangeDegrees,
+            radius: constant.plannerDial.radiusPx,
+            startAngleDegrees: constant.plannerDial.startAngleDegrees,
           })}
         />
-        {props.value > props.min && (
+        {value > min && (
           <path
             className="planner-dial-fill"
             d={resolveArcPath({
-              center: DIAL_CENTER,
+              center: constant.plannerDial.centerPx,
               endAngleDegrees: valueAngleDegrees,
-              radius: DIAL_RADIUS,
-              startAngleDegrees: constant.plannerDialStartAngleDegrees,
+              radius: constant.plannerDial.radiusPx,
+              startAngleDegrees: constant.plannerDial.startAngleDegrees,
             })}
           />
         )}
-        <line className="planner-dial-needle" x1={DIAL_CENTER} x2={knobPoint.x} y1={DIAL_CENTER} y2={knobPoint.y} />
-        <circle className="planner-dial-knob" cx={knobPoint.x} cy={knobPoint.y} r={DIAL_KNOB_RADIUS} />
+        <line
+          className="planner-dial-needle"
+          x1={constant.plannerDial.centerPx}
+          x2={knobPoint.x}
+          y1={constant.plannerDial.centerPx}
+          y2={knobPoint.y}
+        />
+        <circle className="planner-dial-knob" cx={knobPoint.x} cy={knobPoint.y} r={constant.plannerDial.knobRadiusPx} />
       </svg>
-      <span className="planner-dial-value">{props.formatValue(props.value)}</span>
+      <span className="planner-dial-value">{formatValue(value)}</span>
     </div>
   )
 }
