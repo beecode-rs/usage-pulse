@@ -1,12 +1,12 @@
+import { constant } from '#src/renderer/src/util/constant'
 import { type PlannerWindow } from '#src/shared/business/model/trigger-planner-model'
-import { constant } from '#src/shared/util/constant'
-
-const FIRST_WINDOW_GAP_MS = 18_120_000
+import { constant as sharedConstant } from '#src/shared/util/constant'
 
 export class TriggerPlannerService {
   formatDayMs(params: { dayMs: number }): string {
     const { dayMs } = params
-    const wrappedDayMs = ((dayMs % constant.planner.dayMs) + constant.planner.dayMs) % constant.planner.dayMs
+    const wrappedDayMs =
+      ((dayMs % sharedConstant.planner.dayMs) + sharedConstant.planner.dayMs) % sharedConstant.planner.dayMs
     const hours = Math.floor(wrappedDayMs / 3_600_000)
     const minutesPastHour = Math.floor((wrappedDayMs % 3_600_000) / 60_000)
 
@@ -46,7 +46,7 @@ export class TriggerPlannerService {
 
   resolvePlannerWindows(params: { firstTriggerMs: number; workEndMs: number }): PlannerWindow[] {
     const { firstTriggerMs, workEndMs } = params
-    const startLimitMs = Math.min(workEndMs, constant.planner.dayMs)
+    const startLimitMs = Math.min(workEndMs, sharedConstant.planner.dayMs)
 
     return this._collectWindows({ gapIndex: 0, startLimitMs, startMs: firstTriggerMs, windows: [] })
   }
@@ -70,7 +70,7 @@ export class TriggerPlannerService {
     }
 
     const collectedWindow: PlannerWindow = {
-      endMs: step.startMs + constant.planner.windowDurationMs,
+      endMs: step.startMs + sharedConstant.planner.windowDurationMs,
       startMs: step.startMs,
       startTime: this.formatDayMs({ dayMs: step.startMs }),
     }
@@ -78,7 +78,7 @@ export class TriggerPlannerService {
     return this._collectWindows({
       gapIndex: step.gapIndex + 1,
       startLimitMs: step.startLimitMs,
-      startMs: step.startMs + FIRST_WINDOW_GAP_MS + step.gapIndex * 60_000,
+      startMs: step.startMs + constant.planner.firstWindowGapMs + step.gapIndex * 60_000,
       windows: [...step.windows, collectedWindow],
     })
   }

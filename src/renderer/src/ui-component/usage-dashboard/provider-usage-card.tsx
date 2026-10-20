@@ -5,15 +5,15 @@ import { UsageStalenessService } from '#src/renderer/src/business/service/usage-
 import { ZaiPeakService } from '#src/renderer/src/business/service/zai-peak-service'
 import { PeakIcon } from '#src/renderer/src/ui-component/icon/peak-icon'
 import { RefreshIcon } from '#src/renderer/src/ui-component/icon/refresh-icon'
-import { ProviderIcon } from '#src/renderer/src/ui-component/provider/provider-icon'
-import { UsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
-import { UsageWindowBox } from '#src/renderer/src/ui-component/usage-dashboard/usage-window-box'
+import { ProviderIcon } from '#src/renderer/src/ui-component/provider/icon'
+import { UsageDashboardUsageBar } from '#src/renderer/src/ui-component/usage-dashboard/usage-bar'
+import { UsageDashboardUsageWindowBox } from '#src/renderer/src/ui-component/usage-dashboard/usage-window-box'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
 
-export const ProviderUsageCard = (props: {
+export const UsageDashboardProviderUsageCard = (props: {
   isAutoRefreshPaused: boolean
   isRefreshing: boolean
   nowMs: number
@@ -335,7 +335,7 @@ export const ProviderUsageCard = (props: {
         </header>
         {providerSnapshot.status === UsageActivityStatus.OK && primaryWindow !== undefined && (
           <div className="provider-card-body">
-            <UsageWindowBox
+            <UsageDashboardUsageWindowBox
               resetAt={primaryWindow.resetAt}
               title={primaryWindow.label}
               totalAmount={primaryWindow.totalAmount}
@@ -347,7 +347,7 @@ export const ProviderUsageCard = (props: {
               {secondaryWindows.map((usageWindow) => {
                 if (usageWindow.windowMs !== undefined) {
                   return (
-                    <UsageWindowBox
+                    <UsageDashboardUsageWindowBox
                       key={usageWindow.label}
                       resetAt={usageWindow.resetAt}
                       title={usageWindow.label}
@@ -359,7 +359,13 @@ export const ProviderUsageCard = (props: {
                   )
                 }
 
-                return <UsageBar key={usageWindow.label} label={usageWindow.label} percent={usageWindow.usedPercent} />
+                return (
+                  <UsageDashboardUsageBar
+                    key={usageWindow.label}
+                    label={usageWindow.label}
+                    percent={usageWindow.usedPercent}
+                  />
+                )
               })}
             </div>
           </div>

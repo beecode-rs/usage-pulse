@@ -4,7 +4,7 @@ vi.mock('electron', () => ({ app: { getPath: (): string => '/tmp' } }))
 
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
 import { _UsagePollService } from '#src/main/business/service/usage-poll-service-singleton'
-import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
+import { type UsageProvider } from '#src/main/business/service/usage-provider/index'
 import { type ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'

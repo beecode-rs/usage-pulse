@@ -1,8 +1,9 @@
 import type { ReactElement } from 'react'
 
 import { TriggerPlannerService } from '#src/renderer/src/business/service/trigger-planner-service'
+import { constant } from '#src/renderer/src/util/constant'
 import { dayTimeMsUtil } from '#src/renderer/src/util/day-time-ms-util'
-import { constant } from '#src/shared/util/constant'
+import { constant as sharedConstant } from '#src/shared/util/constant'
 
 const triggerPlannerService = new TriggerPlannerService()
 
@@ -15,20 +16,10 @@ interface WindowSegment extends TimeRange {
   startTime: string
 }
 
-const DIAGRAM_DOMAIN_MS: TimeRange = { endMs: 82_800_000, startMs: 21_600_000 }
-
-const DIAGRAM_TICKS: string[] = ['07:00', '12:00', '17:00', '22:00']
-
-const WORK_RANGE: TimeRange = { endMs: 64_800_000, startMs: 36_000_000 }
-
-const WORK_RANGE_LABEL = 'Work 10:00–18:00'
-
-const WINDOW_MS = constant.fiveHourWindowMs
-
 const resolvePositionPercent = (params: { dayMs: number }): number => {
   const { dayMs } = params
-  const domainMs = DIAGRAM_DOMAIN_MS.endMs - DIAGRAM_DOMAIN_MS.startMs
-  const offsetMs = dayMs - DIAGRAM_DOMAIN_MS.startMs
+  const domainMs = constant.triggerWindowExplainer.domainMs.endMs - constant.triggerWindowExplainer.domainMs.startMs
+  const offsetMs = dayMs - constant.triggerWindowExplainer.domainMs.startMs
 
   return (offsetMs / domainMs) * 100
 }
@@ -42,11 +33,11 @@ const resolveSegmentLayout = (params: { range: TimeRange }): { leftPercent: numb
 }
 
 const resolveWindowSegments = (): WindowSegment[] => {
-  return constant.maxWindowScheduleTriggerPreset.times.map((startTime) => {
+  return sharedConstant.maxWindowScheduleTriggerPreset.times.map((startTime) => {
     const startMs = dayTimeMsUtil.resolveDayMs(startTime)
 
     return {
-      endMs: startMs + WINDOW_MS,
+      endMs: startMs + sharedConstant.fiveHourWindowMs,
       startMs,
       startTime,
     }
@@ -63,9 +54,9 @@ const resolveWindowSentence = (): string => {
     .join(', ')
 }
 
-export const TriggerWindowExplainer = (): ReactElement => {
+export const SchedulingTriggerWindowExplainer = (): ReactElement => {
   const windowSegments = resolveWindowSegments()
-  const workLayout = resolveSegmentLayout({ range: WORK_RANGE })
+  const workLayout = resolveSegmentLayout({ range: constant.triggerWindowExplainer.workRange })
 
   return (
     <div className="trigger-explainer">
@@ -123,11 +114,11 @@ export const TriggerWindowExplainer = (): ReactElement => {
                 width: `${String(workLayout.widthPercent)}%`,
               }}
             >
-              {WORK_RANGE_LABEL}
+              {constant.triggerWindowExplainer.workRangeLabel}
             </div>
           </div>
           <div className="trigger-window-diagram-ticks">
-            {DIAGRAM_TICKS.map((tick) => {
+            {constant.triggerWindowExplainer.ticks.map((tick) => {
               const leftPercent = resolvePositionPercent({ dayMs: dayTimeMsUtil.resolveDayMs(tick) })
 
               return (

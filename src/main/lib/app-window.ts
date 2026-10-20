@@ -1,3 +1,4 @@
+import { typeUtil } from '@beecode/msh-util'
 import { BrowserWindow, app, shell } from 'electron'
 import { join } from 'node:path'
 
@@ -9,8 +10,8 @@ import { appTitleUtil } from '#src/shared/util/app-title-util'
 export type WindowVisibilityChangeListener = (params: { isVisible: boolean }) => void
 
 export class AppWindow {
-  create(params?: { onVisibilityChange?: WindowVisibilityChangeListener }): BrowserWindow {
-    const { onVisibilityChange } = params ?? {}
+  create(params: { onVisibilityChange?: WindowVisibilityChangeListener } = {}): BrowserWindow {
+    const { onVisibilityChange } = params
     this._setDevelopmentDockIcon()
 
     const browserWindow = new BrowserWindow({
@@ -54,15 +55,20 @@ export class AppWindow {
   }
 
   protected _resolveWindowIconPath(): string | undefined {
-    switch (osUtil.resolvePlatform()) {
+    const platform = osUtil.resolvePlatform()
+
+    switch (platform) {
       case OS.LINUX: {
         return join(__dirname, '../../build/icons/512x512.png')
+      }
+      case OS.MACOS: {
+        return undefined
       }
       case OS.WINDOWS: {
         return join(__dirname, '../../build/icons/256x256.png')
       }
       default: {
-        return undefined
+        throw typeUtil.exhaustiveError('unsupported platform [platform]', platform)
       }
     }
   }

@@ -4,33 +4,64 @@ import { type WebSocket } from 'ws'
 
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { mobileDerivedEventsServiceSingleton } from '#src/main/business/service/mobile-derived-events-service-singleton'
-import { sessionsPollServiceSingleton } from '#src/main/business/service/sessions/poll-service-singleton'
-import { usagePollServiceSingleton } from '#src/main/business/service/usage-poll-service-singleton'
-import { httpRequestHandler } from '#src/main/controller/mobile-server/http-request-handler'
+import { mobileStateService } from '#src/main/business/service/mobile-state-service'
+import { HttpRequestHandler } from '#src/main/controller/mobile-server/http-request-handler'
 import { WsBroadcaster } from '#src/main/controller/mobile-server/ws-broadcaster'
-import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { type MobileConnectedDevice } from '#src/shared/business/model/mobile-api-model'
+import { type SettingsModel } from '#src/shared/business/model/settings-model'
 import { errorUtil } from '#src/shared/util/error-util'
 
 export class _MobileServerService {
+  protected _appliedPort: number | undefined
   protected _broadcaster: WsBroadcaster | undefined
   protected _isFailed = false
+  protected _isServerActive = false
   protected _server: Server | undefined
+  protected _settingsSavedSubscription: { unsubscribe: () => void } | undefined
   protected _subscriptions: { unsubscribe: () => void }[] = []
+  protected readonly _httpRequestHandler = new HttpRequestHandler()
 
   async start(): Promise<void> {
     await this.stop()
-    this._isFailed = false
+    this._settingsSavedSubscription = appEventBusSingleton().subscribe({
+      listener: (settings) => {
+        void this._syncServerState({ settings }).catch(() => {
+          return undefined
+        })
+      },
+      type: AppEventType.SETTINGS_SAVED,
+    })
     const settings = settingsRepoSingleton().fetch()
+
+    if (!settings.isMobileServerEnabled) {
+      return
+    }
+
+    await this._startServer({ port: settings.mobileServerPort })
+  }
+
+  async stop(): Promise<void> {
+    this._settingsSavedSubscription?.unsubscribe()
+    this._settingsSavedSubscription = undefined
+    await this._stopServer()
+  }
+
+  protected async _startServer(params: { port: number }): Promise<void> {
+    const { port } = params
+    await this._stopServer()
+    this._isFailed = false
     mobileDerivedEventsServiceSingleton().start()
     const broadcaster = this._startBroadcaster()
     this._broadcaster = broadcaster
     this._subscriptions = this._subscribeToBusEvents({ broadcaster })
-    await this._listen({ port: settings.mobileServerPort })
+    await this._listen({ port })
+    this._appliedPort = port
+    this._isServerActive = true
   }
 
-  async stop(): Promise<void> {
+  protected async _stopServer(): Promise<void> {
     this._subscriptions.forEach((subscription) => {
       subscription.unsubscribe()
     })
@@ -41,15 +72,48 @@ export class _MobileServerService {
     const server = this._server
     this._server = undefined
 
-    if (server === undefined) {
+    if (server !== undefined) {
+      await new Promise<void>((resolve) => {
+        server.close(() => {
+          resolve()
+        })
+      })
+    }
+
+    this._appliedPort = undefined
+    this._isServerActive = false
+  }
+
+  protected _isRestartRequired(params: { port: number }): boolean {
+    const { port } = params
+
+    if (!this._isServerActive) {
+      return true
+    }
+
+    if (this.isFailed()) {
+      return true
+    }
+
+    return port !== this._appliedPort
+  }
+
+  protected async _syncServerState(params: { settings: SettingsModel }): Promise<void> {
+    const { settings } = params
+
+    if (!settings.isMobileServerEnabled) {
+      await this._stopServer()
+
       return
     }
 
-    await new Promise<void>((resolve) => {
-      server.close(() => {
-        resolve()
-      })
-    })
+    const isRestartRequired = this._isRestartRequired({ port: settings.mobileServerPort })
+
+    if (!isRestartRequired) {
+      return
+    }
+
+    await this._startServer({ port: settings.mobileServerPort })
   }
 
   getPort(): number | undefined {
@@ -94,11 +158,7 @@ export class _MobileServerService {
   protected _sendStateMessage(params: { broadcaster: WsBroadcaster; ws: WebSocket }): void {
     const { broadcaster, ws } = params
     broadcaster.send({
-      message: {
-        sessions: sessionsPollServiceSingleton().getSnapshot() ?? null,
-        type: 'state',
-        usage: usagePollServiceSingleton().getSnapshot(),
-      },
+      message: { ...mobileStateService.getSnapshot(), type: 'state' },
       ws,
     })
   }
@@ -143,7 +203,7 @@ export class _MobileServerService {
   protected _listen(params: { port: number }): Promise<void> {
     const { port } = params
     const server = createServer((request, response) => {
-      void httpRequestHandler.handleRequest({ request, response })
+      void this._httpRequestHandler.handleRequest({ request, response })
     })
 
     server.on('upgrade', (request, socket, head) => {

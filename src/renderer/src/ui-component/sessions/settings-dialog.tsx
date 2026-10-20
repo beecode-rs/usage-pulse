@@ -1,7 +1,7 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
-import { SessionSoundField } from '#src/renderer/src/ui-component/sessions/session-sound-field'
+import { SessionsSessionSoundField } from '#src/renderer/src/ui-component/sessions/session-sound-field'
 import { SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
@@ -172,7 +172,7 @@ export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: ()
         </label>
         <fieldset className="settings-group">
           <legend className="settings-group-title">Sounds</legend>
-          <SessionSoundField
+          <SessionsSessionSoundField
             hint="Plays when a Claude session starts waiting for your input."
             label="Waiting sound"
             onSoundIdChange={setWaitingSoundId}
@@ -180,7 +180,7 @@ export const SessionsSettingsDialog = (props: { onClose: () => void; onSaved: ()
             soundId={waitingSoundId}
             volumePercent={soundVolumePercent}
           />
-          <SessionSoundField
+          <SessionsSessionSoundField
             hint="Plays when a Claude session finishes working."
             label="Session finished sound"
             onSoundIdChange={setSessionFinishedSoundId}

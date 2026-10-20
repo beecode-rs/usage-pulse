@@ -3,11 +3,11 @@ import { singletonPattern } from '@beecode/msh-util'
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
 import { UsageSnapshotRepo } from '#src/main/business/repo/usage-snapshot-repo'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { ClaudeSystemAccessTokenService } from '#src/main/business/service/claude-system-access-token-service'
 import { UsageProviderClaude } from '#src/main/business/service/usage-provider/claude'
-import { type UsageProvider } from '#src/main/business/service/usage-provider/usage-provider'
+import { type UsageProvider } from '#src/main/business/service/usage-provider/index'
 import { UsageProviderZai } from '#src/main/business/service/usage-provider/zai'
-import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { httpUtil } from '#src/main/util/http-util'
 import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
@@ -118,6 +118,15 @@ export class _UsagePollService {
     const isPollApplied = await this._pollTrackerOnce({ tracker })
 
     this._rescheduleTrackerAfterPoll({ isPollApplied, trackerId: tracker.id })
+  }
+
+  async setTrackerPaused(params: { isAutoRefreshPaused: boolean; trackerId: string }): Promise<SettingsModel> {
+    const { isAutoRefreshPaused, trackerId } = params
+    const settings = this._settingsRepo.fetch().withTrackerPaused({ isAutoRefreshPaused, trackerId })
+
+    await this._settingsRepo.save({ settings })
+
+    return settings
   }
 
   getSnapshot(): UsageSnapshot {

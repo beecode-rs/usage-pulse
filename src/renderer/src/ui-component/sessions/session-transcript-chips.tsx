@@ -3,7 +3,10 @@ import { type ReactElement } from 'react'
 import { sessionPresentationService } from '#src/renderer/src/business/service/session-presentation-service'
 import type { SessionTranscriptStats } from '#src/shared/business/model/session-model'
 
-export const SessionTranscriptChips = (props: { nowMs: number; transcript: SessionTranscriptStats }): ReactElement => {
+export const SessionsSessionTranscriptChips = (props: {
+  nowMs: number
+  transcript: SessionTranscriptStats
+}): ReactElement => {
   const { nowMs, transcript } = props
 
   return (

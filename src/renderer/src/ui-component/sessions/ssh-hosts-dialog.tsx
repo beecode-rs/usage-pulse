@@ -87,7 +87,7 @@ const renderRemoveIcon = (): ReactElement => {
   )
 }
 
-export const SshHostsDialog = (props: { onClose: () => void; onSaved: () => void }): ReactElement => {
+export const SessionsSshHostsDialog = (props: { onClose: () => void; onSaved: () => void }): ReactElement => {
   const { onClose, onSaved } = props
   const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [urlDraft, setUrlDraft] = useState('')

@@ -5,7 +5,7 @@ import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-e
 import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import { SoundNameMapper } from '#src/shared/business/enum/sound-name-mapper-enum'
 import type { ScheduleTriggerConfig } from '#src/shared/business/model/schedule-trigger-model'
-import type { SshHostConfig, TrackerConfig } from '#src/shared/business/model/settings-model'
+import type { SettingsData, SshHostConfig, TrackerConfig } from '#src/shared/business/model/settings-model'
 import { constant } from '#src/shared/util/constant'
 
 const clampedNumberSchema = (params: { fallback: number; max: number; min: number }): z.ZodType<number> => {
@@ -204,7 +204,7 @@ const triggersSchema = z
     return []
   })
 
-export const appSettingsSchema = z.object({
+export const appSettingsSchema: z.ZodType<SettingsData> = z.object({
   isMobileServerEnabled: z.boolean().catch(constant.mobileServer.defaultIsEnabled),
   isSchedulingEnabled: z.boolean().catch(constant.scheduling.defaultIsEnabled),
   isSessionsAutoRefreshPaused: z.boolean().catch(constant.sessionsAutoRefresh.defaultIsPaused),

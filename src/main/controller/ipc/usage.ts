@@ -1,7 +1,6 @@
 import { type IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 
-import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
 import { usagePollServiceSingleton } from '#src/main/business/service/usage-poll-service-singleton'
 import { validationUtil } from '#src/main/util/validation-util'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'
@@ -27,10 +26,7 @@ export const ipcUsage = {
 
   setTrackerPaused: async (_event: IpcMainInvokeEvent, rawParams: unknown): Promise<SettingsModel> => {
     const { isAutoRefreshPaused, trackerId } = validationUtil.parse(rawParams, usageSetTrackerPausedParamsSchema)
-    const settings = settingsRepoSingleton().fetch().withTrackerPaused({ isAutoRefreshPaused, trackerId })
 
-    await settingsRepoSingleton().save({ settings })
-
-    return settings
+    return await usagePollServiceSingleton().setTrackerPaused({ isAutoRefreshPaused, trackerId })
   },
 }

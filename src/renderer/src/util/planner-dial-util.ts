@@ -3,14 +3,14 @@ import { constant } from '#src/renderer/src/util/constant'
 export class PlannerDialUtil {
   resolveDialDeltaDegrees(params: { angleDegrees: number }): number {
     const { angleDegrees } = params
-    const deltaDegrees = (((angleDegrees - constant.plannerDialStartAngleDegrees) % 360) + 360) % 360
+    const deltaDegrees = (((angleDegrees - constant.plannerDial.startAngleDegrees) % 360) + 360) % 360
 
-    if (deltaDegrees <= constant.plannerDialAngleRangeDegrees) {
+    if (deltaDegrees <= constant.plannerDial.angleRangeDegrees) {
       return deltaDegrees
     }
 
-    if (deltaDegrees - constant.plannerDialAngleRangeDegrees < 360 - deltaDegrees) {
-      return constant.plannerDialAngleRangeDegrees
+    if (deltaDegrees - constant.plannerDial.angleRangeDegrees < 360 - deltaDegrees) {
+      return constant.plannerDial.angleRangeDegrees
     }
 
     return 0
@@ -55,7 +55,7 @@ export class PlannerDialUtil {
     const { dx, dy, max, min, step } = params
     const pointerAngleDegrees = (Math.atan2(dy, dx) * 180) / Math.PI
     const deltaDegrees = this.resolveDialDeltaDegrees({ angleDegrees: pointerAngleDegrees })
-    const valueFraction = deltaDegrees / constant.plannerDialAngleRangeDegrees
+    const valueFraction = deltaDegrees / constant.plannerDial.angleRangeDegrees
     const rawValue = min + valueFraction * (max - min)
 
     return this.resolveSteppedValue({ max, min, rawValue, step })
@@ -73,7 +73,7 @@ export class PlannerDialUtil {
     const { max, min, value } = params
     const valueFraction = (value - min) / (max - min)
 
-    return constant.plannerDialStartAngleDegrees + valueFraction * constant.plannerDialAngleRangeDegrees
+    return constant.plannerDial.startAngleDegrees + valueFraction * constant.plannerDial.angleRangeDegrees
   }
 
   protected _resolveClampedValue(params: { max: number; min: number; value: number }): number {

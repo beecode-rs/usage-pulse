@@ -4,7 +4,7 @@ import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus
 import { SessionsClaudeQueryService } from '#src/main/business/service/sessions/claude-query-service'
 import { SessionsFocusGhosttyCompatService } from '#src/main/business/service/sessions/focus/ghostty-compat-service'
 import {
-  type GhosttyFocusPeer,
+  type SessionsFocusGhosttyPeer,
   SessionsFocusGhosttyService,
 } from '#src/main/business/service/sessions/focus/ghostty-service'
 import { SessionsFocusLinuxService } from '#src/main/business/service/sessions/focus/linux-service'
@@ -13,13 +13,11 @@ import { SessionsFocusVsCodeService } from '#src/main/business/service/sessions/
 import { SessionsParserService } from '#src/main/business/service/sessions/parser-service'
 import { SessionsProcessService } from '#src/main/business/service/sessions/process-service'
 import { config } from '#src/main/util/config'
+import { constant } from '#src/main/util/constant'
 import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
 import { errorUtil } from '#src/shared/util/error-util'
-
-const GHOSTTY_OTHER_DESKTOP_MESSAGE =
-  'the terminal is on another desktop or minimized; to let focus jump to it, enable "When switching to an application, switch to a Space with open windows for the application" in System Settings > Desktop & Dock'
 
 export class _SessionsService {
   protected _ghosttyTtySupport: Promise<boolean> | undefined
@@ -140,7 +138,7 @@ export class _SessionsService {
       }
 
       case GhosttyFocusOutcomeMapper.HIDDEN: {
-        throw new Error(GHOSTTY_OTHER_DESKTOP_MESSAGE)
+        throw new Error(constant.sessions.focus.ghostty.otherDesktopMessage)
       }
 
       case GhosttyFocusOutcomeMapper.MISSING: {
@@ -211,7 +209,7 @@ export class _SessionsService {
     return this._ghosttyService.resolvePeerRank({ peers, pid })
   }
 
-  protected async _listGhosttyFocusPeers(params: { cwd: string; pid: number }): Promise<GhosttyFocusPeer[]> {
+  protected async _listGhosttyFocusPeers(params: { cwd: string; pid: number }): Promise<SessionsFocusGhosttyPeer[]> {
     const { cwd, pid } = params
     const sameCwdSessions = await this._listSameCwdSessions({ cwd })
     const sessionPids = [
@@ -226,7 +224,7 @@ export class _SessionsService {
       }),
     )
 
-    return peers.filter((peer): peer is GhosttyFocusPeer => {
+    return peers.filter((peer): peer is SessionsFocusGhosttyPeer => {
       return peer !== undefined
     })
   }
@@ -246,7 +244,7 @@ export class _SessionsService {
     })
   }
 
-  protected async _resolveGhosttyFocusPeer(params: { pid: number }): Promise<GhosttyFocusPeer | undefined> {
+  protected async _resolveGhosttyFocusPeer(params: { pid: number }): Promise<SessionsFocusGhosttyPeer | undefined> {
     const { pid } = params
     try {
       const ancestry = await this._processService.resolveAppBundleAncestry({ childPid: pid, hopCount: 0, pid })
@@ -311,7 +309,9 @@ export class _SessionsService {
 
     return {
       fetchedAt: Date.now(),
-      sessions: new SessionsParserService().sortSessions(new SessionsParserService().parseSessionEntries({ stdout })),
+      sessions: new SessionsParserService().sortSessions({
+        sessions: new SessionsParserService().parseSessionEntries({ stdout }),
+      }),
       unreachableHosts: [],
     }
   }

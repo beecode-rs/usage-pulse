@@ -1,17 +1,8 @@
 import { type ReactElement } from 'react'
 
 import { SessionSoundService } from '#src/renderer/src/business/service/session-sound-service'
+import { constant } from '#src/renderer/src/util/constant'
 import { SoundNameMapper } from '#src/shared/business/enum/sound-name-mapper-enum'
-
-const SESSION_SOUND_OPTIONS: { label: string; soundId: SoundNameMapper }[] = [
-  { label: 'None', soundId: SoundNameMapper.NONE },
-  { label: 'Beep', soundId: SoundNameMapper.BEEP },
-  { label: 'Chime', soundId: SoundNameMapper.CHIME },
-  { label: 'Ding', soundId: SoundNameMapper.DING },
-  { label: 'Fanfare', soundId: SoundNameMapper.FANFARE },
-  { label: 'Ping', soundId: SoundNameMapper.PING },
-  { label: 'Success', soundId: SoundNameMapper.SUCCESS },
-]
 
 const renderPlayIcon = (): ReactElement => {
   return (
@@ -21,7 +12,7 @@ const renderPlayIcon = (): ReactElement => {
   )
 }
 
-export const SessionSoundField = (props: {
+export const SessionsSessionSoundField = (props: {
   hint: string
   label: string
   onSoundIdChange: (soundId: SoundNameMapper) => void
@@ -29,22 +20,24 @@ export const SessionSoundField = (props: {
   soundId: SoundNameMapper
   volumePercent: number
 }): ReactElement => {
+  const { hint, label, onSoundIdChange, playButtonTitle, soundId, volumePercent } = props
+
   const handlePlaySound = (): void => {
-    new SessionSoundService().playSessionSound({ soundId: props.soundId, volumePercent: props.volumePercent })
+    new SessionSoundService().playSessionSound({ soundId, volumePercent })
   }
 
   return (
     <div className="settings-field">
-      <span className="settings-field-label">{props.label}</span>
+      <span className="settings-field-label">{label}</span>
       <div className="sessions-settings-sound-row">
         <select
           className="settings-field-input"
           onChange={(event) => {
-            props.onSoundIdChange(event.target.value as SoundNameMapper)
+            onSoundIdChange(event.target.value as SoundNameMapper)
           }}
-          value={props.soundId}
+          value={soundId}
         >
-          {SESSION_SOUND_OPTIONS.map((option) => {
+          {constant.sound.selectOptions.map((option) => {
             return (
               <option key={option.soundId} value={option.soundId}>
                 {option.label}
@@ -53,17 +46,17 @@ export const SessionSoundField = (props: {
           })}
         </select>
         <button
-          aria-label={props.playButtonTitle}
+          aria-label={playButtonTitle}
           className="sessions-settings-play-button"
-          disabled={props.soundId === SoundNameMapper.NONE}
+          disabled={soundId === SoundNameMapper.NONE}
           onClick={handlePlaySound}
-          title={props.playButtonTitle}
+          title={playButtonTitle}
           type="button"
         >
           {renderPlayIcon()}
         </button>
       </div>
-      <span className="settings-hint">{props.hint}</span>
+      <span className="settings-hint">{hint}</span>
     </div>
   )
 }

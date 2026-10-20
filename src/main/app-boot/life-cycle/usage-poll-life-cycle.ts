@@ -14,6 +14,8 @@ export class UsagePollLifeCycle extends LifeCycle<void> {
   }
 
   protected _destroyFn(): Promise<void> {
+    this._pollService.stop()
+
     return Promise.resolve()
   }
 }

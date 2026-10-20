@@ -14,6 +14,8 @@ export class SessionsPollLifeCycle extends LifeCycle<void> {
   }
 
   protected _destroyFn(): Promise<void> {
+    this._sessionsPollService.stop()
+
     return Promise.resolve()
   }
 }

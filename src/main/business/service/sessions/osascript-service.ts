@@ -2,10 +2,9 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 import { SessionsClaudeQueryService } from '#src/main/business/service/sessions/claude-query-service'
+import { constant } from '#src/main/util/constant'
 
 const execFileAsync = promisify(execFile)
-
-const OSASCRIPT_TIMEOUT_MS = 5_000
 
 export class SessionsOsascriptService {
   protected readonly _claudeQueryService = new SessionsClaudeQueryService()
@@ -13,7 +12,7 @@ export class SessionsOsascriptService {
   async runOsascript(params: { args: string[]; script: string }): Promise<string> {
     const { args, script } = params
     const { stdout } = await execFileAsync('osascript', ['-e', script, '--', ...args], {
-      timeout: OSASCRIPT_TIMEOUT_MS,
+      timeout: constant.sessions.osascript.timeoutMs,
     })
 
     return stdout

@@ -3,45 +3,16 @@ import { type ReactElement, useState } from 'react'
 import '#src/renderer/src/ui-component/development/development-page.css'
 import { usageSeverityService } from '#src/renderer/src/business/service/usage-severity-service'
 import { ZaiPeakService } from '#src/renderer/src/business/service/zai-peak-service'
-import { SelectField } from '#src/renderer/src/ui-component/development/select-field'
-import { SliderField } from '#src/renderer/src/ui-component/development/slider-field'
-import { ProviderUsageCard } from '#src/renderer/src/ui-component/usage-dashboard/provider-usage-card'
+import { DevelopmentSelectField } from '#src/renderer/src/ui-component/development/select-field'
+import { DevelopmentSliderField } from '#src/renderer/src/ui-component/development/slider-field'
+import { UsageDashboardProviderUsageCard } from '#src/renderer/src/ui-component/usage-dashboard/provider-usage-card'
+import { constant } from '#src/renderer/src/util/constant'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { usageResetUtil } from '#src/renderer/src/util/usage-reset-util'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type ProviderSnapshot } from '#src/shared/business/model/usage-model'
-import { constant } from '#src/shared/util/constant'
-
-const DEFAULT_FETCHED_ELAPSED_MINUTES = 1
-const MAX_ELAPSED_MINUTES = 300
-const MAX_FETCHED_ELAPSED_MINUTES = 3 * 24 * 60
-const MAX_MINUTE_OF_DAY = 23 * 60 + 59
-const MAX_USED_PERCENT = 100
-const MINUTES_PER_HOUR = 60
-const PREVIEW_MCP_TOTAL_CALLS = 1000
-const PREVIEW_NEXT_REFRESH_OFFSET_MS = 150_000
-const PREVIEW_REFRESH_INTERVAL_MS = 300_000
-const PREVIEW_REFRESH_SPIN_MS = 1000
-
-const DAY_OFFSETS = [0, 1, 2, 3, 4, 5, 6]
-
-const WEEKDAY_OPTIONS = [
-  { label: 'Monday', value: '1' },
-  { label: 'Tuesday', value: '2' },
-  { label: 'Wednesday', value: '3' },
-  { label: 'Thursday', value: '4' },
-  { label: 'Friday', value: '5' },
-  { label: 'Saturday', value: '6' },
-  { label: 'Sunday', value: '0' },
-]
-
-const SEVERITY_BANDS = [
-  { colorVar: 'var(--meter-accent)', label: 'Normal', range: '0–69%' },
-  { colorVar: 'var(--meter-warning)', label: 'Filling up', range: '70–84%' },
-  { colorVar: 'var(--meter-serious)', label: 'High usage', range: '85–94%' },
-  { colorVar: 'var(--meter-critical)', label: 'Limit reached', range: '95–100%' },
-]
+import { constant as sharedConstant } from '#src/shared/util/constant'
 
 export const DevelopmentPage = (props: {
   elapsedMinutes: number
@@ -53,11 +24,13 @@ export const DevelopmentPage = (props: {
 
   const zaiPeakService = new ZaiPeakService()
 
-  const [fetchedElapsedMinutes, setFetchedElapsedMinutes] = useState(DEFAULT_FETCHED_ELAPSED_MINUTES)
+  const [fetchedElapsedMinutes, setFetchedElapsedMinutes] = useState(
+    constant.development.page.defaultFetchedElapsedMinutes,
+  )
   const [minuteOfDay, setMinuteOfDay] = useState((): number => {
     const now = new Date()
 
-    return now.getHours() * MINUTES_PER_HOUR + now.getMinutes()
+    return now.getHours() * constant.development.page.minutesPerHour + now.getMinutes()
   })
   const [weekdayValue, setWeekdayValue] = useState((): string => {
     return String(new Date().getDay())
@@ -67,7 +40,7 @@ export const DevelopmentPage = (props: {
 
   const resolvePreviewNowMs = (): number => {
     const today = new Date()
-    const matchingOffset = DAY_OFFSETS.find((offset) => {
+    const matchingOffset = constant.development.page.dayOffsets.find((offset) => {
       const candidateDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)
 
       return candidateDate.getDay() === Number(weekdayValue)
@@ -79,7 +52,12 @@ export const DevelopmentPage = (props: {
 
     const previewDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + matchingOffset)
 
-    previewDate.setHours(Math.floor(minuteOfDay / MINUTES_PER_HOUR), minuteOfDay % MINUTES_PER_HOUR, 0, 0)
+    previewDate.setHours(
+      Math.floor(minuteOfDay / constant.development.page.minutesPerHour),
+      minuteOfDay % constant.development.page.minutesPerHour,
+      0,
+      0,
+    )
 
     return previewDate.getTime()
   }
@@ -91,14 +69,16 @@ export const DevelopmentPage = (props: {
   }
 
   const resolveMonthlyResetAt = (): number => {
-    const elapsedFraction = elapsedMinutes / MAX_ELAPSED_MINUTES
-    const elapsedMs = elapsedFraction * constant.thirtyDayWindowMs
+    const elapsedFraction = elapsedMinutes / constant.development.elapsedMinutes.max
+    const elapsedMs = elapsedFraction * sharedConstant.thirtyDayWindowMs
 
-    return Date.now() + constant.thirtyDayWindowMs - elapsedMs
+    return Date.now() + sharedConstant.thirtyDayWindowMs - elapsedMs
   }
 
   const resolveMcpUsedCalls = (): number => {
-    return Math.round((usedPercent / MAX_USED_PERCENT) * PREVIEW_MCP_TOTAL_CALLS)
+    return Math.round(
+      (usedPercent / constant.development.page.usedPercent.max) * constant.development.page.preview.mcpTotalCalls,
+    )
   }
 
   const resolvePreviewSnapshot = (): ProviderSnapshot => {
@@ -106,7 +86,7 @@ export const DevelopmentPage = (props: {
 
     return {
       fetchedAt: previewNowMs - fetchedElapsedMinutes * 60_000,
-      nextRefreshAt: previewNowMs + PREVIEW_NEXT_REFRESH_OFFSET_MS,
+      nextRefreshAt: previewNowMs + constant.development.page.preview.nextRefreshOffsetMs,
       providerId: ProviderIdMapper.ZAI,
       status: UsageActivityStatus.OK,
       trackerId: 'development-zai',
@@ -121,10 +101,10 @@ export const DevelopmentPage = (props: {
         {
           label: 'MCP quota',
           resetAt: resolveMonthlyResetAt(),
-          totalAmount: PREVIEW_MCP_TOTAL_CALLS,
+          totalAmount: constant.development.page.preview.mcpTotalCalls,
           usedAmount: resolveMcpUsedCalls(),
           usedPercent,
-          windowMs: constant.thirtyDayWindowMs,
+          windowMs: sharedConstant.thirtyDayWindowMs,
         },
       ],
     }
@@ -154,8 +134,8 @@ export const DevelopmentPage = (props: {
   }
 
   const resolveTimeValueText = (): string => {
-    const hourText = String(Math.floor(minuteOfDay / MINUTES_PER_HOUR)).padStart(2, '0')
-    const minuteText = String(minuteOfDay % MINUTES_PER_HOUR).padStart(2, '0')
+    const hourText = String(Math.floor(minuteOfDay / constant.development.page.minutesPerHour)).padStart(2, '0')
+    const minuteText = String(minuteOfDay % constant.development.page.minutesPerHour).padStart(2, '0')
 
     return `${hourText}:${minuteText}`
   }
@@ -179,7 +159,7 @@ export const DevelopmentPage = (props: {
     setIsPreviewRefreshing(true)
     setTimeout(() => {
       setIsPreviewRefreshing(false)
-    }, PREVIEW_REFRESH_SPIN_MS)
+    }, constant.development.page.preview.refreshSpinMs)
   }
 
   const handlePreviewOpenSettings = (): void => {
@@ -196,7 +176,7 @@ export const DevelopmentPage = (props: {
           weekdays during the peak window shown on the card.
         </p>
       </header>
-      <ProviderUsageCard
+      <UsageDashboardProviderUsageCard
         isAutoRefreshPaused={isPreviewAutoRefreshPaused}
         isRefreshing={isPreviewRefreshing}
         nowMs={resolvePreviewNowMs()}
@@ -204,44 +184,49 @@ export const DevelopmentPage = (props: {
         onRefresh={handlePreviewRefresh}
         onToggleAutoRefresh={handlePreviewToggleAutoRefresh}
         providerSnapshot={resolvePreviewSnapshot()}
-        refreshIntervalMs={PREVIEW_REFRESH_INTERVAL_MS}
+        refreshIntervalMs={constant.development.page.preview.refreshIntervalMs}
       />
       <section className="development-page-panel">
-        <SliderField
+        <DevelopmentSliderField
           label="Usage"
-          max={MAX_USED_PERCENT}
+          max={constant.development.page.usedPercent.max}
           onChange={onUsedPercentChange}
           value={usedPercent}
           valueText={resolveUsageValueText()}
         />
-        <SliderField
+        <DevelopmentSliderField
           label="Reset"
-          max={MAX_ELAPSED_MINUTES}
+          max={constant.development.elapsedMinutes.max}
           onChange={onElapsedMinutesChange}
           value={elapsedMinutes}
           valueText={resolveElapsedValueText()}
         />
-        <SliderField
+        <DevelopmentSliderField
           label="Fetched"
-          max={MAX_FETCHED_ELAPSED_MINUTES}
+          max={constant.development.page.fetchedElapsedMinutes.max}
           onChange={setFetchedElapsedMinutes}
           value={fetchedElapsedMinutes}
           valueText={resolveFetchedValueText()}
         />
-        <SliderField
+        <DevelopmentSliderField
           label="Time of day"
-          max={MAX_MINUTE_OF_DAY}
+          max={constant.development.page.minuteOfDay.max}
           onChange={setMinuteOfDay}
           value={minuteOfDay}
           valueText={resolveTimeValueText()}
         />
-        <SelectField label="Day" onChange={setWeekdayValue} options={WEEKDAY_OPTIONS} value={weekdayValue} />
+        <DevelopmentSelectField
+          label="Day"
+          onChange={setWeekdayValue}
+          options={constant.development.page.weekdayOptions}
+          value={weekdayValue}
+        />
         <p className="development-page-hint">{resolvePeakHintText()}</p>
       </section>
       <section className="development-page-panel">
         <h2 className="development-page-section-title">Color bands</h2>
         <ul className="development-page-bands">
-          {SEVERITY_BANDS.map((band) => {
+          {constant.development.page.severityBands.map((band) => {
             return (
               <li className="development-page-band" key={band.label}>
                 <span className="development-page-band-swatch" style={{ backgroundColor: band.colorVar }} />

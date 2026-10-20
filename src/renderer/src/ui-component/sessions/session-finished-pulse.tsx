@@ -8,20 +8,16 @@ const resolvePulseStyle = (params: { pulseMs: number }): CSSProperties => {
   return { animationDuration: `${String(pulseMs)}ms` }
 }
 
-export const SessionFinishedPulse = (props: {
+export const SessionsSessionFinishedPulse = (props: {
   finishedAtMs?: number
   nowMs: number
   pulseMs: number
 }): ReactElement | undefined => {
+  const { finishedAtMs, nowMs, pulseMs } = props
+
   if (!sessionFinishedPulseService.isPulsing(props)) {
     return undefined
   }
 
-  return (
-    <span
-      className="session-finished-pulse"
-      key={props.finishedAtMs}
-      style={resolvePulseStyle({ pulseMs: props.pulseMs })}
-    />
-  )
+  return <span className="session-finished-pulse" key={finishedAtMs} style={resolvePulseStyle({ pulseMs })} />
 }

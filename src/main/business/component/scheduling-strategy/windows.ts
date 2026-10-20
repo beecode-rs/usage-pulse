@@ -2,7 +2,7 @@ import type {
   SchedulingInspection,
   SchedulingRegistrationParams,
   SchedulingStrategy,
-} from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
+} from '#src/main/business/component/scheduling-strategy/index'
 import { OS } from '#src/shared/business/enum/os-enum'
 
 export class SchedulingStrategyWindows implements SchedulingStrategy {

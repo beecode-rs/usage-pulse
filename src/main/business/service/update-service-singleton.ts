@@ -7,9 +7,9 @@ import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { updateAssetService } from '#src/main/business/service/update-asset-service'
 import { updateCheckErrorService } from '#src/main/business/service/update-check-error-service'
-import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
 import { constant } from '#src/main/util/constant'
 import { objectUtil } from '#src/main/util/object-util'
 import { osUtil } from '#src/main/util/os-util'
@@ -48,7 +48,7 @@ export class _UpdateService {
     }
   }
 
-  async downloadUpdate(): Promise<string> {
+  async downloadUpdateAndOpenInstaller(): Promise<string> {
     if (this._isDownloading) {
       throw new Error('update download is already in progress')
     }
@@ -68,6 +68,16 @@ export class _UpdateService {
     } finally {
       this._isDownloading = false
     }
+  }
+
+  openRelease(): void {
+    const releaseUrl = this._status.releaseUrl
+
+    if (!releaseUrl?.startsWith('https://github.com/')) {
+      return
+    }
+
+    void shell.openExternal(releaseUrl)
   }
 
   protected _resolveFailureStatus(params: { error: unknown }): UpdateStatus {
@@ -218,7 +228,7 @@ export class _UpdateService {
   protected async _downloadAsset(params: { asset: UpdateAsset }): Promise<string> {
     const { asset } = params
     const filePath = this._resolveDownloadFilePath({ asset })
-    const partialFilePath = `${filePath}${constant.updateDownloadPartialFileSuffix}`
+    const partialFilePath = `${filePath}${constant.update.downloadPartialFileSuffix}`
 
     try {
       const response = await fetch(asset.url)

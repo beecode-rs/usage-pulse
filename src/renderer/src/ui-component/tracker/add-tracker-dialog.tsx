@@ -3,8 +3,8 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import { osClientService } from '#src/renderer/src/business/service/os-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
-import { ProviderIcon } from '#src/renderer/src/ui-component/provider/provider-icon'
-import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/tracker-config-fields'
+import { ProviderIcon } from '#src/renderer/src/ui-component/provider/icon'
+import { TrackerConfigFields } from '#src/renderer/src/ui-component/tracker/config-fields'
 import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import type { OS } from '#src/shared/business/enum/os-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
@@ -12,7 +12,7 @@ import { SettingsModel, type TrackerConfig } from '#src/shared/business/model/se
 import { constant } from '#src/shared/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
 
-export const AddTrackerDialog = (props: { onClose: () => void; onSaved: () => void }): ReactElement => {
+export const TrackerAddTrackerDialog = (props: { onClose: () => void; onSaved: () => void }): ReactElement => {
   const { onClose, onSaved } = props
   const [settings, setSettings] = useState<SettingsModel | undefined>(undefined)
   const [newTracker, setNewTracker] = useState<TrackerConfig | undefined>(undefined)

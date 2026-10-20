@@ -2,12 +2,12 @@ import { type ChangeEvent, type ReactElement } from 'react'
 
 import '#src/renderer/src/ui-component/development/select-field.css'
 
-export type SelectFieldOption = {
+type SelectFieldOption = {
   label: string
   value: string
 }
 
-export const SelectField = (props: {
+export const DevelopmentSelectField = (props: {
   label: string
   onChange: (value: string) => void
   options: SelectFieldOption[]

@@ -65,11 +65,6 @@ export type MobileConnectedDevice = {
 
 export type MobileDevicesUpdateListener = (devices: MobileConnectedDevice[]) => void
 
-export type MobileHealthResponse = {
-  appVersion: string
-  ok: boolean
-}
-
 export type MobileStateResponse = {
   sessions: SessionSnapshot | null
   usage: UsageSnapshot

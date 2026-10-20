@@ -5,16 +5,12 @@ import { constant } from '#src/main/util/constant'
 
 const execFileAsync = promisify(execFile)
 
-const MAX_ANCESTOR_HOPS = 12
-
-const PS_QUERY_TIMEOUT_MS = 5_000
-
-export type ProcessEntry = {
+type ProcessEntry = {
   comm: string
   ppid: number
 }
 
-export type AppBundleAncestry = {
+type AppBundleAncestry = {
   bundlePath: string
   hostPid: number
 }
@@ -26,9 +22,9 @@ export class SessionsProcessService {
     pid: number
   }): Promise<AppBundleAncestry> {
     const { childPid, hopCount, pid } = params
-    if (hopCount >= MAX_ANCESTOR_HOPS) {
+    if (hopCount >= constant.sessions.processAncestry.maxHops) {
       throw new Error(
-        `could not find an application bundle for the session process; the ancestor walk exceeded ${String(MAX_ANCESTOR_HOPS)} hops`,
+        `could not find an application bundle for the session process; the ancestor walk exceeded ${String(constant.sessions.processAncestry.maxHops)} hops`,
       )
     }
 
@@ -61,7 +57,7 @@ export class SessionsProcessService {
     const { pid } = params
     try {
       const { stdout } = await execFileAsync('ps', ['-o', 'ppid=,comm=', '-p', String(pid)], {
-        timeout: PS_QUERY_TIMEOUT_MS,
+        timeout: constant.sessions.psQuery.timeoutMs,
       })
 
       return this._parseProcessLine({ line: stdout.trim() })
@@ -74,7 +70,7 @@ export class SessionsProcessService {
     const { pid } = params
     try {
       const { stdout } = await execFileAsync('ps', ['-o', 'lstart=', '-p', String(pid)], {
-        timeout: PS_QUERY_TIMEOUT_MS,
+        timeout: constant.sessions.psQuery.timeoutMs,
       })
 
       return this._parseStartTime({ stdout })
@@ -87,7 +83,7 @@ export class SessionsProcessService {
     const { pid } = params
     try {
       const { stdout } = await execFileAsync('ps', ['-o', 'tty=', '-p', String(pid)], {
-        timeout: PS_QUERY_TIMEOUT_MS,
+        timeout: constant.sessions.psQuery.timeoutMs,
       })
       const ttyName = stdout.trim()
 

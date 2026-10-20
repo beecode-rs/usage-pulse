@@ -1,15 +1,14 @@
 import { MenuStatusDotMapper } from '#src/renderer/src/business/enum/menu-status-dot-mapper-enum'
 import { UsageStalenessService } from '#src/renderer/src/business/service/usage-staleness-service'
 import { ZaiPeakService } from '#src/renderer/src/business/service/zai-peak-service'
+import { constant } from '#src/renderer/src/util/constant'
 import { UsagePaceUtil } from '#src/renderer/src/util/usage-pace-util'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import type { SessionSnapshot } from '#src/shared/business/model/session-model'
 import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
-import { constant } from '#src/shared/util/constant'
-
-const MAX_ELAPSED_MINUTES = 300
+import { constant as sharedConstant } from '#src/shared/util/constant'
 
 export class MenuStatusService {
   resolveCombinedStatusDot(params: { dots: (MenuStatusDotMapper | undefined)[] }): MenuStatusDotMapper | undefined {
@@ -54,20 +53,20 @@ export class MenuStatusService {
               resetAt: this._resolveWindowResetAt({
                 elapsedMinutes,
                 now,
-                windowMs: constant.fiveHourWindowMs,
+                windowMs: sharedConstant.fiveHourWindowMs,
               }),
               usedPercent,
-              windowMs: constant.fiveHourWindowMs,
+              windowMs: sharedConstant.fiveHourWindowMs,
             },
             {
               label: 'MCP quota',
               resetAt: this._resolveWindowResetAt({
                 elapsedMinutes,
                 now,
-                windowMs: constant.thirtyDayWindowMs,
+                windowMs: sharedConstant.thirtyDayWindowMs,
               }),
               usedPercent,
-              windowMs: constant.thirtyDayWindowMs,
+              windowMs: sharedConstant.thirtyDayWindowMs,
             },
           ],
         },
@@ -194,7 +193,7 @@ export class MenuStatusService {
   protected _resolveWindowResetAt(params: { elapsedMinutes: number; now: number; windowMs: number }): number {
     const { elapsedMinutes, now, windowMs } = params
 
-    const elapsedMs = (elapsedMinutes * windowMs) / MAX_ELAPSED_MINUTES
+    const elapsedMs = (elapsedMinutes * windowMs) / constant.development.elapsedMinutes.max
 
     return now + windowMs - elapsedMs
   }

@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 
-export const DashboardAddButton = (props: { label: string; onClick: () => void }): ReactElement => {
+export const UsageDashboardAddButton = (props: { label: string; onClick: () => void }): ReactElement => {
   const { label, onClick } = props
 
   return (

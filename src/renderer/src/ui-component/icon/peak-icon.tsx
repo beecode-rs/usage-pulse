@@ -1,9 +1,9 @@
 import type { ReactElement } from 'react'
 
-const DEFAULT_ICON_SIZE = 13
+import { constant } from '#src/renderer/src/util/constant'
 
 export const PeakIcon = (props: { size?: number }): ReactElement => {
-  const { size = DEFAULT_ICON_SIZE } = props
+  const { size = constant.icon.peakSizePx } = props
 
   return (
     <svg

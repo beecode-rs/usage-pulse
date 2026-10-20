@@ -1,10 +1,12 @@
 import { type IpcMainInvokeEvent } from 'electron'
-import { type ZodError } from 'zod'
+import { type ZodError, z } from 'zod'
 
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
 import { appSettingsStrictSchema } from '#src/main/business/schema/settings-schema'
 import { validationUtil } from '#src/main/util/validation-util'
 import { type SettingsData, type SettingsModel } from '#src/shared/business/model/settings-model'
+
+const settingsSavePayloadSchema = z.object({ settings: z.unknown() })
 
 const resolveStrictParseErrorMessage = (error: ZodError): string => {
   return error.issues
@@ -29,7 +31,9 @@ export const ipcSettings = {
     return settingsRepoSingleton().fetch()
   },
 
-  save: async (_event: IpcMainInvokeEvent, rawSettings: unknown): Promise<SettingsModel> => {
-    return await settingsRepoSingleton().saveExternal({ settings: parseStrictSettings(rawSettings) })
+  save: async (_event: IpcMainInvokeEvent, rawPayload: unknown): Promise<SettingsModel> => {
+    const { settings } = validationUtil.parse(rawPayload, settingsSavePayloadSchema)
+
+    return await settingsRepoSingleton().saveExternal({ settings: parseStrictSettings(settings) })
   },
 }

@@ -76,6 +76,17 @@ export class TriggerRunnerService {
     }
   }
 
+  async getRunLogs(params: { triggerId: string }): Promise<ScheduleTriggerRunLogEntry[]> {
+    const { triggerId } = params
+
+    return await this._runLogRepo.listByTriggerId({ triggerId })
+  }
+
+  async clearRunLogs(params: { triggerId: string }): Promise<void> {
+    const { triggerId } = params
+    await this._runLogRepo.removeByTriggerId({ triggerId })
+  }
+
   protected async _runCommandTrigger(params: {
     eventId: string
     settings: SettingsModel

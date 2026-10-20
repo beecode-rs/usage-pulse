@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 
-export const ClearRunsDialog = (props: { onClose: () => void; onConfirm: () => void }): ReactElement => {
+export const SchedulingClearRunsDialog = (props: { onClose: () => void; onConfirm: () => void }): ReactElement => {
   const { onClose, onConfirm } = props
 
   return (

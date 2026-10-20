@@ -28,7 +28,7 @@ const usageApi: UsageApiClient = {
   clearTriggerRunLogs: (params: { triggerId: string }): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.TRIGGER_CLEAR_RUN_LOGS, params)
   },
-  downloadUpdate: (): Promise<string> => {
+  downloadUpdateAndOpenInstaller: (): Promise<string> => {
     return ipcRenderer.invoke(IpcChannelMapper.UPDATE_DOWNLOAD)
   },
   focusSession: (params: { cwd: string; pid: number }): Promise<void> => {
@@ -70,9 +70,10 @@ const usageApi: UsageApiClient = {
   listSessions: (): Promise<SessionSnapshot> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_LIST)
   },
-  onMobileDevicesUpdate: (listener: MobileDevicesUpdateListener): (() => void) => {
+  onMobileDevicesUpdate: (params: { onUpdate: MobileDevicesUpdateListener }): (() => void) => {
+    const { onUpdate } = params
     const mobileDevicesUpdateListener = (_event: Electron.IpcRendererEvent, devices: MobileConnectedDevice[]): void => {
-      listener(devices)
+      onUpdate(devices)
     }
 
     ipcRenderer.on(IpcChannelMapper.MOBILE_DEVICES_UPDATE, mobileDevicesUpdateListener)
@@ -81,9 +82,10 @@ const usageApi: UsageApiClient = {
       ipcRenderer.removeListener(IpcChannelMapper.MOBILE_DEVICES_UPDATE, mobileDevicesUpdateListener)
     }
   },
-  onSessionsUpdate: (listener: SessionsUpdateListener): (() => void) => {
+  onSessionsUpdate: (params: { onUpdate: SessionsUpdateListener }): (() => void) => {
+    const { onUpdate } = params
     const sessionsUpdateListener = (_event: Electron.IpcRendererEvent, snapshot: SessionSnapshot): void => {
-      listener(snapshot)
+      onUpdate(snapshot)
     }
 
     ipcRenderer.on(IpcChannelMapper.SESSIONS_UPDATE, sessionsUpdateListener)
@@ -92,9 +94,10 @@ const usageApi: UsageApiClient = {
       ipcRenderer.removeListener(IpcChannelMapper.SESSIONS_UPDATE, sessionsUpdateListener)
     }
   },
-  onSettingsUpdate: (listener: SettingsUpdateListener): (() => void) => {
+  onSettingsUpdate: (params: { onUpdate: SettingsUpdateListener }): (() => void) => {
+    const { onUpdate } = params
     const settingsUpdateListener = (_event: Electron.IpcRendererEvent, settings: SettingsModel): void => {
-      listener(settings)
+      onUpdate(settings)
     }
 
     ipcRenderer.on(IpcChannelMapper.SETTINGS_UPDATE, settingsUpdateListener)
@@ -103,9 +106,10 @@ const usageApi: UsageApiClient = {
       ipcRenderer.removeListener(IpcChannelMapper.SETTINGS_UPDATE, settingsUpdateListener)
     }
   },
-  onUpdateStatus: (listener: UpdateStatusListener): (() => void) => {
+  onUpdateStatus: (params: { onUpdate: UpdateStatusListener }): (() => void) => {
+    const { onUpdate } = params
     const updateStatusListener = (_event: Electron.IpcRendererEvent, status: UpdateStatus): void => {
-      listener(status)
+      onUpdate(status)
     }
 
     ipcRenderer.on(IpcChannelMapper.UPDATE_STATUS, updateStatusListener)
@@ -114,9 +118,10 @@ const usageApi: UsageApiClient = {
       ipcRenderer.removeListener(IpcChannelMapper.UPDATE_STATUS, updateStatusListener)
     }
   },
-  onUsageUpdate: (listener: UsageUpdateListener): (() => void) => {
+  onUsageUpdate: (params: { onUpdate: UsageUpdateListener }): (() => void) => {
+    const { onUpdate } = params
     const usageUpdateListener = (_event: Electron.IpcRendererEvent, snapshot: UsageSnapshot): void => {
-      listener(snapshot)
+      onUpdate(snapshot)
     }
 
     ipcRenderer.on(IpcChannelMapper.USAGE_UPDATE, usageUpdateListener)
@@ -134,8 +139,10 @@ const usageApi: UsageApiClient = {
   refreshTracker: (params: { trackerId: string }): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH_TRACKER, params)
   },
-  saveSettings: (settings: SettingsModel): Promise<SettingsModel> => {
-    return ipcRenderer.invoke(IpcChannelMapper.SETTINGS_SAVE, settings)
+  saveSettings: (params: { settings: SettingsModel }): Promise<SettingsModel> => {
+    const { settings } = params
+
+    return ipcRenderer.invoke(IpcChannelMapper.SETTINGS_SAVE, { settings })
   },
   setSchedulingEnabled: (params: { isEnabled: boolean }): Promise<SettingsModel> => {
     return ipcRenderer.invoke(IpcChannelMapper.SCHEDULING_SET_ENABLED, params)

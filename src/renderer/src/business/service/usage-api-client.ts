@@ -13,7 +13,7 @@ import type { SettingsUpdateListener, UsageSnapshot, UsageUpdateListener } from 
 export type UsageApiClient = {
   checkForUpdate: () => Promise<UpdateStatus>
   clearTriggerRunLogs: (params: { triggerId: string }) => Promise<void>
-  downloadUpdate: () => Promise<string>
+  downloadUpdateAndOpenInstaller: () => Promise<string>
   focusSession: (params: { cwd: string; pid: number }) => Promise<void>
   getMobileDevices: () => Promise<MobileConnectedDevice[]>
   getPlatform: () => Promise<OS>
@@ -27,15 +27,15 @@ export type UsageApiClient = {
   installSessionFocusTool: () => Promise<void>
   isSessionFocusSupported: () => Promise<boolean>
   listSessions: () => Promise<SessionSnapshot>
-  onMobileDevicesUpdate: (listener: MobileDevicesUpdateListener) => () => void
-  onSessionsUpdate: (listener: SessionsUpdateListener) => () => void
-  onSettingsUpdate: (listener: SettingsUpdateListener) => () => void
-  onUpdateStatus: (listener: UpdateStatusListener) => () => void
-  onUsageUpdate: (listener: UsageUpdateListener) => () => void
+  onMobileDevicesUpdate: (params: { onUpdate: MobileDevicesUpdateListener }) => () => void
+  onSessionsUpdate: (params: { onUpdate: SessionsUpdateListener }) => () => void
+  onSettingsUpdate: (params: { onUpdate: SettingsUpdateListener }) => () => void
+  onUpdateStatus: (params: { onUpdate: UpdateStatusListener }) => () => void
+  onUsageUpdate: (params: { onUpdate: UsageUpdateListener }) => () => void
   openRelease: () => void
   refreshNow: () => Promise<void>
   refreshTracker: (params: { trackerId: string }) => Promise<void>
-  saveSettings: (settings: SettingsModel) => Promise<SettingsModel>
+  saveSettings: (params: { settings: SettingsModel }) => Promise<SettingsModel>
   setSchedulingEnabled: (params: { isEnabled: boolean }) => Promise<SettingsModel>
   setTriggerEnabled: (params: { isEnabled: boolean; triggerId: string }) => Promise<SettingsModel>
   setTrackerPaused: (params: { isAutoRefreshPaused: boolean; trackerId: string }) => Promise<SettingsModel>

@@ -3,14 +3,11 @@ import { type ReactElement, useEffect, useState } from 'react'
 import appIconUrl from '#resource/icon/app-icon.png'
 import { updateClientService } from '#src/renderer/src/business/service/update-client-service'
 import '#src/renderer/src/ui-component/about/about-page.css'
+import { constant } from '#src/renderer/src/util/constant'
 import type { UpdateStatus } from '#src/shared/business/model/update-model'
 import { updateCheckErrorMessageService } from '#src/shared/business/service/update-check-error-message-service'
-import { appTitleUtil } from '#src/shared/util/app-title-util'
-import { constant } from '#src/shared/util/constant'
+import { constant as sharedConstant } from '#src/shared/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
-
-const APP_TITLE = appTitleUtil.resolve({ isDev: import.meta.env.DEV })
-const TITLE_CLICKS_TO_TOGGLE_DEVELOPMENT = 7
 
 const resolveCheckButtonLabel = (params: { isChecking: boolean }): string => {
   const { isChecking } = params
@@ -56,7 +53,7 @@ export const AboutPage = (props: { onToggleDevelopmentUnlock: () => void }): Rea
   const { onToggleDevelopmentUnlock } = props
   const [checkErrorMessage, setCheckErrorMessage] = useState<string>('')
   const [developmentClicksRemaining, setDevelopmentClicksRemaining] = useState<number>(
-    TITLE_CLICKS_TO_TOGGLE_DEVELOPMENT,
+    constant.aboutPage.developmentUnlockClickCount,
   )
   const [isCheckingForUpdate, setIsCheckingForUpdate] = useState<boolean>(false)
   const [status, setStatus] = useState<UpdateStatus | undefined>(undefined)
@@ -105,7 +102,7 @@ export const AboutPage = (props: { onToggleDevelopmentUnlock: () => void }): Rea
       return
     }
 
-    setDevelopmentClicksRemaining(TITLE_CLICKS_TO_TOGGLE_DEVELOPMENT)
+    setDevelopmentClicksRemaining(constant.aboutPage.developmentUnlockClickCount)
     onToggleDevelopmentUnlock()
   }
 
@@ -128,9 +125,9 @@ export const AboutPage = (props: { onToggleDevelopmentUnlock: () => void }): Rea
       <header>
         <img alt="Usage Pulse app icon" className="about-page-icon" src={appIconUrl} />
         <h1 className="about-page-title" onClick={handleTitleClick}>
-          {APP_TITLE}
+          {constant.app.title}
         </h1>
-        {developmentClicksRemaining < TITLE_CLICKS_TO_TOGGLE_DEVELOPMENT && (
+        {developmentClicksRemaining < constant.aboutPage.developmentUnlockClickCount && (
           <p className="about-page-development-hint">{resolveDevelopmentHintText()}</p>
         )}
         <p className="about-page-tagline">Desktop tracker for Claude and z.ai coding-plan usage limits.</p>
@@ -160,7 +157,7 @@ export const AboutPage = (props: { onToggleDevelopmentUnlock: () => void }): Rea
       <section className="about-page-section">
         <h2 className="about-page-section-title">Supported providers</h2>
         <ul className="about-page-provider-list">
-          {constant.providerCatalog.map((catalogEntry) => {
+          {sharedConstant.providerCatalog.map((catalogEntry) => {
             return (
               <li className="about-page-provider" key={catalogEntry.id}>
                 <span className="about-page-provider-name">{catalogEntry.name}</span>

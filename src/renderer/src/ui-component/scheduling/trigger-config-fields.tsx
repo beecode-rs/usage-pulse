@@ -1,10 +1,10 @@
 import type { ReactElement } from 'react'
 
-import { DayTimeScheduleFields } from '#src/renderer/src/ui-component/schedule/day-time-schedule-fields'
+import { ScheduleDayTimeScheduleFields } from '#src/renderer/src/ui-component/schedule/day-time-schedule-fields'
 import { type ScheduleTriggerConfig } from '#src/shared/business/model/schedule-trigger-model'
 import { constant } from '#src/shared/util/constant'
 
-export const TriggerConfigFields = (props: {
+export const SchedulingTriggerConfigFields = (props: {
   config: ScheduleTriggerConfig
   onChange: (config: ScheduleTriggerConfig) => void
 }): ReactElement => {
@@ -37,7 +37,7 @@ export const TriggerConfigFields = (props: {
         />
         <span className="settings-hint">Full shell command the trigger runs each time it fires.</span>
       </label>
-      <DayTimeScheduleFields
+      <ScheduleDayTimeScheduleFields
         days={config.days}
         onChange={({ days, times }) => {
           onChange({ ...config, days, times })

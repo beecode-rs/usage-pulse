@@ -4,7 +4,7 @@ import { app } from 'electron'
 import { SchedulingStrategyFactory } from '#src/main/business/component/scheduling-strategy/factory'
 import { AppEventType } from '#src/main/business/enum/app-event-type-enum'
 import { settingsRepoSingleton } from '#src/main/business/repo/settings-repo-singleton'
-import { appEventBusSingleton } from '#src/main/lib/app-event-bus-singleton'
+import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-singleton'
 import { config } from '#src/main/util/config'
 import type { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import type {
@@ -57,6 +57,24 @@ export class _SchedulingService {
         return [...inspections, { isRegistered: inspection.isRegistered, triggerId: trigger.id }]
       })
     }, Promise.resolve([]))
+  }
+
+  async setEnabled(params: { isEnabled: boolean }): Promise<SettingsModel> {
+    const { isEnabled } = params
+    const settings = this._settingsRepo.fetch().withSchedulingEnabled({ isEnabled })
+
+    await this._settingsRepo.save({ settings })
+
+    return settings
+  }
+
+  async setTriggerEnabled(params: { isEnabled: boolean; triggerId: string }): Promise<SettingsModel> {
+    const { isEnabled, triggerId } = params
+    const settings = this._settingsRepo.fetch().withTriggerEnabled({ isEnabled, triggerId })
+
+    await this._settingsRepo.save({ settings })
+
+    return settings
   }
 
   async syncRegistrations(): Promise<void> {

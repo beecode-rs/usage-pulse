@@ -2,12 +2,12 @@ import { type ReactElement, useEffect, useState } from 'react'
 
 import { triggerValidationService } from '#src/renderer/src/business/service/trigger-validation-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
-import { TriggerConfigFields } from '#src/renderer/src/ui-component/scheduling/trigger-config-fields'
+import { SchedulingTriggerConfigFields } from '#src/renderer/src/ui-component/scheduling/trigger-config-fields'
 import { type ScheduleTriggerConfig } from '#src/shared/business/model/schedule-trigger-model'
 import { SettingsModel } from '#src/shared/business/model/settings-model'
 import { errorUtil } from '#src/shared/util/error-util'
 
-export const TriggerSettingsDialog = (props: {
+export const SchedulingTriggerSettingsDialog = (props: {
   onClose: () => void
   onSaved: () => void
   triggerId: string
@@ -169,7 +169,7 @@ export const TriggerSettingsDialog = (props: {
           </button>
         </header>
         <div className="settings-panel-body">
-          <TriggerConfigFields config={editedTrigger} onChange={setEditedTrigger} />
+          <SchedulingTriggerConfigFields config={editedTrigger} onChange={setEditedTrigger} />
           {errorMessage !== '' && <p className="settings-error">{errorMessage}</p>}
         </div>
         <div className="settings-dialog-actions">

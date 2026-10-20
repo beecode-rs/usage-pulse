@@ -2,7 +2,7 @@ import { type ChangeEvent, type ReactElement } from 'react'
 
 import '#src/renderer/src/ui-component/development/slider-field.css'
 
-export const SliderField = (props: {
+export const DevelopmentSliderField = (props: {
   label: string
   max: number
   onChange: (value: number) => void

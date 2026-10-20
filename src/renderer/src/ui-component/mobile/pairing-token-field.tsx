@@ -1,6 +1,6 @@
 import { type ReactElement, useState } from 'react'
 
-const COPIED_RESET_MS = 2000
+import { constant } from '#src/renderer/src/util/constant'
 
 const renderCopyIcon = (): ReactElement => {
   return (
@@ -94,7 +94,7 @@ export const MobilePairingTokenField = (props: { onRegenerateToken: () => void; 
     setIsCopied(true)
     setTimeout(() => {
       setIsCopied(false)
-    }, COPIED_RESET_MS)
+    }, constant.pairingToken.copiedResetMs)
   }
 
   const resolveCopyTitle = (): string => {

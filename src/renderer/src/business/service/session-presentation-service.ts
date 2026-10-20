@@ -1,3 +1,6 @@
+import { typeUtil } from '@beecode/msh-util'
+
+import { constant } from '#src/renderer/src/util/constant'
 import { dateUtil } from '#src/renderer/src/util/date-util'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
@@ -12,7 +15,7 @@ export const sessionPresentationService = {
   resolveModelLabel: (params: { model: string }): string => {
     const { model } = params
 
-    return model.replace(/-\d{8}$/, '')
+    return model.replace(constant.regex.modelDateSuffixRegex, '')
   },
 
   resolveProjectLabel: (params: { cwd: string }): string => {
@@ -48,7 +51,7 @@ export const sessionPresentationService = {
 
   resolveSessionTitleParts: (params: { title: string }): { name: string; suffix: string | undefined } => {
     const { title } = params
-    const titleMatch = /^(.+)-(.+)$/.exec(title)
+    const titleMatch = constant.regex.titleHyphenSplitRegex.exec(title)
     const name = titleMatch?.[1]
     const suffix = titleMatch?.[2]
 
@@ -76,6 +79,14 @@ export const sessionPresentationService = {
         return { badgeClassName: 'session-status is-idle', dotClassName: 'session-status-dot is-idle', label: 'Idle' }
       }
 
+      case SessionStatusMapper.UNKNOWN: {
+        return {
+          badgeClassName: 'session-status is-unknown',
+          dotClassName: 'session-status-dot is-unknown',
+          label: 'Unknown',
+        }
+      }
+
       case SessionStatusMapper.WAITING: {
         return {
           badgeClassName: 'session-status is-waiting',
@@ -85,11 +96,7 @@ export const sessionPresentationService = {
       }
 
       default: {
-        return {
-          badgeClassName: 'session-status is-unknown',
-          dotClassName: 'session-status-dot is-unknown',
-          label: 'Unknown',
-        }
+        throw typeUtil.exhaustiveError('unsupported session status [status]', status)
       }
     }
   },

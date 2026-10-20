@@ -1,3 +1,5 @@
+import { typeUtil } from '@beecode/msh-util'
+
 import { ClaudeAccessTokenSource } from '#src/shared/business/enum/claude-access-token-source-enum'
 import { OS } from '#src/shared/business/enum/os-enum'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
@@ -54,8 +56,12 @@ export const trackerAccessTokenSourceService = {
         }
       }
 
-      default: {
+      case OS.WINDOWS: {
         return { selectedAccessTokenSource: ClaudeAccessTokenSource.MANUAL }
+      }
+
+      default: {
+        throw typeUtil.exhaustiveError('unsupported platform [platform]', osPlatform)
       }
     }
   },

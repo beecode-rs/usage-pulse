@@ -8,12 +8,12 @@ import type {
   SchedulingInspection,
   SchedulingRegistrationParams,
   SchedulingStrategy,
-} from '#src/main/business/component/scheduling-strategy/scheduling-strategy'
+} from '#src/main/business/component/scheduling-strategy/index'
 import { config } from '#src/main/util/config'
 import { constant } from '#src/main/util/constant'
 import { osUtil } from '#src/main/util/os-util'
 import { OS } from '#src/shared/business/enum/os-enum'
-import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
+import { type ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import { errorUtil } from '#src/shared/util/error-util'
 
 const execFileAsync = promisify(execFile)
@@ -28,17 +28,9 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
   readonly isSupported = true
 
   protected readonly _homeDir: string
-  protected readonly _labelPrefix = 'com.usage-pulse.trigger.'
+  protected readonly _labelPrefix = constant.scheduling.launchd.labelPrefix
   protected readonly _launchctlTimeoutMs = config.launchctlTimeoutMs
-  protected readonly _launchdWeekdayByTriggerDay: Record<ScheduleTriggerDayMapper, number> = {
-    [ScheduleTriggerDayMapper.FRIDAY]: 5,
-    [ScheduleTriggerDayMapper.MONDAY]: 1,
-    [ScheduleTriggerDayMapper.SATURDAY]: 6,
-    [ScheduleTriggerDayMapper.SUNDAY]: 0,
-    [ScheduleTriggerDayMapper.THURSDAY]: 4,
-    [ScheduleTriggerDayMapper.TUESDAY]: 2,
-    [ScheduleTriggerDayMapper.WEDNESDAY]: 3,
-  }
+  protected readonly _launchdWeekdayByTriggerDay = constant.scheduling.launchd.weekdayByTriggerDay
 
   protected readonly _uid: number
 
@@ -97,7 +89,7 @@ export class SchedulingStrategyMacLaunchd implements SchedulingStrategy {
 
   protected _assertRegistrationParams(params: SchedulingRegistrationParams): void {
     const { triggerId, executablePath, executableArgs, days, times } = params
-    if (!/^[A-Za-z0-9_-]+$/.test(triggerId)) {
+    if (!constant.scheduleTrigger.idRegex.test(triggerId)) {
       throw new Error(`Invalid trigger id '${triggerId}': only alphanumerics, underscores and hyphens are allowed`)
     }
 

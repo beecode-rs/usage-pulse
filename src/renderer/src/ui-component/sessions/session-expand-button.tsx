@@ -2,7 +2,7 @@ import type { ReactElement } from 'react'
 
 import { ChevronIcon } from '#src/renderer/src/ui-component/icon/chevron-icon'
 
-export const SessionExpandButton = (props: {
+export const SessionsSessionExpandButton = (props: {
   isExpanded: boolean
   label: string
   onClick: () => void

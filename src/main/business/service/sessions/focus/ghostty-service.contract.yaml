@@ -29,11 +29,11 @@ methods:
         params:
           - stdout: "missing\n"
         result: missing
-      # Empty or unexpected stdout counts as no terminal matched.
+      # Empty stdout is script drift: the parser refuses it instead of mapping it to missing.
       - constructorParams: []
         params:
           - stdout: ""
-        result: missing
+        result: "new Error(\"the Ghostty focus script printed unexpected output: ''\")"
   resolvePeerRank:
     terms:
       # Same-cwd sessions rank by surface host age: the newer session focuses the second match.

@@ -1,5 +1,5 @@
 import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus-outcome-mapper-enum'
-import { type GhosttyFocusPeer } from '#src/main/business/service/sessions/focus/ghostty-service'
+import { type SessionsFocusGhosttyPeer } from '#src/main/business/service/sessions/focus/ghostty-service'
 import { _SessionsService } from '#src/main/business/service/sessions/service-singleton'
 import { type OS } from '#src/shared/business/enum/os-enum'
 
@@ -11,7 +11,7 @@ export class SessionsServiceContractHarness extends _SessionsService {
   linuxFocusToolInstallAttemptCount = 0
   linuxFocusToolInstallError: Error | undefined
   macOsAgentsQueryStdout: string | undefined
-  macOsGhosttyFocusPeers: GhosttyFocusPeer[] = []
+  macOsGhosttyFocusPeers: SessionsFocusGhosttyPeer[] = []
   macOsGhosttySessionTty: string | undefined
   macOsGhosttyTabFocusOutcome: GhosttyFocusOutcomeMapper = GhosttyFocusOutcomeMapper.FOCUSED
   macOsGhosttyTtyFocusOutcome: GhosttyFocusOutcomeMapper = GhosttyFocusOutcomeMapper.MISSING
@@ -66,7 +66,10 @@ export class SessionsServiceContractHarness extends _SessionsService {
     return this.macOsGhosttySessionTty
   }
 
-  protected override async _listGhosttyFocusPeers(params: { cwd: string; pid: number }): Promise<GhosttyFocusPeer[]> {
+  protected override async _listGhosttyFocusPeers(params: {
+    cwd: string
+    pid: number
+  }): Promise<SessionsFocusGhosttyPeer[]> {
     if (!this.isMacOsGhosttyPeersStubbed) {
       return super._listGhosttyFocusPeers(params)
     }

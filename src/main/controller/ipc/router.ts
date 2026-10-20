@@ -10,7 +10,7 @@ import { ipcUpdate } from '#src/main/controller/ipc/update'
 import { ipcUsage } from '#src/main/controller/ipc/usage'
 import { IpcChannelMapper } from '#src/shared/business/enum/ipc-channel-mapper-enum'
 
-export class IpcRouter {
+export const ipcRouter = {
   register(): void {
     // mobile
     ipcMain.handle(IpcChannelMapper.MOBILE_GET_DEVICES, ipcMobile.getConnectedDevices)
@@ -51,5 +51,47 @@ export class IpcRouter {
     ipcMain.handle(IpcChannelMapper.USAGE_REFRESH, ipcUsage.refresh)
     ipcMain.handle(IpcChannelMapper.USAGE_REFRESH_TRACKER, ipcUsage.refreshTracker)
     ipcMain.handle(IpcChannelMapper.USAGE_SET_TRACKER_PAUSED, ipcUsage.setTrackerPaused)
-  }
+  },
+
+  unregister(): void {
+    // mobile
+    ipcMain.removeHandler(IpcChannelMapper.MOBILE_GET_DEVICES)
+
+    // os
+    ipcMain.removeHandler(IpcChannelMapper.OS_GET_PLATFORM)
+
+    // scheduling
+    ipcMain.removeHandler(IpcChannelMapper.SCHEDULING_GET_INFO)
+    ipcMain.removeHandler(IpcChannelMapper.SCHEDULING_SET_ENABLED)
+
+    // sessions
+    ipcMain.removeHandler(IpcChannelMapper.SESSIONS_FOCUS)
+    ipcMain.removeHandler(IpcChannelMapper.SESSIONS_GET_FOCUS_SUPPORT)
+    ipcMain.removeHandler(IpcChannelMapper.SESSIONS_GET_SNAPSHOT)
+    ipcMain.removeHandler(IpcChannelMapper.SESSIONS_INSTALL_FOCUS_TOOL)
+    ipcMain.removeHandler(IpcChannelMapper.SESSIONS_LIST)
+    ipcMain.removeHandler(IpcChannelMapper.SESSIONS_TEST_SSH_HOST)
+
+    // settings
+    ipcMain.removeHandler(IpcChannelMapper.SETTINGS_GET)
+    ipcMain.removeHandler(IpcChannelMapper.SETTINGS_SAVE)
+
+    // trigger
+    ipcMain.removeHandler(IpcChannelMapper.TRIGGER_CLEAR_RUN_LOGS)
+    ipcMain.removeHandler(IpcChannelMapper.TRIGGER_GET_RUN_LOGS)
+    ipcMain.removeHandler(IpcChannelMapper.TRIGGER_OS_INSPECT)
+    ipcMain.removeHandler(IpcChannelMapper.TRIGGER_SET_ENABLED)
+
+    // update
+    ipcMain.removeHandler(IpcChannelMapper.UPDATE_CHECK)
+    ipcMain.removeHandler(IpcChannelMapper.UPDATE_DOWNLOAD)
+    ipcMain.removeHandler(IpcChannelMapper.UPDATE_GET_STATUS)
+    ipcMain.removeListener(IpcChannelMapper.UPDATE_OPEN_RELEASE, ipcUpdate.openRelease)
+
+    // usage
+    ipcMain.removeHandler(IpcChannelMapper.USAGE_GET_SNAPSHOT)
+    ipcMain.removeHandler(IpcChannelMapper.USAGE_REFRESH)
+    ipcMain.removeHandler(IpcChannelMapper.USAGE_REFRESH_TRACKER)
+    ipcMain.removeHandler(IpcChannelMapper.USAGE_SET_TRACKER_PAUSED)
+  },
 }

@@ -1,11 +1,13 @@
-const STORAGE_KEY = 'side-menu.is-collapsed'
+import { constant } from '#src/renderer/src/util/constant'
+import { prefsUtil } from '#src/renderer/src/util/prefs-util'
 
 export const sideMenuPrefsUtil = {
   loadIsCollapsed: (): boolean => {
-    return window.localStorage.getItem(STORAGE_KEY) === 'true'
+    return prefsUtil.loadBoolean({ key: constant.localStorage.sideMenuIsCollapsedKey })
   },
   saveIsCollapsed: (params: { isCollapsed: boolean }): void => {
     const { isCollapsed } = params
-    window.localStorage.setItem(STORAGE_KEY, String(isCollapsed))
+
+    prefsUtil.saveBoolean({ isSet: isCollapsed, key: constant.localStorage.sideMenuIsCollapsedKey })
   },
 }
