@@ -2,6 +2,7 @@ import { singletonPattern } from '@beecode/msh-util'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
+import { SessionsOpenCodeParserService } from '#src/main/business/service/sessions/opencode-parser-service'
 import { SessionsParserService } from '#src/main/business/service/sessions/parser-service'
 import { constant } from '#src/main/util/constant'
 import { type SessionInfo, type SessionSnapshot, type UnreachableHost } from '#src/shared/business/model/session-model'
@@ -32,6 +33,8 @@ export class _SessionsSshService {
   protected readonly _cacheById = new Map<string, SshHostCacheEntry>()
 
   protected readonly _inFlightById = new Map<string, Promise<SshHostFetchResult>>()
+
+  protected readonly _openCodeParserService = new SessionsOpenCodeParserService()
 
   async listRemoteSessions(params: { hosts: SshHostConfig[] }): Promise<SshHostFetchResult[]> {
     const { hosts } = params
@@ -170,6 +173,24 @@ export class _SessionsSshService {
       }
     }
 
+    const [claudeResult, openCodeSessions] = await Promise.all([
+      this._fetchHostClaudeResult({ host, target }),
+      this._fetchHostOpenCodeSessions({ target }),
+    ])
+
+    return {
+      errorMessage: claudeResult.errorMessage,
+      host,
+      sessions: [...claudeResult.sessions, ...openCodeSessions],
+    }
+  }
+
+  protected async _fetchHostClaudeResult(params: {
+    host: SshHostConfig
+    target: SshTarget
+  }): Promise<SshHostFetchResult> {
+    const { host, target } = params
+
     try {
       const { stdout } = await execFileAsync(
         'ssh',
@@ -189,6 +210,25 @@ export class _SessionsSshService {
         host,
         sessions: [],
       }
+    }
+  }
+
+  protected async _fetchHostOpenCodeSessions(params: { target: SshTarget }): Promise<SessionInfo[]> {
+    const { target } = params
+
+    try {
+      const { stdout } = await execFileAsync(
+        'ssh',
+        this._buildSshArgs({ command: constant.sessions.ssh.remoteOpenCodeSessionsCommand, target }),
+        {
+          timeout: constant.sessions.ssh.queryTimeoutMs,
+        },
+      )
+      const openCodePayload = this._openCodeParserService.parseRemoteEnvelope({ stdout })
+
+      return this._openCodeParserService.parseSessions({ ...openCodePayload, nowMs: Date.now() })
+    } catch {
+      return []
     }
   }
 

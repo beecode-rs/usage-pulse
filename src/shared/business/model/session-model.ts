@@ -1,3 +1,4 @@
+import { type SessionProviderMapper } from '#src/shared/business/enum/session-provider-mapper-enum'
 import { type SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 
 export type SessionTranscriptStats = {
@@ -22,7 +23,8 @@ export type SessionInfo = {
   hostLabel?: string
   kind: string
   name: string
-  pid: number
+  pid?: number
+  provider: SessionProviderMapper
   sessionId: string
   startedAt: number
   status: SessionStatusMapper

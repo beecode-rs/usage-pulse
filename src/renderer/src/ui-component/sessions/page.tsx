@@ -1,6 +1,7 @@
 import { typeUtil } from '@beecode/msh-util'
 import { type ReactElement, useEffect, useState } from 'react'
 
+import { sessionPresentationService } from '#src/renderer/src/business/service/session-presentation-service'
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { SessionsAutoRefreshButton } from '#src/renderer/src/ui-component/sessions/auto-refresh-button'
@@ -21,12 +22,6 @@ import { type SessionInfo, type SessionSnapshot, type UnreachableHost } from '#s
 import { SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant as sharedConstant } from '#src/shared/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
-
-const resolveSessionKey = (session: SessionInfo): string => {
-  const hostId = session.hostId ?? 'local'
-
-  return `${hostId}:${session.sessionId}:${String(session.pid)}`
-}
 
 const resolveUnreachableHostsLabel = (hosts: UnreachableHost[]): string => {
   const hostParts = hosts.map((host) => {
@@ -301,7 +296,7 @@ export const SessionsPage = (props: {
         {!hasSnapshot && displayedErrorMessage !== '' && <p className="sessions-empty">Could not load sessions</p>}
         {isEmpty && <p className="sessions-empty">No active sessions</p>}
         {sessions.map((session) => {
-          const sessionKey = resolveSessionKey(session)
+          const sessionKey = sessionPresentationService.resolveSessionKey({ session })
 
           return (
             <SessionsSessionCard
@@ -310,6 +305,10 @@ export const SessionsPage = (props: {
               key={sessionKey}
               nowMs={nowMs}
               onFocus={() => {
+                if (session.pid === undefined) {
+                  return
+                }
+
                 void focusSession({ cwd: session.cwd, pid: session.pid })
               }}
               onToggle={() => {

@@ -2,6 +2,7 @@ import { type ReactElement } from 'react'
 
 import { sessionPresentationService } from '#src/renderer/src/business/service/session-presentation-service'
 import { ServerIcon } from '#src/renderer/src/ui-component/icon/server-icon'
+import { SessionsProviderIcon } from '#src/renderer/src/ui-component/sessions/provider-icon'
 import { SessionsSessionExpandButton } from '#src/renderer/src/ui-component/sessions/session-expand-button'
 import { SessionsSessionFinishedPulse } from '#src/renderer/src/ui-component/sessions/session-finished-pulse'
 import { SessionsSessionFocusButton } from '#src/renderer/src/ui-component/sessions/session-focus-button'
@@ -178,7 +179,7 @@ export const SessionsSessionCard = (props: {
           <span className={statusPresentation.dotClassName} />
           {statusPresentation.label}
         </span>
-        {session.hostId === undefined && (
+        {session.hostId === undefined && session.pid !== undefined && (
           <SessionsSessionFocusButton label={`Focus terminal for ${sessionTitle}`} onClick={onFocus} />
         )}
         {transcript !== undefined && (
@@ -195,6 +196,10 @@ export const SessionsSessionCard = (props: {
       {transcript !== undefined && <SessionsSessionTranscriptChips nowMs={nowMs} transcript={transcript} />}
       {isExpanded && transcript !== undefined && renderTranscriptDetails({ session, transcript })}
       <footer className="session-card-footer">
+        <span className="session-card-meta session-provider-chip">
+          <SessionsProviderIcon provider={session.provider} size={14} />
+          {sessionPresentationService.resolveProviderLabel({ provider: session.provider })}
+        </span>
         {session.hostId !== undefined && (
           <span className="session-card-meta session-host-chip">
             <ServerIcon size={12} />
@@ -202,7 +207,7 @@ export const SessionsSessionCard = (props: {
           </span>
         )}
         {session.kind !== '' && <span className="session-card-meta">{resolveKindLabel(session.kind)}</span>}
-        <span className="session-card-meta">pid {String(session.pid)}</span>
+        {session.pid !== undefined && <span className="session-card-meta">pid {String(session.pid)}</span>}
         <span className="session-card-meta">{resolveUptimeLabel({ nowMs, startedAt: session.startedAt })}</span>
       </footer>
     </article>

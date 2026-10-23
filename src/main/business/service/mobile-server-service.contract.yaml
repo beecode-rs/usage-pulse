@@ -87,6 +87,7 @@ methods:
             kind: claude-code
             name: session-a
             pid: 1234
+            provider: claude-code
             sessionId: s-a
             startedAt: 1726000000000
             status: waiting

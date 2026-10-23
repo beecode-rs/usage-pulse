@@ -1,8 +1,11 @@
 import { OS } from '#src/shared/business/enum/os-enum'
 import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
+import { SessionProviderMapper } from '#src/shared/business/enum/session-provider-mapper-enum'
 import { UsageSeverityLevel } from '#src/shared/business/enum/usage-severity-level-enum'
 
 const ghosttyBundleId = 'com.mitchellh.ghostty'
+
+const openCodeEnvelopeMarker = '__USAGE_PULSE_OPENCODE_ACTIVE__'
 
 const ghosttyFrontWindowPoll = { count: 20, delayMs: 100 }
 
@@ -210,6 +213,18 @@ end tell`,
         workspaceNameCandidateLimit: 3,
       },
     },
+    opencodeQuery: {
+      activePath: '/api/session/active',
+      authUser: 'opencode',
+      formPathSuffix: '/form',
+      permissionPathSuffix: '/permission',
+      recentSessionWindowMs: 7_200_000,
+      serviceFilePathSegments: ['opencode', 'service.json'],
+      sessionPathPrefix: '/api/session',
+      sessionsPath: '/api/session',
+      tabsFilePathSegments: ['opencode', 'latest', 'tui', 'tabs.json'],
+      timeoutMs: 10_000,
+    },
     originOrder: {
       local: 0,
       ssh: 1,
@@ -220,14 +235,20 @@ end tell`,
     processAncestry: {
       maxHops: 12,
     },
+    providerOrder: {
+      [SessionProviderMapper.CLAUDE_CODE]: 0,
+      [SessionProviderMapper.OPENCODE]: 1,
+    },
     psQuery: {
       timeoutMs: 5_000,
     },
     ssh: {
       connectTimeoutMs: 5_000,
       hostCacheTtlMs: 15_000,
+      openCodeEnvelopeMarker,
       queryTimeoutMs: 10_000,
       remoteAgentsCommand: String.raw`bash -lc 'PATH="$HOME/.local/bin:$PATH" claude agents --json'`,
+      remoteOpenCodeSessionsCommand: String.raw`bash -lc 'PATH="$HOME/.local/bin:$PATH"; S="$(opencode service status 2>/dev/null)"; T="$HOME/.local/state"; [ -n "$XDG_STATE_HOME" ] && T="$XDG_STATE_HOME"; if [ -n "$S" ] && [ "$S" != "stopped" ]; then opencode api GET /api/session; printf "\n${openCodeEnvelopeMarker}\n"; A="$(opencode api GET /api/session/active 2>/dev/null || printf "{\"data\":{}}")"; printf "%s" "$A"; printf "\n${openCodeEnvelopeMarker}\n"; cat "$T/opencode/latest/tui/tabs.json" 2>/dev/null || printf "{}"; printf "\n${openCodeEnvelopeMarker}\n"; printf "["; SEP=""; for ID in $(printf "%s" "$A" | grep -oE "ses_[A-Za-z0-9]+"); do printf "%s" "$SEP"; opencode api GET "/api/session/$ID/form" 2>/dev/null || printf "{\"data\":[]}"; SEP=","; done; printf "]"; printf "\n${openCodeEnvelopeMarker}\n"; printf "["; SEP=""; for ID in $(printf "%s" "$A" | grep -oE "ses_[A-Za-z0-9]+"); do printf "%s" "$SEP"; opencode api GET "/api/session/$ID/permission" 2>/dev/null || printf "{\"data\":[]}"; SEP=","; done; printf "]"; else printf "{\"data\":[]}\n${openCodeEnvelopeMarker}\n{\"data\":{}}\n${openCodeEnvelopeMarker}\n{}\n${openCodeEnvelopeMarker}\n[]\n${openCodeEnvelopeMarker}\n[]"; fi'`,
       remoteProbeCommand: 'true',
       testTimeoutMs: 8_000,
     },

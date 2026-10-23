@@ -14,4 +14,11 @@ export const sessionsParserServiceContractHarness = {
       return { errorMessage: errorUtil.resolveMessage(error) }
     }
   },
+  sortSessions: (params: { sessions: SessionInfo[] }): string[] => {
+    const { sessions } = params
+
+    return new SessionsParserService().sortSessions({ sessions }).map((session) => {
+      return `${session.provider}|${session.name}`
+    })
+  },
 }

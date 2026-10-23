@@ -1,0 +1,313 @@
+# Contract for SessionsOpenCodeParserService, the zod validation boundary over
+# the OpenCode daemon session payloads (the local query service fetch and the
+# ssh remote envelope). parseSessions keeps only visible top-level sessions:
+# entries with a time.archived stamp or a parentID (task-tool subagent child
+# sessions) are dropped, and a top-level entry is visible only while it is
+# actively running (its id is a key in the active envelope's data), has its tab
+# open in a tui (its id appears in the tabs file's cwd/global tab lists), or
+# was updated within constant.sessions.opencodeQuery.recentSessionWindowMs of
+# the nowMs clock (the harness defaults the clock to 1792768656239; pass nowMs
+# to shift it). The outcome field is ignored: the daemon stamps it after every
+# completed turn, so it says nothing about liveness. A pending question form
+# or permission request (per active session, flattened entry arrays) marks the
+# session waiting (over the busy of an active run), and an entry neither
+# waiting nor active maps to idle. Entries whose id or
+# time.created fail the schema are dropped while valid siblings survive, and
+# missing location/model/tokens/title fields fall back to ''/0 defaults instead
+# of dropping the entry. Kept sessions are stamped provider opencode, marked
+# busy when their id is a key in the active envelope's data (idle otherwise),
+# and get a transcript only when the model id or any token count signals
+# activity. The parseSessions terms drive
+# __tests__/_opencode-parser-service-contract-harness.ts, which wraps the call
+# in a try/catch so thrown messages surface as errorMessage markers instead of
+# failing the runner. The runner's result comparison serializes with a
+# top-level key filter, so the nested session fields in the expected results
+# document the mapping while the session counts are what gets asserted; the
+# field-level mapping is pinned by opencode-parser-service.test.ts.
+# parseRemoteEnvelope splits the ssh stdout on the envelope marker and recovers
+# each section's JSON by slicing from the first '{' to the last '}', falling
+# back to the empty payload per section; the harness projects the recovered
+# payloads as key-sorted JSON strings so the runner compares them fully.
+subject: sessionsOpenCodeParserServiceContractHarness
+module: ./__tests__/_opencode-parser-service-contract-harness.js
+subjectType: function
+methods:
+  parseSessions:
+    terms:
+      # Visibility filter: of six daemon entries only the running one (busy via
+      # the active envelope) and the recently updated idle one survive; the
+      # archived stamp, the task-tool subagent child (parentID set), the stale
+      # entry outside the recent window and the never-updated idle entry are
+      # dropped.
+      - params:
+          - active:
+              data:
+                ses_e96acc339ffegA84VkCje3KC7g:
+                  type: running
+            sessions:
+              data:
+                - id: ses_e96acc339ffegA84VkCje3KC7g
+                  location:
+                    directory: /Users/milos/code/usage-pulse
+                  model:
+                    id: glm-5.3
+                  time:
+                    created: 1792768425216
+                    updated: 1792768596239
+                  title: Opencode and SSH session provider support
+                  tokens:
+                    cache:
+                      read: 532352
+                      write: 0
+                    input: 45483
+                    output: 1454
+                    reasoning: 3865
+                - id: ses_subagent
+                  parentID: ses_e96acc339ffegA84VkCje3KC7g
+                  time:
+                    created: 1792768425999
+                    updated: 1792768596999
+                  title: Subagent child
+                - id: ses_archived
+                  time:
+                    archived: 1792769999999
+                    created: 1792760000003
+                    updated: 1792768596998
+                - id: ses_stale
+                  outcome: succeeded
+                  time:
+                    created: 1792760000000
+                    updated: 1792760000000
+                  title: Finished one
+                - id: ses_never_updated
+                  time:
+                    created: 1792760000002
+                  title: Never updated
+                - id: ses_idle
+                  location:
+                    directory: /tmp/other
+                  model:
+                    id: ''
+                  time:
+                    created: 1792760000004
+                    updated: 1792768596000
+                  title: ''
+                  tokens:
+                    cache:
+                      read: 0
+                      write: 0
+                    input: 0
+                    output: 0
+                    reasoning: 0
+        result:
+          sessions:
+            - cwd: /Users/milos/code/usage-pulse
+              kind: ''
+              name: Opencode and SSH session provider support
+              provider: opencode
+              sessionId: ses_e96acc339ffegA84VkCje3KC7g
+              startedAt: 1792768425216
+              status: busy
+              transcript:
+                aiTitle: ''
+                cacheCreationTokens: 0
+                cacheReadTokens: 532352
+                gitBranch: ''
+                inputTokens: 45483
+                lastActivityAt: 1792768596239
+                lastPrompt: ''
+                model: glm-5.3
+                outputTokens: 1454
+                thinkingTokens: 3865
+                userTurnsCount: 0
+                version: ''
+            - cwd: /tmp/other
+              kind: ''
+              name: ''
+              provider: opencode
+              sessionId: ses_idle
+              startedAt: 1792760000004
+              status: idle
+      # Drop-invalid: a scalar entry, a non-string id, a non-number
+      # time.created and a missing time object are all dropped while the valid
+      # sibling survives (visible via the active envelope) with the default ''
+      # fields.
+      - params:
+          - active:
+              data:
+                ses_survivor:
+                  type: running
+            sessions:
+              data:
+                - 42
+                - id: 123
+                  time:
+                    created: 1
+                - id: ses_bad_created
+                  time:
+                    created: '3'
+                - id: ses_no_time
+                  title: no time object
+                - id: ses_survivor
+                  time:
+                    created: 5
+        result:
+          sessions:
+            - cwd: ''
+              kind: ''
+              name: ''
+              provider: opencode
+              sessionId: ses_survivor
+              startedAt: 5
+              status: busy
+      # An empty daemon list parses to no sessions.
+      - params:
+          - active:
+              data: {}
+            sessions:
+              data: []
+        result:
+          sessions: []
+      # Junk envelopes never throw: a non-record active payload and a
+      # non-array sessions data both fall back to their empty shapes.
+      - params:
+          - active: 42
+            sessions:
+              data: not-an-array
+        result:
+          sessions: []
+      # Entirely absent payloads fall back the same way.
+      - params:
+          - active: !undefined
+            sessions: !undefined
+        result:
+          sessions: []
+      # The minimal visible entry: every optional block is absent, the entry
+      # rides the active envelope, so cwd, name and kind default to '' and the
+      # zero-signal entry gets no transcript.
+      - params:
+          - active:
+              data:
+                ses_minimal:
+                  type: running
+            sessions:
+              data:
+                - id: ses_minimal
+                  time:
+                    created: 5
+        result:
+          sessions:
+            - cwd: ''
+              kind: ''
+              name: ''
+              provider: opencode
+              sessionId: ses_minimal
+              startedAt: 5
+              status: busy
+  parseRemoteEnvelope:
+    terms:
+      # A normal two-section ssh stdout: the sessions JSON before the marker
+      # and the active JSON after it are recovered verbatim; the tabs, forms
+      # and permissions sections are absent, so they fall back to empty.
+      - params:
+          - stdout: |-
+              {"data":[{"id":"ses_a","location":{"directory":"/w"},"time":{"created":1},"title":"t"}]}
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              {"data":{"ses_a":{"type":"running"}}}
+        result:
+          activeJson: '{"data":{"ses_a":{"type":"running"}}}'
+          formsJson: '[]'
+          openTabsJson: '{}'
+          permissionsJson: '[]'
+          sessionsJson: '{"data":[{"id":"ses_a","location":{"directory":"/w"},"time":{"created":1},"title":"t"}]}'
+      # The full five-section envelope of the current remote command: sessions,
+      # active, the tui tabs file, and the per-active-session form and
+      # permission envelope arrays each land in their positional section; the
+      # form entries are flattened out of their per-session data wrappers.
+      - params:
+          - stdout: |-
+              {"data":[{"id":"ses_a","time":{"created":1,"updated":2}},{"id":"ses_b","time":{"created":1,"updated":2}}]}
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              {"data":{"ses_a":{"type":"running"},"ses_b":{"type":"running"}}}
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              {"cwd":{"/w":{"tabs":[{"sessionID":"ses_a","title":"t"}]}}}
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              [{"data":[]},{"data":[{"metadata":{"kind":"question"},"sessionID":"ses_b","title":"Questions"}]}]
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              [{"data":[{"action":"bash","sessionID":"ses_a"}]},{"data":[]}]
+        result:
+          activeJson: '{"data":{"ses_a":{"type":"running"},"ses_b":{"type":"running"}}}'
+          formsJson: '[{"metadata":{"kind":"question"},"sessionID":"ses_b","title":"Questions"}]'
+          openTabsJson: '{"cwd":{"/w":{"tabs":[{"sessionID":"ses_a","title":"t"}]}}}'
+          permissionsJson: '[{"action":"bash","sessionID":"ses_a"}]'
+          sessionsJson: '{"data":[{"id":"ses_a","time":{"created":1,"updated":2}},{"id":"ses_b","time":{"created":1,"updated":2}}]}'
+      # Remote-shell noise around each section's JSON is discarded by slicing
+      # from the first '{' to the last '}'.
+      - params:
+          - stdout: |-
+              bash: warning: ignoring environment value of HOME
+              {"data":[{"id":"ses_a","time":{"created":1}}]}
+              trailing noise from the remote shell
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              warn: before {"data":{"ses_a":{"type":"running"}}} after
+        result:
+          activeJson: '{"data":{"ses_a":{"type":"running"}}}'
+          formsJson: '[]'
+          openTabsJson: '{}'
+          permissionsJson: '[]'
+          sessionsJson: '{"data":[{"id":"ses_a","time":{"created":1}}]}'
+      # No marker at all: every payload falls back to its empty shape.
+      - params:
+          - stdout: '{"data":[{"id":"ses_a","time":{"created":1}}]}'
+        result:
+          activeJson: '{"data":{}}'
+          formsJson: '[]'
+          openTabsJson: '{}'
+          permissionsJson: '[]'
+          sessionsJson: '{"data":[]}'
+      # Marker present but the sessions section is unrecoverable garbage: only
+      # that section falls back to the empty list while the active section
+      # still parses.
+      - params:
+          - stdout: |-
+              opencode: command not found
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              {"data":{"ses_a":{"type":"running"}}}
+        result:
+          activeJson: '{"data":{"ses_a":{"type":"running"}}}'
+          formsJson: '[]'
+          openTabsJson: '{}'
+          permissionsJson: '[]'
+          sessionsJson: '{"data":[]}'
+      # Mirror case: the active section is garbage, the sessions section still
+      # parses.
+      - params:
+          - stdout: |-
+              {"data":[{"id":"ses_a","time":{"created":1}}]}
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              opencode: command not found
+        result:
+          activeJson: '{"data":{}}'
+          formsJson: '[]'
+          openTabsJson: '{}'
+          permissionsJson: '[]'
+          sessionsJson: '{"data":[{"id":"ses_a","time":{"created":1}}]}'
+      # The stopped-service fallback output of the remote command parses to
+      # every empty payload.
+      - params:
+          - stdout: |-
+              {"data":[]}
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              {"data":{}}
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              {}
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              []
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              []
+        result:
+          activeJson: '{"data":{}}'
+          formsJson: '[]'
+          openTabsJson: '{}'
+          permissionsJson: '[]'
+          sessionsJson: '{"data":[]}'

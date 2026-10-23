@@ -2,6 +2,7 @@ import { typeUtil } from '@beecode/msh-util'
 
 import { constant } from '#src/renderer/src/util/constant'
 import { dateUtil } from '#src/renderer/src/util/date-util'
+import { SessionProviderMapper } from '#src/shared/business/enum/session-provider-mapper-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
 
@@ -30,6 +31,34 @@ export const sessionPresentationService = {
     }
 
     return lastSegment
+  },
+
+  resolveProviderLabel: (params: { provider: SessionProviderMapper }): string => {
+    const { provider } = params
+    switch (provider) {
+      case SessionProviderMapper.CLAUDE_CODE: {
+        return 'Claude Code'
+      }
+
+      case SessionProviderMapper.OPENCODE: {
+        return 'OpenCode'
+      }
+
+      default: {
+        throw typeUtil.exhaustiveError('unsupported session provider [provider]', provider)
+      }
+    }
+  },
+
+  resolveSessionKey: (params: { session: SessionInfo }): string => {
+    const { session } = params
+    const hostId = session.hostId ?? 'local'
+
+    if (session.pid === undefined) {
+      return `${hostId}:${session.provider}:${session.sessionId}:x`
+    }
+
+    return `${hostId}:${session.provider}:${session.sessionId}:${String(session.pid)}`
   },
 
   resolveSessionTitle: (params: { session: SessionInfo }): string => {

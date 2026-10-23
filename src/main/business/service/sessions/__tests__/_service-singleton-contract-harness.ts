@@ -2,6 +2,7 @@ import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus
 import { type SessionsFocusGhosttyPeer } from '#src/main/business/service/sessions/focus/ghostty-service'
 import { _SessionsService } from '#src/main/business/service/sessions/service-singleton'
 import { type OS } from '#src/shared/business/enum/os-enum'
+import { type SessionInfo } from '#src/shared/business/model/session-model'
 
 export class SessionsServiceContractHarness extends _SessionsService {
   isLinuxFocusToolInstalled: boolean | undefined
@@ -16,6 +17,7 @@ export class SessionsServiceContractHarness extends _SessionsService {
   macOsGhosttyTabFocusOutcome: GhosttyFocusOutcomeMapper = GhosttyFocusOutcomeMapper.FOCUSED
   macOsGhosttyTtyFocusOutcome: GhosttyFocusOutcomeMapper = GhosttyFocusOutcomeMapper.MISSING
   macOsGhosttyTtySupport = false
+  openCodeSessions: SessionInfo[] | undefined
   readonly macOsBundleActivateCalls: { bundlePath: string }[] = []
   readonly macOsBundleResolveCalls: { hopCount: number; pid: number }[] = []
   readonly macOsTabFocusCalls: { cwd: string; matchRank: number }[] = []
@@ -52,6 +54,14 @@ export class SessionsServiceContractHarness extends _SessionsService {
     }
 
     return this.macOsAgentsQueryStdout
+  }
+
+  protected override _fetchOpenCodeSessions(): Promise<SessionInfo[]> {
+    if (this.openCodeSessions === undefined) {
+      return Promise.resolve([])
+    }
+
+    return Promise.resolve(this.openCodeSessions)
   }
 
   protected override _isGhosttyTtySupported(): Promise<boolean> {

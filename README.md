@@ -20,7 +20,7 @@
 A small Electron + TypeScript desktop app for people who run several Claude Code sessions at once. It does four things:
 
 - **Usage limits** — continuously pings your coding-plan providers and shows how much of your limits you have consumed: the 5-hour window as a ring, the longer window (weekly for Claude, monthly for z.ai) as a bar.
-- **Active sessions** — lists your running Claude Code sessions, local and on remote SSH hosts, with their project folder and transcript stats, so you can see what every window is up to at a glance.
+- **Active sessions** — lists your running Claude Code and OpenCode sessions, local and on remote SSH hosts, with their project folder and transcript stats, so you can see what every window is up to at a glance.
 - **Scheduling** — registers a Claude command trigger with your OS scheduler (launchd/systemd) timed to the start of each 5-hour usage window.
 - **Mobile API** — an opt-in server inside the app that streams the same live usage and session data to the Usage Pulse companion app on your phone, secured by a pairing token and reached over your VPN.
 
@@ -47,7 +47,7 @@ The titles link to each feature's section in [resource/docs/features.md](resourc
 ## Features
 
 - **Usage limits** — continuously pings your coding-plan providers and shows how much of your limits you have consumed: the 5-hour window as a ring, the longer window (weekly for Claude, monthly for z.ai) as a bar.
-- **Active sessions** — lists your running Claude Code sessions, local and on remote SSH hosts, with their project folder and transcript stats, so you can see what every window is up to at a glance.
+- **Active sessions** — lists your running Claude Code and OpenCode sessions, local and on remote SSH hosts, with their project folder and transcript stats, so you can see what every window is up to at a glance.
 - **Session focus** — clicking a session's card focuses that session's terminal window (macOS, Linux X11).
 - **Overview dashboard** — a combined light view of usage and sessions as the landing screen, with click-to-focus session rows.
 - **Scheduling** — registers commands with your OS scheduler (launchd on macOS, systemd on Linux), each with its own toggle, weekdays, and trigger times.
@@ -68,7 +68,7 @@ I usually have three or four Claude Code sessions running at the same time, each
 Done:
 
 - [x] Usage tracking (Claude, z.ai)
-- [x] Session tracking (local + SSH remote hosts)
+- [x] Session tracking (Claude Code and OpenCode, local + SSH remote hosts)
 - [x] Session focus (macOS, Linux X11)
 - [x] Scheduler (macOS launchd, Linux systemd)
 - [x] Claude system token (macOS, Linux)

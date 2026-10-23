@@ -20,6 +20,8 @@ Tokens stay on your machine: they are stored only in `usage-pulse-settings.json`
 
 Sessions are discovered locally and on remote SSH hosts. Each card shows the project folder, transcript stats (context tokens, model, branch), how recently it was active, plus pid and uptime. Clicking a card focuses that session's terminal window so you can jump straight to the one waiting for you (macOS, Linux X11). The screen's header sums everything up (`2 sessions · 2 working · 0 waiting · 0 idle · 1 remote`) with a status legend underneath.
 
+OpenCode sessions appear alongside the Claude Code ones, locally and from SSH hosts. Only top-level OpenCode sessions are listed — task-tool subagent child sessions stay hidden — and a session stays visible while it is actively running, has its tab open in an OpenCode terminal (the tui tabs state), or was updated within the last two hours. A pending question form (the OpenCode equivalent of ask-a-question) or permission request marks the session as waiting for input, an actively generating one as working, and the rest as idle. Each card is tagged with an OpenCode chip instead of Claude Code, with token stats read straight from the OpenCode background service. OpenCode exposes no process id, so those cards show no pid and have no terminal-focus button.
+
 ## Overview dashboard
 
 <img src="../screenshots/dashboard.png" height="480" alt="Dashboard screen" />

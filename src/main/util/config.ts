@@ -18,6 +18,7 @@ export const config = mshEnvResolver({
   xdg: {
     configHome: env('XDG_CONFIG_HOME').string.optional,
     sessionType: env('XDG_SESSION_TYPE').string.optional,
+    stateHome: env('XDG_STATE_HOME').string.optional,
   },
 })
 

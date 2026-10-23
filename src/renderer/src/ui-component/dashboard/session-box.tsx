@@ -1,6 +1,7 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { sessionPresentationService } from '#src/renderer/src/business/service/session-presentation-service'
+import { SessionsProviderIcon } from '#src/renderer/src/ui-component/sessions/provider-icon'
 import { SessionsSessionFinishedPulse } from '#src/renderer/src/ui-component/sessions/session-finished-pulse'
 import { SessionsSessionFocusButton } from '#src/renderer/src/ui-component/sessions/session-focus-button'
 import { SessionsSessionOriginIcon } from '#src/renderer/src/ui-component/sessions/session-origin-icon'
@@ -58,6 +59,10 @@ export const DashboardSessionBox = (props: {
           <span className="dashboard-session-box-origin">
             <SessionsSessionOriginIcon isRemote={session.hostId !== undefined} />
           </span>
+          <span className="session-card-meta session-provider-chip">
+            <SessionsProviderIcon provider={session.provider} size={14} />
+            {sessionPresentationService.resolveProviderLabel({ provider: session.provider })}
+          </span>
           {session.hostId !== undefined && session.hostLabel !== undefined && (
             <span className="dashboard-session-box-host" title={session.hostLabel}>
               {session.hostLabel}
@@ -69,7 +74,7 @@ export const DashboardSessionBox = (props: {
             <span className={statusPresentation.dotClassName} />
             {statusPresentation.label}
           </span>
-          {session.hostId === undefined && (
+          {session.hostId === undefined && session.pid !== undefined && (
             <SessionsSessionFocusButton label={`Focus terminal for ${sessionTitle}`} onClick={onFocus} />
           )}
         </div>

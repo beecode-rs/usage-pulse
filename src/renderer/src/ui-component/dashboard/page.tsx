@@ -1,6 +1,7 @@
 import { type ReactElement, useEffect, useState } from 'react'
 
 import { AppViewIdMapper } from '#src/renderer/src/business/enum/app-view-id-mapper-enum'
+import { sessionPresentationService } from '#src/renderer/src/business/service/session-presentation-service'
 import { sessionsClientService } from '#src/renderer/src/business/service/sessions-client-service'
 import { usageClientService } from '#src/renderer/src/business/service/usage-client-service'
 import { UsageStalenessService } from '#src/renderer/src/business/service/usage-staleness-service'
@@ -10,16 +11,10 @@ import { DashboardUsageBox } from '#src/renderer/src/ui-component/dashboard/usag
 import '#src/renderer/src/ui-component/dashboard/dashboard.css'
 import '#src/renderer/src/ui-component/sessions/sessions.css'
 import '#src/renderer/src/ui-component/usage-dashboard/usage-dashboard.css'
-import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
+import { type SessionSnapshot } from '#src/shared/business/model/session-model'
 import type { SettingsModel } from '#src/shared/business/model/settings-model'
 import type { UsageSnapshot } from '#src/shared/business/model/usage-model'
 import { errorUtil } from '#src/shared/util/error-util'
-
-const resolveSessionKey = (session: SessionInfo): string => {
-  const hostId = session.hostId ?? 'local'
-
-  return `${hostId}:${session.sessionId}:${String(session.pid)}`
-}
 
 export const DashboardPage = (props: {
   finishedAtBySessionId: Record<string, number>
@@ -153,8 +148,12 @@ export const DashboardPage = (props: {
           return (
             <DashboardSessionBox
               finishedAtMs={finishedAtBySessionId[session.sessionId]}
-              key={resolveSessionKey(session)}
+              key={sessionPresentationService.resolveSessionKey({ session })}
               onFocus={() => {
+                if (session.pid === undefined) {
+                  return
+                }
+
                 void focusSession({ cwd: session.cwd, pid: session.pid })
               }}
               pulseMs={pulseMs}

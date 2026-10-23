@@ -212,6 +212,12 @@
   background: color-mix(in srgb, var(--session-remote) 6%, var(--surface));
 }
 
+.session-provider-chip {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+}
+
 .session-host-chip {
   align-items: center;
   background: color-mix(in srgb, var(--session-remote) 14%, transparent);

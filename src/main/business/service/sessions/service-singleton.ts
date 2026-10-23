@@ -10,6 +10,8 @@ import {
 import { SessionsFocusLinuxService } from '#src/main/business/service/sessions/focus/linux-service'
 import { SessionsFocusMacOsService } from '#src/main/business/service/sessions/focus/macos-service'
 import { SessionsFocusVsCodeService } from '#src/main/business/service/sessions/focus/vscode-service'
+import { SessionsOpenCodeParserService } from '#src/main/business/service/sessions/opencode-parser-service'
+import { SessionsOpenCodeQueryService } from '#src/main/business/service/sessions/opencode-query-service'
 import { SessionsParserService } from '#src/main/business/service/sessions/parser-service'
 import { SessionsProcessService } from '#src/main/business/service/sessions/process-service'
 import { config } from '#src/main/util/config'
@@ -29,6 +31,8 @@ export class _SessionsService {
   protected readonly _ghosttyService = new SessionsFocusGhosttyService()
   protected readonly _linuxService = new SessionsFocusLinuxService()
   protected readonly _macOsService = new SessionsFocusMacOsService()
+  protected readonly _openCodeParserService = new SessionsOpenCodeParserService()
+  protected readonly _openCodeQueryService = new SessionsOpenCodeQueryService()
   protected readonly _processService = new SessionsProcessService()
   protected readonly _vsCodeService = new SessionsFocusVsCodeService()
 
@@ -212,12 +216,14 @@ export class _SessionsService {
   protected async _listGhosttyFocusPeers(params: { cwd: string; pid: number }): Promise<SessionsFocusGhosttyPeer[]> {
     const { cwd, pid } = params
     const sameCwdSessions = await this._listSameCwdSessions({ cwd })
-    const sessionPids = [
-      pid,
-      ...sameCwdSessions.map((session) => {
+    const sameCwdPids = sameCwdSessions
+      .map((session) => {
         return session.pid
-      }),
-    ]
+      })
+      .filter((sessionPid): sessionPid is number => {
+        return sessionPid !== undefined
+      })
+    const sessionPids = [pid, ...sameCwdPids]
     const peers = await Promise.all(
       [...new Set(sessionPids)].map((sessionPid) => {
         return this._resolveGhosttyFocusPeer({ pid: sessionPid })
@@ -305,14 +311,29 @@ export class _SessionsService {
   }
 
   protected async _fetchSnapshot(): Promise<SessionSnapshot> {
-    const stdout = await this._runAgentsQuery()
+    const [stdout, openCodeSessions] = await Promise.all([this._runAgentsQuery(), this._fetchOpenCodeSessions()])
+    const claudeSessions = new SessionsParserService().parseSessionEntries({ stdout })
 
     return {
       fetchedAt: Date.now(),
       sessions: new SessionsParserService().sortSessions({
-        sessions: new SessionsParserService().parseSessionEntries({ stdout }),
+        sessions: [...claudeSessions, ...openCodeSessions],
       }),
       unreachableHosts: [],
+    }
+  }
+
+  protected async _fetchOpenCodeSessions(): Promise<SessionInfo[]> {
+    try {
+      const openCodePayload = await this._openCodeQueryService.fetchSessions()
+
+      if (openCodePayload === undefined) {
+        return []
+      }
+
+      return this._openCodeParserService.parseSessions({ ...openCodePayload, nowMs: Date.now() })
+    } catch {
+      return []
     }
   }
 

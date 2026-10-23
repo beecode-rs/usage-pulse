@@ -1,18 +1,23 @@
 import { z } from 'zod'
 
 import { constant } from '#src/main/util/constant'
+import { SessionProviderMapper } from '#src/shared/business/enum/session-provider-mapper-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
 
-const sessionEntrySchema = z.object({
-  cwd: z.string().catch(''),
-  kind: z.string().catch(''),
-  name: z.string().catch(''),
-  pid: z.number(),
-  sessionId: z.string(),
-  startedAt: z.number(),
-  status: z.enum(SessionStatusMapper).catch(SessionStatusMapper.UNKNOWN),
-})
+const sessionEntrySchema = z
+  .object({
+    cwd: z.string().catch(''),
+    kind: z.string().catch(''),
+    name: z.string().catch(''),
+    pid: z.number(),
+    sessionId: z.string(),
+    startedAt: z.number(),
+    status: z.enum(SessionStatusMapper).catch(SessionStatusMapper.UNKNOWN),
+  })
+  .transform((entry) => {
+    return { ...entry, provider: SessionProviderMapper.CLAUDE_CODE }
+  })
 
 const sessionEntriesSchema = z.array(z.unknown()).transform((rawEntries) => {
   return rawEntries.reduce<SessionInfo[]>((sessions, rawEntry) => {
@@ -49,6 +54,12 @@ export class SessionsParserService {
         return originOrderDiff
       }
 
+      const providerOrderDiff = this._resolveSessionProviderOrder(left) - this._resolveSessionProviderOrder(right)
+
+      if (providerOrderDiff !== 0) {
+        return providerOrderDiff
+      }
+
       return left.name.localeCompare(right.name)
     })
   }
@@ -59,6 +70,10 @@ export class SessionsParserService {
     }
 
     return constant.sessions.originOrder.ssh
+  }
+
+  protected _resolveSessionProviderOrder(session: SessionInfo): number {
+    return constant.sessions.providerOrder[session.provider]
   }
 
   protected _tryParseSessionsJson(params: { stdout: string }): unknown {

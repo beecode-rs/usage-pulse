@@ -6,10 +6,11 @@
 # variants parses from its JSON form (state carries usage plus sessions, with
 # sessions null before the first sessions poll completes; usage-warning carries
 # either the percent pair for the two percent reasons or errorMessage for
-# provider-error). Anything else fails: an unknown type never matches a
-# discriminator literal, a missing required section fails, a wrong primitive
-# for `at` fails, and enum fields (session status, warning reason) reject
-# values outside the enums.
+# provider-error). Sessions carry a provider (claude-code or opencode); pid is
+# optional because OpenCode sessions expose none. Anything else fails: an
+# unknown type never matches a discriminator literal, a missing required
+# section fails, a wrong primitive for `at` fails, and enum fields (session
+# status, session provider, warning reason) reject values outside the enums.
 subject: mobileApiSchemaContractHarness
 module: ./__tests__/_mobile-api-schema-contract-harness.js
 subjectType: function
@@ -26,6 +27,7 @@ methods:
                     kind: claude-code
                     name: fix-login
                     pid: 123
+                    provider: claude-code
                     sessionId: session-1
                     startedAt: 1699999000000
                     status: idle
@@ -50,6 +52,7 @@ methods:
                   kind: claude-code
                   name: fix-login
                   pid: 123
+                  provider: claude-code
                   sessionId: session-1
                   startedAt: 1699999000000
                   status: idle
@@ -178,6 +181,7 @@ methods:
                 kind: claude-code
                 name: refactor
                 pid: 456
+                provider: claude-code
                 sessionId: session-2
                 startedAt: 1699998000000
                 status: idle
@@ -203,6 +207,7 @@ methods:
               kind: claude-code
               name: refactor
               pid: 456
+              provider: claude-code
               sessionId: session-2
               startedAt: 1699998000000
               status: idle
@@ -218,6 +223,30 @@ methods:
                 thinkingTokens: 3
                 userTurnsCount: 4
                 version: '1.0'
+            type: session-finished
+          success: true
+      # --- session-finished variant, an OpenCode session carries no pid ---
+      - params:
+          - message:
+              session:
+                cwd: /home/user/opencode
+                kind: ''
+                name: build
+                provider: opencode
+                sessionId: ses_opencode_1
+                startedAt: 1699997000000
+                status: busy
+              type: session-finished
+        result:
+          data:
+            session:
+              cwd: /home/user/opencode
+              kind: ''
+              name: build
+              provider: opencode
+              sessionId: ses_opencode_1
+              startedAt: 1699997000000
+              status: busy
             type: session-finished
           success: true
       # --- usage-warning variant, high-usage carries the percent pair ---
@@ -297,9 +326,25 @@ methods:
                 kind: claude-code
                 name: fix-login
                 pid: 123
+                provider: claude-code
                 sessionId: session-1
                 startedAt: 1699999000000
                 status: sleeping
+              type: session-finished
+        result:
+          success: false
+      # session provider outside the enum fails.
+      - params:
+          - message:
+              session:
+                cwd: /home/user/project
+                kind: claude-code
+                name: fix-login
+                pid: 123
+                provider: cursor
+                sessionId: session-1
+                startedAt: 1699999000000
+                status: idle
               type: session-finished
         result:
           success: false

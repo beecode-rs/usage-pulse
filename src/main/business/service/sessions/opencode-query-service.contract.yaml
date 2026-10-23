@@ -1,0 +1,227 @@
+# Contract for SessionsOpenCodeQueryService.fetchSessions, the local OpenCode
+# daemon query: read opencode/service.json from the XDG state home
+# ($XDG_STATE_HOME when set, else <homeDir>/.local/state), zod-validate the url
+# and password, then GET /api/session and /api/session/active in parallel
+# through httpUtil.fetchJson with the Basic opencode:<password> authorization
+# header and the constant timeout, plus a best-effort read of the tui tabs file
+# (opencode/latest/tui/tabs.json under the same state home; a missing or
+# invalid file projects as null and never fails the payload). For every session
+# id in the active envelope the service then queries that session's pending
+# question forms (/api/session/<id>/form) and permission requests
+# (/api/session/<id>/permission) and flattens their data entries into the
+# forms/permissions arrays (a failed per-session call contributes nothing).
+# Any failure — missing service file, invalid JSON, schema mismatch, sessions
+# or active request rejection — resolves to undefined instead of throwing, and
+# no fetch happens when the service file is unusable.
+# The terms drive __tests__/_opencode-query-service-contract-harness.ts, which
+# mocks httpUtil.fetchJson (recording every call; form/permission paths answer
+# from the scenario's formResponse/permissionResponse) and the config module's
+# xdg.stateHome getter (the real config snapshots the environment at import
+# time), writes serviceFileContent into a fresh temp homeDir per scenario, and
+# returns the observed fetch calls plus the resolved payloads as key-sorted
+# JSON strings (resolved: 'undefined' marks the undefined outcome), so the
+# runner fully compares the auth header, every url and the timeout. The
+# fetchSessionsUsingDefaultHome scenarios point HOME/USERPROFILE at the temp
+# dir and construct the service without params, pinning the real-homedir
+# default of the constructor. The useXdgStateHome scenario points the state
+# home at its own temp dir and plants a decoy service.json under the default
+# <home>/.local/state path, so the winning url and password prove the XDG
+# file is the one being read.
+subject: sessionsOpenCodeQueryServiceContractHarness
+module: ./__tests__/_opencode-query-service-contract-harness.js
+subjectType: function
+methods:
+  fetchSessions:
+    terms:
+      # A valid service.json (extra id/version/pid fields tolerated) resolves
+      # to the payloads; the one active session drives its form and permission
+      # queries with the same Basic header and timeout.
+      - params:
+          - activeResponse:
+              data:
+                ses_e96acc339ffegA84VkCje3KC7g:
+                  type: running
+            serviceFileContent: '{"id":"00000000-0000-4000-8000-000000000000","version":"0.0.0-test","url":"http://127.0.0.1:49374","pid":4242,"password":"test-password-123"}'
+            sessionsResponse:
+              data:
+                - id: ses_e96acc339ffegA84VkCje3KC7g
+                  location:
+                    directory: /Users/milos/code/usage-pulse
+                  model:
+                    id: glm-5.3
+                  time:
+                    created: 1792768425216
+                    updated: 1792768596239
+                  title: Opencode and SSH session provider support
+                  tokens:
+                    cache:
+                      read: 532352
+                      write: 0
+                    input: 45483
+                    output: 1454
+                    reasoning: 3865
+                - id: ses_e96be6251ffei75TXI7lKEvlwr
+                  outcome: succeeded
+                  time:
+                    created: 1792760000000
+                    updated: 1792765000000
+                  title: Finished one
+        result:
+          activeJson: '{"data":{"ses_e96acc339ffegA84VkCje3KC7g":{"type":"running"}}}'
+          fetchCalls:
+            - 'http://127.0.0.1:49374/api/session | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+            - 'http://127.0.0.1:49374/api/session/active | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+            - 'http://127.0.0.1:49374/api/session/ses_e96acc339ffegA84VkCje3KC7g/form | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+            - 'http://127.0.0.1:49374/api/session/ses_e96acc339ffegA84VkCje3KC7g/permission | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+          formsJson: '[]'
+          openTabsJson: 'null'
+          permissionsJson: '[]'
+          resolved: payloads
+          sessionsJson: '{"data":[{"id":"ses_e96acc339ffegA84VkCje3KC7g","location":{"directory":"/Users/milos/code/usage-pulse"},"model":{"id":"glm-5.3"},"time":{"created":1792768425216,"updated":1792768596239},"title":"Opencode and SSH session provider support","tokens":{"cache":{"read":532352,"write":0},"input":45483,"output":1454,"reasoning":3865}},{"id":"ses_e96be6251ffei75TXI7lKEvlwr","outcome":"succeeded","time":{"created":1792760000000,"updated":1792765000000},"title":"Finished one"}]}'
+      # A pending question form for the active session lands in the forms
+      # array with its sessionID, the signal the parser maps to waiting.
+      - params:
+          - activeResponse:
+              data:
+                ses_e96acc339ffegA84VkCje3KC7g:
+                  type: running
+            formResponse:
+              data:
+                - metadata:
+                    kind: question
+                  sessionID: ses_e96acc339ffegA84VkCje3KC7g
+                  title: Questions
+            serviceFileContent: '{"url":"http://127.0.0.1:49374","password":"test-password-123"}'
+            sessionsResponse:
+              data: []
+        result:
+          activeJson: '{"data":{"ses_e96acc339ffegA84VkCje3KC7g":{"type":"running"}}}'
+          fetchCalls:
+            - 'http://127.0.0.1:49374/api/session | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+            - 'http://127.0.0.1:49374/api/session/active | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+            - 'http://127.0.0.1:49374/api/session/ses_e96acc339ffegA84VkCje3KC7g/form | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+            - 'http://127.0.0.1:49374/api/session/ses_e96acc339ffegA84VkCje3KC7g/permission | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+          formsJson: '[{"metadata":{"kind":"question"},"sessionID":"ses_e96acc339ffegA84VkCje3KC7g","title":"Questions"}]'
+          openTabsJson: 'null'
+          permissionsJson: '[]'
+          resolved: payloads
+          sessionsJson: '{"data":[]}'
+      # A tui tabs file next to the service file is read and projected as the
+      # openTabs payload; no active session means no per-session waiting
+      # queries at all.
+      - params:
+          - activeResponse:
+              data: {}
+            serviceFileContent: '{"url":"http://127.0.0.1:49374","password":"test-password-123"}'
+            sessionsResponse:
+              data: []
+            tabsFileContent: '{"cwd":{"/w":{"tabs":[{"sessionID":"ses_a","title":"t"}],"unread":{}}},"global":{"tabs":[],"unread":{}}}'
+        result:
+          activeJson: '{"data":{}}'
+          fetchCalls:
+            - 'http://127.0.0.1:49374/api/session | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+            - 'http://127.0.0.1:49374/api/session/active | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+          formsJson: '[]'
+          openTabsJson: '{"cwd":{"/w":{"tabs":[{"sessionID":"ses_a","title":"t"}],"unread":{}}},"global":{"tabs":[],"unread":{}}}'
+          permissionsJson: '[]'
+          resolved: payloads
+          sessionsJson: '{"data":[]}'
+      # A 401-style rejection on the sessions endpoint resolves to undefined;
+      # both base fetches were still issued with the same auth header.
+      - params:
+          - activeResponse:
+              data: {}
+            rejectSessionsPath: true
+            serviceFileContent: '{"url":"http://127.0.0.1:49374","password":"test-password-123"}'
+        result:
+          fetchCalls:
+            - 'http://127.0.0.1:49374/api/session | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+            - 'http://127.0.0.1:49374/api/session/active | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+          resolved: 'undefined'
+      # A connection-refused style rejection on the active endpoint resolves to
+      # undefined the same way.
+      - params:
+          - rejectActivePath: true
+            serviceFileContent: '{"url":"http://127.0.0.1:49374","password":"test-password-123"}'
+            sessionsResponse:
+              data: []
+        result:
+          fetchCalls:
+            - 'http://127.0.0.1:49374/api/session | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+            - 'http://127.0.0.1:49374/api/session/active | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+          resolved: 'undefined'
+      # A missing service.json resolves to undefined before any fetch happens.
+      - params:
+          - activeResponse:
+              data: {}
+            sessionsResponse:
+              data: []
+        result:
+          fetchCalls: []
+          resolved: 'undefined'
+      # A service.json without the password fails the schema and resolves to
+      # undefined before any fetch happens.
+      - params:
+          - serviceFileContent: '{"url":"http://127.0.0.1:49374"}'
+        result:
+          fetchCalls: []
+          resolved: 'undefined'
+      # A service.json that is not valid JSON at all resolves to undefined
+      # before any fetch happens.
+      - params:
+          - serviceFileContent: 'not json {'
+        result:
+          fetchCalls: []
+          resolved: 'undefined'
+      # XDG_STATE_HOME relocates the service file: the daemon file is read
+      # from <XDG_STATE_HOME>/opencode/service.json while a decoy under
+      # <home>/.local/state/opencode/service.json is ignored — the fetches use
+      # the XDG file's url and password.
+      - params:
+          - activeResponse:
+              data: {}
+            serviceFileContent: '{"url":"http://127.0.0.1:49374","password":"test-password-123"}'
+            sessionsResponse:
+              data: []
+            useXdgStateHome: true
+        result:
+          activeJson: '{"data":{}}'
+          fetchCalls:
+            - 'http://127.0.0.1:49374/api/session | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+            - 'http://127.0.0.1:49374/api/session/active | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+          formsJson: '[]'
+          openTabsJson: 'null'
+          permissionsJson: '[]'
+          resolved: payloads
+          sessionsJson: '{"data":[]}'
+  fetchSessionsUsingDefaultHome:
+    terms:
+      # Constructing the service without params resolves the service file
+      # under the OS homedir (HOME/USERPROFILE pointed at the temp home by the
+      # harness) and resolves to the payloads.
+      - params:
+          - activeResponse:
+              data: {}
+            serviceFileContent: '{"url":"http://127.0.0.1:49374","password":"test-password-123"}'
+            sessionsResponse:
+              data: []
+        result:
+          activeJson: '{"data":{}}'
+          fetchCalls:
+            - 'http://127.0.0.1:49374/api/session | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+            - 'http://127.0.0.1:49374/api/session/active | Basic b3BlbmNvZGU6dGVzdC1wYXNzd29yZC0xMjM= | 10000'
+          formsJson: '[]'
+          openTabsJson: 'null'
+          permissionsJson: '[]'
+          resolved: payloads
+          sessionsJson: '{"data":[]}'
+      # With no service.json under the OS homedir the default-constructed
+      # service resolves to undefined without any fetch.
+      - params:
+          - activeResponse:
+              data: {}
+            sessionsResponse:
+              data: []
+        result:
+          fetchCalls: []
+          resolved: 'undefined'

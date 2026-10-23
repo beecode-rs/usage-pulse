@@ -14,6 +14,7 @@ import { appEventBusSingleton } from '#src/main/business/service/app-event-bus-s
 import { _MobileServerService } from '#src/main/business/service/mobile-server-service-singleton'
 import { usagePollServiceSingleton } from '#src/main/business/service/usage-poll-service-singleton'
 import { ProviderIdMapper } from '#src/shared/business/enum/provider-id-mapper-enum'
+import { SessionProviderMapper } from '#src/shared/business/enum/session-provider-mapper-enum'
 import { SessionStatusMapper } from '#src/shared/business/enum/session-status-mapper-enum'
 import { UsageActivityStatus } from '#src/shared/business/enum/usage-activity-status-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
@@ -36,6 +37,7 @@ const sessionWaitingFixture: SessionInfo = {
   kind: 'claude-code',
   name: 'session-a',
   pid: 1234,
+  provider: SessionProviderMapper.CLAUDE_CODE,
   sessionId: 's-a',
   startedAt: 1_726_000_000_000,
   status: SessionStatusMapper.WAITING,

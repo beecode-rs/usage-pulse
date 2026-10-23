@@ -4,6 +4,7 @@ import { join } from 'node:path'
 
 import { ClaudeTranscriptParserService } from '#src/main/lib/claude-transcript-parser/service'
 import { constant } from '#src/main/util/constant'
+import { SessionProviderMapper } from '#src/shared/business/enum/session-provider-mapper-enum'
 import { type SessionInfo, type SessionTranscriptStats } from '#src/shared/business/model/session-model'
 
 type TranscriptCacheEntry = {
@@ -32,7 +33,7 @@ export class SessionTranscriptService {
 
   protected async _enrichSession(params: { session: SessionInfo }): Promise<SessionInfo> {
     const { session } = params
-    if (session.hostId !== undefined) {
+    if (session.provider !== SessionProviderMapper.CLAUDE_CODE || session.hostId !== undefined) {
       return session
     }
 

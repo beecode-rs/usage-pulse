@@ -4,12 +4,18 @@
 # Entries are dropped, not thrown, when pid or startedAt is not a number or
 # sessionId is not a string, while cwd/kind/name fall back to '' when absent or
 # non-string and status outside busy/idle/waiting/unknown falls back to
-# unknown. Leading and trailing junk around the JSON array is recovered by
-# slicing from the first '[' to the last ']', while output with no recoverable
-# array slice or a non-array JSON root throws. The terms drive
+# unknown. Every surviving entry is stamped provider claude-code by the parser
+# itself; the CLI output never carries the field. Leading and trailing junk
+# around the JSON array is recovered by slicing from the first '[' to the last
+# ']', while output with no recoverable array slice or a non-array JSON root
+# throws. The terms drive
 # __tests__/_parser-service-contract-harness.ts, which wraps the call in a
 # try/catch so thrown messages surface as errorMessage markers instead of
-# failing the runner.
+# failing the runner. The sortSessions terms pin the snapshot ordering through
+# a provider|name projection (an array of primitives the runner compares
+# element by element, so the full order is asserted): origin first (local
+# before ssh), then the provider tiebreak (claude-code before opencode), then
+# the name.
 subject: sessionsParserServiceContractHarness
 module: ./__tests__/_parser-service-contract-harness.js
 subjectType: function
@@ -28,6 +34,7 @@ methods:
               kind: main
               name: build-agent
               pid: 4242
+              provider: claude-code
               sessionId: sess-42
               startedAt: 1757900000000
               status: busy
@@ -35,6 +42,7 @@ methods:
               kind: ''
               name: ''
               pid: 7
+              provider: claude-code
               sessionId: sess-7
               startedAt: 1757900100000
               status: idle
@@ -42,6 +50,7 @@ methods:
               kind: ''
               name: ''
               pid: 9
+              provider: claude-code
               sessionId: sess-9
               startedAt: 1757900200000
               status: waiting
@@ -55,6 +64,7 @@ methods:
               kind: ''
               name: ''
               pid: 1
+              provider: claude-code
               sessionId: s1
               startedAt: 10
               status: unknown
@@ -62,6 +72,7 @@ methods:
               kind: ''
               name: ''
               pid: 2
+              provider: claude-code
               sessionId: s2
               startedAt: 20
               status: unknown
@@ -75,6 +86,7 @@ methods:
               kind: kk
               name: nn
               pid: 8
+              provider: claude-code
               sessionId: survivor
               startedAt: 5
               status: busy
@@ -93,6 +105,7 @@ methods:
               kind: k
               name: nm
               pid: 11
+              provider: claude-code
               sessionId: sess-11
               startedAt: 30
               status: busy
@@ -117,3 +130,83 @@ methods:
           - stdout: '[]'
         result:
           sessions: []
+  sortSessions:
+    terms:
+      # Provider tiebreak within the same (local) origin: the claude-code
+      # sessions sort before the opencode sessions regardless of startedAt,
+      # and each provider group sorts by name.
+      - params:
+          - sessions:
+              - cwd: /w
+                kind: ''
+                name: zeta
+                provider: opencode
+                sessionId: op-1
+                startedAt: 4
+                status: idle
+              - cwd: /w
+                kind: ''
+                name: alpha
+                provider: opencode
+                sessionId: op-2
+                startedAt: 3
+                status: idle
+              - cwd: /w
+                kind: ''
+                name: zulu
+                provider: claude-code
+                sessionId: cc-1
+                startedAt: 2
+                status: busy
+              - cwd: /w
+                kind: ''
+                name: beta
+                provider: claude-code
+                sessionId: cc-2
+                startedAt: 1
+                status: busy
+        result:
+          - claude-code|beta
+          - claude-code|zulu
+          - opencode|alpha
+          - opencode|zeta
+      # Origin dominates the provider tiebreak: local sessions sort before ssh
+      # sessions regardless of provider, and the name tiebreak applies within
+      # each origin+provider group.
+      - params:
+          - sessions:
+              - cwd: /remote
+                hostId: host-1
+                kind: ''
+                name: a
+                provider: opencode
+                sessionId: ssh-op-1
+                startedAt: 4
+                status: idle
+              - cwd: /local
+                kind: ''
+                name: z
+                provider: opencode
+                sessionId: op-2
+                startedAt: 3
+                status: idle
+              - cwd: /local
+                kind: ''
+                name: y
+                provider: claude-code
+                sessionId: cc-1
+                startedAt: 2
+                status: busy
+              - cwd: /remote
+                hostId: host-2
+                kind: ''
+                name: b
+                provider: claude-code
+                sessionId: ssh-cc-2
+                startedAt: 1
+                status: busy
+        result:
+          - claude-code|y
+          - opencode|z
+          - claude-code|b
+          - opencode|a
