@@ -1,6 +1,6 @@
 {
 	"name": "usage-pulse",
-	"version": "0.9.0",
+	"version": "0.10.0",
 	"description": "Desktop tracker for Claude and z.ai coding-plan usage limits",
 	"repository": {
 		"type": "git",
