@@ -132,6 +132,14 @@ export const AboutPage = (props: { onToggleDevelopmentUnlock: () => void }): Rea
         )}
         <p className="about-page-tagline">Desktop tracker for Claude and z.ai coding-plan usage limits.</p>
         {status !== undefined && <p className="about-page-version">Version {status.currentVersion}</p>}
+        <a
+          className="about-page-github-link"
+          href="https://github.com/beecode-rs/usage-pulse"
+          rel="noreferrer"
+          target="_blank"
+        >
+          GitHub
+        </a>
       </header>
       <section className="about-page-section">
         <h2 className="about-page-section-title">Updates</h2>
