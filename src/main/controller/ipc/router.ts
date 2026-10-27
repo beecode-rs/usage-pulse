@@ -45,6 +45,7 @@ export const ipcRouter = {
     ipcMain.handle(IpcChannelMapper.UPDATE_DOWNLOAD, ipcUpdate.download)
     ipcMain.handle(IpcChannelMapper.UPDATE_GET_STATUS, ipcUpdate.getStatus)
     ipcMain.on(IpcChannelMapper.UPDATE_OPEN_RELEASE, ipcUpdate.openRelease)
+    ipcMain.handle(IpcChannelMapper.UPDATE_RESTART, ipcUpdate.restart)
 
     // usage
     ipcMain.handle(IpcChannelMapper.USAGE_GET_SNAPSHOT, ipcUsage.getSnapshot)
@@ -87,6 +88,7 @@ export const ipcRouter = {
     ipcMain.removeHandler(IpcChannelMapper.UPDATE_DOWNLOAD)
     ipcMain.removeHandler(IpcChannelMapper.UPDATE_GET_STATUS)
     ipcMain.removeListener(IpcChannelMapper.UPDATE_OPEN_RELEASE, ipcUpdate.openRelease)
+    ipcMain.removeHandler(IpcChannelMapper.UPDATE_RESTART)
 
     // usage
     ipcMain.removeHandler(IpcChannelMapper.USAGE_GET_SNAPSHOT)

@@ -1,7 +1,7 @@
-import { OS } from '#src/shared/business/enum/os-enum'
 import { ScheduleTriggerDayMapper } from '#src/shared/business/enum/schedule-trigger-day-mapper-enum'
 import { SessionProviderMapper } from '#src/shared/business/enum/session-provider-mapper-enum'
 import { UsageSeverityLevel } from '#src/shared/business/enum/usage-severity-level-enum'
+import { type UpdateInstallType } from '#src/shared/business/model/update-model'
 
 const ghosttyBundleId = 'com.mitchellh.ghostty'
 
@@ -81,6 +81,15 @@ const ghosttyTtyFocusScript = `on run argv
 ${ghosttyFrontWindowWaitSnippet}
   end tell
 end run`
+
+const assetSuffixesByInstallType: Record<UpdateInstallType, string[]> = {
+  appImage: ['.AppImage'],
+  deb: ['.deb'],
+  dev: ['.AppImage', '.deb'],
+  dmg: ['.dmg'],
+  exe: ['.exe'],
+  unsupported: [],
+}
 
 const launchdWeekdayByTriggerDay: Record<ScheduleTriggerDayMapper, number> = {
   [ScheduleTriggerDayMapper.FRIDAY]: 5,
@@ -262,12 +271,11 @@ end tell`,
   },
   twoDigitTimeRegex: /^([0-9]{2}):([0-9]{2})$/,
   update: {
-    assetSuffixesByOs: {
-      [OS.LINUX]: ['.AppImage', '.deb'],
-      [OS.MACOS]: ['.dmg'],
-      [OS.WINDOWS]: ['.exe'],
-    },
+    assetSuffixesByInstallType,
+    debInstallCancelledExitCode: 126,
+    debInstallUnauthorizedExitCode: 127,
     downloadPartialFileSuffix: '.part',
+    installStderrTailMaxLength: 2048,
   },
   usageSeverityLevelRank: {
     [UsageSeverityLevel.FILLING_UP]: 1,

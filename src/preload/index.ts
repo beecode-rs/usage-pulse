@@ -14,7 +14,13 @@ import {
 } from '#src/shared/business/model/schedule-trigger-model'
 import { type SessionSnapshot, type SessionsUpdateListener } from '#src/shared/business/model/session-model'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'
-import { type UpdateStatus, type UpdateStatusListener } from '#src/shared/business/model/update-model'
+import {
+  type UpdateDownloadProgress,
+  type UpdateDownloadProgressListener,
+  type UpdateDownloadResult,
+  type UpdateStatus,
+  type UpdateStatusListener,
+} from '#src/shared/business/model/update-model'
 import {
   type SettingsUpdateListener,
   type UsageSnapshot,
@@ -28,7 +34,7 @@ const usageApi: UsageApiClient = {
   clearTriggerRunLogs: (params: { triggerId: string }): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.TRIGGER_CLEAR_RUN_LOGS, params)
   },
-  downloadUpdateAndOpenInstaller: (): Promise<string> => {
+  downloadUpdate: (): Promise<UpdateDownloadResult> => {
     return ipcRenderer.invoke(IpcChannelMapper.UPDATE_DOWNLOAD)
   },
   focusSession: (params: { cwd: string; pid: number }): Promise<void> => {
@@ -106,6 +112,21 @@ const usageApi: UsageApiClient = {
       ipcRenderer.removeListener(IpcChannelMapper.SETTINGS_UPDATE, settingsUpdateListener)
     }
   },
+  onUpdateDownloadStatus: (params: { onUpdate: UpdateDownloadProgressListener }): (() => void) => {
+    const { onUpdate } = params
+    const updateDownloadStatusListener = (
+      _event: Electron.IpcRendererEvent,
+      progress: UpdateDownloadProgress,
+    ): void => {
+      onUpdate(progress)
+    }
+
+    ipcRenderer.on(IpcChannelMapper.UPDATE_DOWNLOAD_STATUS, updateDownloadStatusListener)
+
+    return () => {
+      ipcRenderer.removeListener(IpcChannelMapper.UPDATE_DOWNLOAD_STATUS, updateDownloadStatusListener)
+    }
+  },
   onUpdateStatus: (params: { onUpdate: UpdateStatusListener }): (() => void) => {
     const { onUpdate } = params
     const updateStatusListener = (_event: Electron.IpcRendererEvent, status: UpdateStatus): void => {
@@ -138,6 +159,9 @@ const usageApi: UsageApiClient = {
   },
   refreshTracker: (params: { trackerId: string }): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.USAGE_REFRESH_TRACKER, params)
+  },
+  restartUpdate: (): Promise<void> => {
+    return ipcRenderer.invoke(IpcChannelMapper.UPDATE_RESTART)
   },
   saveSettings: (params: { settings: SettingsModel }): Promise<SettingsModel> => {
     const { settings } = params

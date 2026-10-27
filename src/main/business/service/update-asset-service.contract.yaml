@@ -1,17 +1,140 @@
 # Contract for updateAssetService.
+# resolveInstallType decides how a downloaded update is installed from the runtime
+# shape: MACOS always maps to dmg (drag-and-drop installer, never a restart flow),
+# WINDOWS to exe, LINUX to dev while unpackaged, then to appImage when the APPIMAGE
+# env points at the running AppImage, and to deb for any other packaged Linux install.
 # resolveUpdateAsset picks the release asset whose file name ends with the preferred
-# suffix for the given OS, trying suffixes in priority order (.dmg for MACOS;
-# .AppImage before .deb for LINUX; .exe for WINDOWS). Matching is case-insensitive so
-# mixed-case asset names still resolve. No matching asset yields undefined, which keeps
-# the release page as the update fallback in UpdateStatus.
+# suffix for that install type, trying suffixes in priority order (.deb for deb;
+# .AppImage for appImage; .AppImage before .deb for dev; .dmg for dmg; .exe for exe;
+# nothing for unsupported). Matching is case-insensitive so mixed-case asset names
+# still resolve. No matching asset yields undefined, which keeps the release page as
+# the update fallback in UpdateStatus. resolveDebInstallOutcome classifies the exit
+# code of the pkexec dpkg run: 0 installed the package, 126 (polkit dialog
+# dismissed) and 127 (authorization refused) fall back to opening the installer,
+# a failed pkexec spawn falls back the same way, and anything else is a real
+# failure whose stderr tail is surfaced to the user.
 subject: updateAssetService
 module: ./update-asset-service.js
 subjectType: function
 methods:
+  resolveDebInstallOutcome:
+    terms:
+      # --- Success ---
+      # A zero exit code means dpkg installed the package.
+      - params:
+          - exitCode: 0
+            isSpawnFailed: false
+        result: installed
+      # --- Deliberate cancels fall back to the manual flow ---
+      # Dismissing the polkit dialog is a deliberate cancel, not a failure.
+      - params:
+          - exitCode: 126
+            isSpawnFailed: false
+        result: fallback
+      # pkexec refusing authorization also falls back to the manual flow.
+      - params:
+          - exitCode: 127
+            isSpawnFailed: false
+        result: fallback
+      # A missing pkexec binary falls back to the manual flow.
+      - params:
+          - exitCode: null
+            isSpawnFailed: true
+        result: fallback
+      # --- Real failures ---
+      # Any other dpkg failure is a real error.
+      - params:
+          - exitCode: 2
+            isSpawnFailed: false
+        result: failed
+      # A process killed by a signal is a real error.
+      - params:
+          - exitCode: null
+            isSpawnFailed: false
+        result: failed
+  resolveInstallType:
+    terms:
+      # --- macOS always maps to dmg, packaged or not ---
+      - params:
+          - appImagePath: null
+            isPackaged: true
+            platform: MACOS
+        result: dmg
+      - params:
+          - appImagePath: null
+            isPackaged: false
+            platform: MACOS
+        result: dmg
+      # --- Linux splits on packaging and the APPIMAGE env ---
+      # An unpackaged linux build keeps the manual dev flow.
+      - params:
+          - appImagePath: null
+            isPackaged: false
+            platform: LINUX
+        result: dev
+      # A packaged linux app with APPIMAGE set is an AppImage install.
+      - params:
+          - appImagePath: /home/demo/apps/usage-pulse.AppImage
+            isPackaged: true
+            platform: LINUX
+        result: appImage
+      # A packaged linux app without APPIMAGE is a deb install.
+      - params:
+          - appImagePath: null
+            isPackaged: true
+            platform: LINUX
+        result: deb
+      # --- Windows keeps the exe installer flow ---
+      - params:
+          - appImagePath: null
+            isPackaged: true
+            platform: WINDOWS
+        result: exe
   resolveUpdateAsset:
     terms:
-      # --- Platform dispatch picks the matching suffix ---
-      # MACOS picks the .dmg and ignores the Linux and Windows assets.
+      # --- Install-type dispatch picks the matching suffix ---
+      # A deb install picks the deb even when an AppImage is published.
+      - params:
+          - assets:
+              - name: 'Usage.Pulse-1.0.0.AppImage'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.AppImage'
+              - name: 'usage-pulse-1.0.0.deb'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
+            installType: deb
+        result:
+          name: 'usage-pulse-1.0.0.deb'
+          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
+      # An AppImage install picks the AppImage from the same asset list.
+      - params:
+          - assets:
+              - name: 'usage-pulse-1.0.0.deb'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
+              - name: 'Usage.Pulse-1.0.0.AppImage'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.AppImage'
+            installType: appImage
+        result:
+          name: 'Usage.Pulse-1.0.0.AppImage'
+          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.AppImage'
+      # Dev builds prefer the AppImage and fall back to the deb.
+      - params:
+          - assets:
+              - name: 'usage-pulse-1.0.0.deb'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
+              - name: 'Usage.Pulse-1.0.0.AppImage'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.AppImage'
+            installType: dev
+        result:
+          name: 'Usage.Pulse-1.0.0.AppImage'
+          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.AppImage'
+      - params:
+          - assets:
+              - name: 'usage-pulse-1.0.0.deb'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
+            installType: dev
+        result:
+          name: 'usage-pulse-1.0.0.deb'
+          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
+      # A dmg install picks the dmg and ignores the Linux and Windows assets.
       - params:
           - assets:
               - name: 'Usage.Pulse-1.0.0.AppImage'
@@ -20,70 +143,55 @@ methods:
                 url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.dmg'
               - name: 'Usage.Pulse-1.0.0.exe'
                 url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.exe'
-            platform: MACOS
+            installType: dmg
         result:
           name: 'Usage.Pulse-1.0.0.dmg'
           url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.dmg'
-      # LINUX prefers .AppImage over .deb.
-      - params:
-          - assets:
-              - name: 'usage-pulse-1.0.0.deb'
-                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
-              - name: 'usage-pulse-1.0.0.AppImage'
-                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.AppImage'
-            platform: LINUX
-        result:
-          name: 'usage-pulse-1.0.0.AppImage'
-          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.AppImage'
-      # LINUX falls back to .deb when no .AppImage exists.
-      - params:
-          - assets:
-              - name: 'usage-pulse-1.0.0.deb'
-                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
-              - name: 'Usage.Pulse-1.0.0.dmg'
-                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.dmg'
-            platform: LINUX
-        result:
-          name: 'usage-pulse-1.0.0.deb'
-          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.deb'
-      # WINDOWS picks .exe even when a macOS asset is present.
+      # An exe install picks the exe even when a macOS asset is present.
       - params:
           - assets:
               - name: 'Usage.Pulse-1.0.0.dmg'
                 url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.dmg'
               - name: 'Usage.Pulse-1.0.0.exe'
                 url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.exe'
-            platform: WINDOWS
+            installType: exe
         result:
           name: 'Usage.Pulse-1.0.0.exe'
           url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.exe'
       # --- Case-insensitive suffix matching ---
-      # An uppercase .DMG asset name still resolves on MACOS.
+      # An uppercase .DMG asset name still resolves for dmg.
       - params:
           - assets:
-              - name: 'usage-pulse-1.0.0.DMG'
-                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.DMG'
-            platform: MACOS
+              - name: 'Usage.Pulse-1.0.0.DMG'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.DMG'
+            installType: dmg
         result:
-          name: 'usage-pulse-1.0.0.DMG'
-          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/usage-pulse-1.0.0.DMG'
+          name: 'Usage.Pulse-1.0.0.DMG'
+          url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.DMG'
       # --- No match keeps the release-page fallback ---
-      # A platform whose assets are all foreign yields undefined.
+      # A deb install gets nothing when only an AppImage is published.
       - params:
           - assets:
-              - name: 'Usage.Pulse-1.0.0.exe'
-                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.exe'
-            platform: MACOS
+              - name: 'Usage.Pulse-1.0.0.AppImage'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.AppImage'
+            installType: deb
         result: !undefined
-      # An empty asset list yields undefined.
+      # The unsupported install type never matches an asset.
+      - params:
+          - assets:
+              - name: 'Usage.Pulse-1.0.0.dmg'
+                url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.dmg'
+            installType: unsupported
+        result: !undefined
+      # An empty asset list gets nothing for any install type.
       - params:
           - assets: []
-            platform: LINUX
+            installType: deb
         result: !undefined
       # A lookalike name that contains but does not end with the suffix is no match.
       - params:
           - assets:
               - name: 'Usage.Pulse-1.0.0.dmg.blockmap'
                 url: 'https://github.com/beecode-rs/usage-pulse/releases/download/v1.0.0/Usage.Pulse-1.0.0.dmg.blockmap'
-            platform: MACOS
+            installType: dmg
         result: !undefined

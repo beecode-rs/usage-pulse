@@ -28,6 +28,15 @@ export const rxjsBusIpcForwarder = {
         type: AppEventType.SETTINGS_SAVED,
       }),
       appEventBusSingleton().subscribe({
+        listener: (progress) => {
+          appWindowStoreSingleton().sendToRenderer({
+            channel: IpcChannelMapper.UPDATE_DOWNLOAD_STATUS,
+            payload: progress,
+          })
+        },
+        type: AppEventType.UPDATE_DOWNLOAD_STATUS,
+      }),
+      appEventBusSingleton().subscribe({
         listener: (status) => {
           appWindowStoreSingleton().sendToRenderer({ channel: IpcChannelMapper.UPDATE_STATUS, payload: status })
         },

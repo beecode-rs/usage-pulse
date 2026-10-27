@@ -37,3 +37,8 @@
   cursor: default;
   opacity: 0.7;
 }
+
+.app-footer-update-button--restart {
+  border-color: color-mix(in srgb, var(--meter-accent) 70%, transparent);
+  color: var(--ink-primary);
+}

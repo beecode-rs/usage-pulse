@@ -1,13 +1,13 @@
 import { updateServiceSingleton } from '#src/main/business/service/update-service-singleton'
-import { type UpdateStatus } from '#src/shared/business/model/update-model'
+import { type UpdateDownloadResult, type UpdateStatus } from '#src/shared/business/model/update-model'
 
 export const ipcUpdate = {
   check: async (): Promise<UpdateStatus> => {
     return await updateServiceSingleton().checkForUpdate()
   },
 
-  download: async (): Promise<string> => {
-    return await updateServiceSingleton().downloadUpdateAndOpenInstaller()
+  download: async (): Promise<UpdateDownloadResult> => {
+    return await updateServiceSingleton().downloadUpdate()
   },
 
   getStatus: (): UpdateStatus => {
@@ -16,5 +16,9 @@ export const ipcUpdate = {
 
   openRelease: (): void => {
     updateServiceSingleton().openRelease()
+  },
+
+  restart: (): void => {
+    updateServiceSingleton().relaunchForUpdate()
   },
 }

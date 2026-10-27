@@ -4,15 +4,74 @@ import { type ReactElement, useEffect, useState } from 'react'
 import { updateClientService } from '#src/renderer/src/business/service/update-client-service'
 import '#src/renderer/src/ui-component/app-shell/app-footer.css'
 import { constant } from '#src/renderer/src/util/constant'
-import type { UpdateStatus } from '#src/shared/business/model/update-model'
+import type {
+  UpdateDownloadProgress,
+  UpdateDownloadStatus,
+  UpdateStatus,
+} from '#src/shared/business/model/update-model'
 import { errorUtil } from '#src/shared/util/error-util'
 
-type UpdateDownloadState = 'downloaded' | 'downloading' | 'idle'
+type UpdateDownloadState = 'downloaded' | 'downloading' | 'idle' | 'installing' | 'restart-required'
 
 type UpdateDownload = {
   errorMessage: string
   filePath: string
+  percent?: number
   state: UpdateDownloadState
+}
+
+const resolveDownloadState = (params: { status: UpdateDownloadStatus }): UpdateDownloadState => {
+  const { status } = params
+
+  switch (status) {
+    case 'completed': {
+      return 'downloaded'
+    }
+
+    case 'downloading': {
+      return 'downloading'
+    }
+
+    case 'installing': {
+      return 'installing'
+    }
+
+    case 'restart-required': {
+      return 'restart-required'
+    }
+
+    case 'error': {
+      return 'idle'
+    }
+
+    case 'idle': {
+      return 'idle'
+    }
+
+    default: {
+      throw typeUtil.exhaustiveError('unsupported update download status [status]', status)
+    }
+  }
+}
+
+const resolveDownloadPercent = (params: { progress: UpdateDownloadProgress }): number | undefined => {
+  const { progress } = params
+
+  if (progress.totalBytes <= 0) {
+    return undefined
+  }
+
+  return Math.floor((progress.receivedBytes / progress.totalBytes) * 100)
+}
+
+const resolveUpdateButtonClassName = (params: { state: UpdateDownloadState }): string => {
+  const { state } = params
+
+  if (state === 'restart-required') {
+    return 'app-footer-update-button app-footer-update-button--restart'
+  }
+
+  return 'app-footer-update-button'
 }
 
 const resolveUpdateButtonLabel = (params: {
@@ -24,11 +83,23 @@ const resolveUpdateButtonLabel = (params: {
 
   switch (download.state) {
     case 'downloading': {
-      return 'Downloading…'
+      if (download.percent === undefined) {
+        return 'Downloading…'
+      }
+
+      return `Downloading… ${String(download.percent)}%`
+    }
+
+    case 'installing': {
+      return 'Installing…'
+    }
+
+    case 'restart-required': {
+      return 'Restart to finish update'
     }
 
     case 'downloaded': {
-      return 'Installer opened'
+      return 'Opened installer'
     }
 
     case 'idle': {
@@ -60,6 +131,14 @@ const resolveUpdateButtonTitle = (params: {
   switch (download.state) {
     case 'downloading': {
       return 'Downloading the update'
+    }
+
+    case 'installing': {
+      return 'Installing the downloaded update…'
+    }
+
+    case 'restart-required': {
+      return 'Update installed — restart to finish'
     }
 
     case 'downloaded': {
@@ -102,6 +181,27 @@ export const AppShellFooter = (): ReactElement => {
     })
   }, [])
 
+  useEffect(() => {
+    return updateClientService.subscribeToUpdateDownloadProgress({
+      onUpdate: (progress) => {
+        const state = resolveDownloadState({ status: progress.status })
+
+        if (state === 'idle') {
+          return
+        }
+
+        setDownload((current) => {
+          return {
+            errorMessage: current.errorMessage,
+            filePath: progress.filePath ?? current.filePath,
+            percent: resolveDownloadPercent({ progress }),
+            state,
+          }
+        })
+      },
+    })
+  }, [])
+
   if (status === undefined) {
     return <footer className="app-footer" />
   }
@@ -110,6 +210,14 @@ export const AppShellFooter = (): ReactElement => {
   const latestVersion = status.latestVersion
 
   const handleUpdateClick = (): void => {
+    if (download.state === 'restart-required') {
+      void updateClientService.restartUpdate().catch(() => {
+        return undefined
+      })
+
+      return
+    }
+
     if (status.asset === undefined) {
       updateClientService.openRelease()
 
@@ -119,9 +227,13 @@ export const AppShellFooter = (): ReactElement => {
     setDownload({ errorMessage: '', filePath: '', state: 'downloading' })
 
     void updateClientService
-      .downloadUpdateAndOpenInstaller()
-      .then((filePath) => {
-        setDownload({ errorMessage: '', filePath, state: 'downloaded' })
+      .downloadUpdate()
+      .then((result) => {
+        setDownload({
+          errorMessage: '',
+          filePath: result.filePath,
+          state: resolveDownloadState({ status: result.status }),
+        })
       })
       .catch((error: unknown) => {
         setDownload({ ...constant.appFooter.idleDownload, errorMessage: errorUtil.resolveMessage(error) })
@@ -132,8 +244,8 @@ export const AppShellFooter = (): ReactElement => {
     <footer className="app-footer">
       {status.isUpdateAvailable && latestVersion !== undefined && (
         <button
-          className="app-footer-update-button"
-          disabled={download.state !== 'idle'}
+          className={resolveUpdateButtonClassName({ state: download.state })}
+          disabled={download.state === 'downloading' || download.state === 'installing'}
           onClick={handleUpdateClick}
           title={resolveUpdateButtonTitle({
             currentVersion: status.currentVersion,

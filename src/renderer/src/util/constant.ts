@@ -10,11 +10,12 @@ type SessionSoundTone = {
   waveType: OscillatorType
 }
 
-type UpdateDownloadState = 'downloaded' | 'downloading' | 'idle'
+type UpdateDownloadState = 'downloaded' | 'downloading' | 'idle' | 'installing' | 'restart-required'
 
 type UpdateDownload = {
   errorMessage: string
   filePath: string
+  percent?: number
   state: UpdateDownloadState
 }
 

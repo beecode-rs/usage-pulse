@@ -7,13 +7,18 @@ import type {
 } from '#src/shared/business/model/schedule-trigger-model'
 import type { SessionSnapshot, SessionsUpdateListener } from '#src/shared/business/model/session-model'
 import type { SettingsModel } from '#src/shared/business/model/settings-model'
-import type { UpdateStatus, UpdateStatusListener } from '#src/shared/business/model/update-model'
+import type {
+  UpdateDownloadProgressListener,
+  UpdateDownloadResult,
+  UpdateStatus,
+  UpdateStatusListener,
+} from '#src/shared/business/model/update-model'
 import type { SettingsUpdateListener, UsageSnapshot, UsageUpdateListener } from '#src/shared/business/model/usage-model'
 
 export type UsageApiClient = {
   checkForUpdate: () => Promise<UpdateStatus>
   clearTriggerRunLogs: (params: { triggerId: string }) => Promise<void>
-  downloadUpdateAndOpenInstaller: () => Promise<string>
+  downloadUpdate: () => Promise<UpdateDownloadResult>
   focusSession: (params: { cwd: string; pid: number }) => Promise<void>
   getMobileDevices: () => Promise<MobileConnectedDevice[]>
   getPlatform: () => Promise<OS>
@@ -30,11 +35,13 @@ export type UsageApiClient = {
   onMobileDevicesUpdate: (params: { onUpdate: MobileDevicesUpdateListener }) => () => void
   onSessionsUpdate: (params: { onUpdate: SessionsUpdateListener }) => () => void
   onSettingsUpdate: (params: { onUpdate: SettingsUpdateListener }) => () => void
+  onUpdateDownloadStatus: (params: { onUpdate: UpdateDownloadProgressListener }) => () => void
   onUpdateStatus: (params: { onUpdate: UpdateStatusListener }) => () => void
   onUsageUpdate: (params: { onUpdate: UsageUpdateListener }) => () => void
   openRelease: () => void
   refreshNow: () => Promise<void>
   refreshTracker: (params: { trackerId: string }) => Promise<void>
+  restartUpdate: () => Promise<void>
   saveSettings: (params: { settings: SettingsModel }) => Promise<SettingsModel>
   setSchedulingEnabled: (params: { isEnabled: boolean }) => Promise<SettingsModel>
   setTriggerEnabled: (params: { isEnabled: boolean; triggerId: string }) => Promise<SettingsModel>

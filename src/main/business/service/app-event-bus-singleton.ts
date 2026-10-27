@@ -5,7 +5,7 @@ import { type AppEventType } from '#src/main/business/enum/app-event-type-enum'
 import { type MobileConnectedDevice, type UsageWarning } from '#src/shared/business/model/mobile-api-model'
 import { type SessionInfo, type SessionSnapshot } from '#src/shared/business/model/session-model'
 import { type SettingsModel } from '#src/shared/business/model/settings-model'
-import { type UpdateStatus } from '#src/shared/business/model/update-model'
+import { type UpdateDownloadProgress, type UpdateStatus } from '#src/shared/business/model/update-model'
 import { type UsageSnapshot } from '#src/shared/business/model/usage-model'
 
 type EventBusMessage<MESSAGE_MAP extends Record<string, unknown>> = {
@@ -51,6 +51,7 @@ type AppEventMessage = {
   [AppEventType.SESSION_FINISHED]: SessionInfo
   [AppEventType.SESSION_WAITING]: SessionInfo
   [AppEventType.SETTINGS_SAVED]: SettingsModel
+  [AppEventType.UPDATE_DOWNLOAD_STATUS]: UpdateDownloadProgress
   [AppEventType.UPDATE_STATUS]: UpdateStatus
   [AppEventType.USAGE_SNAPSHOT]: UsageSnapshot
   [AppEventType.USAGE_WARNING]: UsageWarning

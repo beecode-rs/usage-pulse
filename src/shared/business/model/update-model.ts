@@ -11,6 +11,27 @@ export type UpdateAsset = {
   url: string
 }
 
+export type UpdateDebInstallOutcome = 'fallback' | 'failed' | 'installed'
+
+export type UpdateDownloadStatus = 'completed' | 'downloading' | 'error' | 'idle' | 'installing' | 'restart-required'
+
+export type UpdateDownloadProgress = {
+  errorMessage?: string
+  filePath?: string
+  receivedBytes: number
+  status: UpdateDownloadStatus
+  totalBytes: number
+}
+
+export type UpdateDownloadProgressListener = (progress: UpdateDownloadProgress) => void
+
+export type UpdateDownloadResult = {
+  filePath: string
+  status: UpdateDownloadStatus
+}
+
+export type UpdateInstallType = 'appImage' | 'deb' | 'dev' | 'dmg' | 'exe' | 'unsupported'
+
 export type UpdateStatus = {
   asset?: UpdateAsset
   currentVersion: string
