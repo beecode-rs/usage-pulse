@@ -6,9 +6,9 @@ import { errorUtil } from '#src/shared/util/error-util'
 type ParseRemoteEnvelopeOutcome = {
   activeJson: string
   formsJson: string
-  openTabsJson: string
   permissionsJson: string
   sessionsJson: string
+  tuiDirectoriesJson: string
 }
 type ParseSessionsOutcome = { errorMessage: string } | { sessions: SessionInfo[] }
 
@@ -22,13 +22,18 @@ export const sessionsOpenCodeParserServiceContractHarness = {
     return {
       activeJson: sortedJsonUtil.stringify({ value: payload.active }),
       formsJson: sortedJsonUtil.stringify({ value: payload.forms }),
-      openTabsJson: sortedJsonUtil.stringify({ value: payload.openTabs }),
       permissionsJson: sortedJsonUtil.stringify({ value: payload.permissions }),
       sessionsJson: sortedJsonUtil.stringify({ value: payload.sessions }),
+      tuiDirectoriesJson: sortedJsonUtil.stringify({ value: payload.tuiDirectories }),
     }
   },
-  parseSessions: (params: { active: unknown; nowMs?: number; sessions: unknown }): ParseSessionsOutcome => {
-    const { active, nowMs, sessions } = params
+  parseSessions: (params: {
+    active: unknown
+    nowMs?: number
+    sessions: unknown
+    tuiDirectories?: string[]
+  }): ParseSessionsOutcome => {
+    const { active, nowMs, sessions, tuiDirectories } = params
 
     try {
       return {
@@ -36,6 +41,7 @@ export const sessionsOpenCodeParserServiceContractHarness = {
           active,
           nowMs: nowMs ?? contractNowMs,
           sessions,
+          tuiDirectories,
         }),
       }
     } catch (error) {

@@ -23,6 +23,11 @@ type SshHostFetchResult = {
   sessions: SessionInfo[]
 }
 
+type SshSessionsFetchResult = {
+  errorMessage?: string
+  sessions: SessionInfo[]
+}
+
 type SshHostCacheEntry = {
   fetchedAt: number
   fingerprint: string
@@ -36,8 +41,11 @@ export class _SessionsSshService {
 
   protected readonly _openCodeParserService = new SessionsOpenCodeParserService()
 
-  async listRemoteSessions(params: { hosts: SshHostConfig[] }): Promise<SshHostFetchResult[]> {
-    const { hosts } = params
+  async listRemoteSessions(params: {
+    hosts: SshHostConfig[]
+    isCacheSkipped?: boolean
+  }): Promise<SshHostFetchResult[]> {
+    const { hosts, isCacheSkipped } = params
     const enabledHosts = hosts.filter((host) => {
       return host.isEnabled
     })
@@ -46,7 +54,7 @@ export class _SessionsSshService {
 
     return await Promise.all(
       enabledHosts.map((host) => {
-        return this._resolveHostResult({ host })
+        return this._resolveHostResult({ host, isCacheSkipped })
       }),
     )
   }
@@ -91,20 +99,26 @@ export class _SessionsSshService {
     }
 
     try {
-      await execFileAsync('ssh', this._buildSshArgs({ command: constant.sessions.ssh.remoteProbeCommand, target }), {
-        timeout: constant.sessions.ssh.testTimeoutMs,
+      await this._execSshCommand({
+        command: constant.sessions.ssh.remoteProbeCommand,
+        target,
+        timeoutMs: constant.sessions.ssh.testTimeoutMs,
       })
     } catch (error) {
       throw new Error(`connecting to '${url}' failed: ${this._resolveSshErrorMessage(error)}`)
     }
   }
 
-  protected async _resolveHostResult(params: { host: SshHostConfig }): Promise<SshHostFetchResult> {
-    const { host } = params
+  protected async _resolveHostResult(params: {
+    host: SshHostConfig
+    isCacheSkipped?: boolean
+  }): Promise<SshHostFetchResult> {
+    const { host, isCacheSkipped } = params
     const fingerprint = this._resolveHostFingerprint({ host })
     const cachedResult = this._resolveFreshCacheResult({
       cacheEntry: this._cacheById.get(host.id),
       fingerprint,
+      isCacheSkipped,
     })
 
     if (cachedResult !== undefined) {
@@ -123,8 +137,14 @@ export class _SessionsSshService {
   protected _resolveFreshCacheResult(params: {
     cacheEntry: SshHostCacheEntry | undefined
     fingerprint: string
+    isCacheSkipped?: boolean
   }): SshHostFetchResult | undefined {
-    const { cacheEntry, fingerprint } = params
+    const { cacheEntry, fingerprint, isCacheSkipped } = params
+
+    if (isCacheSkipped) {
+      return undefined
+    }
+
     if (cacheEntry === undefined) {
       return undefined
     }
@@ -173,63 +193,91 @@ export class _SessionsSshService {
       }
     }
 
-    const [claudeResult, openCodeSessions] = await Promise.all([
+    const [claudeResult, openCodeResult] = await Promise.all([
       this._fetchHostClaudeResult({ host, target }),
-      this._fetchHostOpenCodeSessions({ target }),
+      this._fetchHostOpenCodeSessions({ host, target }),
     ])
 
     return {
-      errorMessage: claudeResult.errorMessage,
+      errorMessage: this._resolveFetchErrorMessage({ claudeResult, openCodeResult }),
       host,
-      sessions: [...claudeResult.sessions, ...openCodeSessions],
+      sessions: [...claudeResult.sessions, ...openCodeResult.sessions],
     }
   }
 
   protected async _fetchHostClaudeResult(params: {
     host: SshHostConfig
     target: SshTarget
-  }): Promise<SshHostFetchResult> {
+  }): Promise<SshSessionsFetchResult> {
     const { host, target } = params
 
     try {
-      const { stdout } = await execFileAsync(
-        'ssh',
-        this._buildSshArgs({ command: constant.sessions.ssh.remoteAgentsCommand, target }),
-        {
-          timeout: constant.sessions.ssh.queryTimeoutMs,
-        },
-      )
+      const stdout = await this._execSshCommand({
+        command: constant.sessions.ssh.remoteAgentsCommand,
+        target,
+        timeoutMs: constant.sessions.ssh.claudeQueryTimeoutMs,
+      })
 
       return {
-        host,
         sessions: new SessionsParserService().parseSessionEntries({ stdout }),
       }
     } catch (error) {
       return {
         errorMessage: `connecting to '${host.url}' failed: ${this._resolveSshErrorMessage(error)}`,
-        host,
         sessions: [],
       }
     }
   }
 
-  protected async _fetchHostOpenCodeSessions(params: { target: SshTarget }): Promise<SessionInfo[]> {
-    const { target } = params
+  protected async _fetchHostOpenCodeSessions(params: {
+    host: SshHostConfig
+    target: SshTarget
+  }): Promise<SshSessionsFetchResult> {
+    const { host, target } = params
 
     try {
-      const { stdout } = await execFileAsync(
-        'ssh',
-        this._buildSshArgs({ command: constant.sessions.ssh.remoteOpenCodeSessionsCommand, target }),
-        {
-          timeout: constant.sessions.ssh.queryTimeoutMs,
-        },
-      )
+      const stdout = await this._execSshCommand({
+        command: constant.sessions.ssh.remoteOpenCodeSessionsCommand,
+        target,
+        timeoutMs: constant.sessions.ssh.openCodeQueryTimeoutMs,
+      })
       const openCodePayload = this._openCodeParserService.parseRemoteEnvelope({ stdout })
 
-      return this._openCodeParserService.parseSessions({ ...openCodePayload, nowMs: Date.now() })
-    } catch {
-      return []
+      return {
+        sessions: this._openCodeParserService.parseSessions({ ...openCodePayload, nowMs: Date.now() }),
+      }
+    } catch (error) {
+      return {
+        errorMessage: `opencode query on '${host.url}' failed: ${this._resolveSshErrorMessage(error)}`,
+        sessions: [],
+      }
     }
+  }
+
+  protected async _execSshCommand(params: { command: string; target: SshTarget; timeoutMs: number }): Promise<string> {
+    const { command, target, timeoutMs } = params
+    const { stdout } = await execFileAsync('ssh', this._buildSshArgs({ command, target }), {
+      maxBuffer: constant.sessions.ssh.maxBufferBytes,
+      timeout: timeoutMs,
+    })
+
+    return stdout
+  }
+
+  protected _resolveFetchErrorMessage(params: {
+    claudeResult: SshSessionsFetchResult
+    openCodeResult: SshSessionsFetchResult
+  }): string | undefined {
+    const { claudeResult, openCodeResult } = params
+    const errorMessages = [claudeResult.errorMessage, openCodeResult.errorMessage].filter((errorMessage) => {
+      return errorMessage !== undefined
+    })
+
+    if (errorMessages.length === 0) {
+      return undefined
+    }
+
+    return errorMessages.join('; ')
   }
 
   protected _buildSshArgs(params: { command: string; target: SshTarget }): string[] {

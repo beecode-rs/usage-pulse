@@ -23,12 +23,12 @@ import { SettingsModel } from '#src/shared/business/model/settings-model'
 import { constant as sharedConstant } from '#src/shared/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
 
-const resolveUnreachableHostsLabel = (hosts: UnreachableHost[]): string => {
+const resolveHostErrorsLabel = (hosts: UnreachableHost[]): string => {
   const hostParts = hosts.map((host) => {
     return `${host.hostLabel} (${host.errorMessage})`
   })
 
-  return `Unreachable SSH hosts: ${hostParts.join(' · ')}`
+  return `SSH host errors: ${hostParts.join(' · ')}`
 }
 
 const resolveSessionsWord = (count: number): string => {
@@ -289,7 +289,7 @@ export const SessionsPage = (props: {
       </div>
       {displayedErrorMessage !== '' && <p className="sessions-error">{displayedErrorMessage}</p>}
       {snapshot !== undefined && snapshot.unreachableHosts.length > 0 && (
-        <p className="sessions-warning">{resolveUnreachableHostsLabel(snapshot.unreachableHosts)}</p>
+        <p className="sessions-warning">{resolveHostErrorsLabel(snapshot.unreachableHosts)}</p>
       )}
       <main className="sessions-grid">
         {!hasSnapshot && displayedErrorMessage === '' && <p className="sessions-empty">Loading sessions…</p>}

@@ -2,9 +2,9 @@
 // that no contract yaml reaches: the claude and opencode ssh execs run through
 // the real execFile path (a fake ssh binary prepended to PATH inspects its last
 // argv element — the remote command — and answers the claude agents query or
-// the opencode envelope), and the merged host result keeps the claude error
-// semantics while the opencode sessions stay best-effort. Fresh service
-// instances per test bypass the per-host result cache.
+// the opencode envelope), and the merged host result surfaces each provider's
+// ssh failure while merging whatever succeeded. Fresh service instances per
+// test bypass the per-host result cache.
 
 import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -39,11 +39,11 @@ case "$remoteCommand" in
     printf '\\n${constant.sessions.ssh.openCodeEnvelopeMarker}\\n'
     printf '%s\\n' '{"data":{"ses_op_remote":{"type":"running"}}}'
     printf '\\n${constant.sessions.ssh.openCodeEnvelopeMarker}\\n'
-    printf '%s\\n' '{"cwd":{}}'
-    printf '\\n${constant.sessions.ssh.openCodeEnvelopeMarker}\\n'
     printf '%s\\n' '[{"data":[]}]'
     printf '\\n${constant.sessions.ssh.openCodeEnvelopeMarker}\\n'
     printf '%s\\n' '[]'
+    printf '\\n${constant.sessions.ssh.openCodeEnvelopeMarker}\\n'
+    printf '%s\\n' '/remote-op'
     exit 0
     ;;
 esac
@@ -57,6 +57,7 @@ const sshHostFixture: SshHostConfig = {
 }
 
 const claudeFailureMessage = "connecting to 'ssh://box' failed: fake ssh: claude agents exec failed"
+const openCodeFailureMessage = "opencode query on 'ssh://box' failed: fake ssh: opencode exec failed"
 
 const resolveSessionIds = (sessions: SessionInfo[]): string[] => {
   return sessions.map((session) => {
@@ -162,7 +163,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)(
       }
     })
 
-    it('returns claude sessions only when the opencode exec fails', async () => {
+    it('reports the opencode failure while still merging claude sessions', async () => {
       const shim = await installSshShims()
 
       try {
@@ -170,8 +171,8 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)(
 
         const merged = await listMergedSessions()
 
-        expect(merged.errorMessage).toBeUndefined()
-        expect(merged.unreachableHostCount).toBe(0)
+        expect(merged.errorMessage).toBe(openCodeFailureMessage)
+        expect(merged.unreachableHostCount).toBe(1)
         expect(resolveSessionIds(merged.sessions)).toEqual(['cc-remote'])
       } finally {
         await shim.restoreEnvironment()
@@ -187,7 +188,7 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)(
 
         const merged = await listMergedSessions()
 
-        expect(merged.errorMessage).toBe(claudeFailureMessage)
+        expect(merged.errorMessage).toBe(`${claudeFailureMessage}; ${openCodeFailureMessage}`)
         expect(merged.unreachableHostCount).toBe(1)
         expect(merged.sessions).toEqual([])
       } finally {

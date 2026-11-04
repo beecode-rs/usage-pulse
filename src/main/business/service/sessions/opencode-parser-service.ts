@@ -32,18 +32,6 @@ const openCodeSessionsEnvelopeSchema = z.object({ data: z.array(z.unknown()).cat
 
 const openCodeActiveEnvelopeSchema = z.object({ data: z.record(z.string(), z.unknown()).catch({}) }).catch({ data: {} })
 
-const openCodeTabSchema = z.object({ sessionID: z.string().catch('') }).catch({ sessionID: '' })
-
-const openCodeTabsSchema = z
-  .object({
-    cwd: z.record(z.string(), z.object({ tabs: z.array(openCodeTabSchema).catch([]) }).catch({ tabs: [] })).catch({}),
-    global: z
-      .object({ tabs: z.array(openCodeTabSchema).catch([]) })
-      .catch({ tabs: [] })
-      .optional(),
-  })
-  .catch({ cwd: {} })
-
 const openCodeWaitingEntrySchema = z.object({ sessionID: z.string().catch('') }).catch({ sessionID: '' })
 
 export class SessionsOpenCodeParserService {
@@ -51,16 +39,16 @@ export class SessionsOpenCodeParserService {
     active: unknown
     forms?: unknown[]
     nowMs: number
-    openTabs?: unknown
     permissions?: unknown[]
     sessions: unknown
+    tuiDirectories?: string[]
   }): SessionInfo[] {
-    const { active, forms, nowMs, openTabs, permissions, sessions } = params
+    const { active, forms, nowMs, permissions, sessions } = params
+    const tuiDirectories = params.tuiDirectories ?? []
     const activeSessionIds = this._resolveActiveSessionIds({ active })
-    const openTabSessionIds = this._resolveOpenTabSessionIds({ openTabs })
     const waitingSessionIds = this._resolveWaitingSessionIds({ forms, permissions })
 
-    return this._resolveSessionEntries({ activeSessionIds, nowMs, openTabSessionIds, sessions }).map((entry) => {
+    return this._resolveSessionEntries({ activeSessionIds, nowMs, sessions, tuiDirectories }).map((entry) => {
       return this._buildSessionInfo({ activeSessionIds, entry, waitingSessionIds })
     })
   }
@@ -68,23 +56,23 @@ export class SessionsOpenCodeParserService {
   parseRemoteEnvelope(params: { stdout: string }): {
     active: unknown
     forms: unknown[]
-    openTabs: unknown
     permissions: unknown[]
     sessions: unknown
+    tuiDirectories: string[]
   } {
     const { stdout } = params
     const sections = stdout.split(constant.sessions.ssh.openCodeEnvelopeMarker)
 
     if (sections.length < 2) {
-      return { active: { data: {} }, forms: [], openTabs: {}, permissions: [], sessions: { data: [] } }
+      return { active: { data: {} }, forms: [], permissions: [], sessions: { data: [] }, tuiDirectories: [] }
     }
 
     return {
       active: this._recoverSectionJson({ section: sections[1] ?? '' }) ?? { data: {} },
-      forms: this._recoverWaitingEntries({ section: sections[3] ?? '' }),
-      openTabs: this._recoverSectionJson({ section: sections[2] ?? '' }) ?? {},
-      permissions: this._recoverWaitingEntries({ section: sections[4] ?? '' }),
+      forms: this._recoverWaitingEntries({ section: sections[2] ?? '' }),
+      permissions: this._recoverWaitingEntries({ section: sections[3] ?? '' }),
       sessions: this._recoverSectionJson({ section: sections[0] ?? '' }) ?? { data: [] },
+      tuiDirectories: this._resolveTuiDirectories({ section: sections[4] ?? '' }),
     }
   }
 
@@ -95,23 +83,17 @@ export class SessionsOpenCodeParserService {
     return new Set(Object.keys(parsedActive.data))
   }
 
-  protected _resolveOpenTabSessionIds(params: { openTabs: unknown }): Set<string> {
-    const { openTabs } = params
-    const parsedTabs = openCodeTabsSchema.parse(openTabs ?? {})
-    const cwdTabSessionIds = Object.values(parsedTabs.cwd).flatMap((cwdEntry) => {
-      return cwdEntry.tabs.map((tab) => {
-        return tab.sessionID
-      })
-    })
-    const globalTabSessionIds = (parsedTabs.global?.tabs ?? []).map((tab) => {
-      return tab.sessionID
-    })
+  protected _resolveTuiDirectories(params: { section: string }): string[] {
+    const { section } = params
 
-    return new Set(
-      [...cwdTabSessionIds, ...globalTabSessionIds].filter((sessionId) => {
-        return sessionId !== ''
-      }),
-    )
+    return section
+      .split('\n')
+      .map((line) => {
+        return line.trim()
+      })
+      .filter((line) => {
+        return line.startsWith('/')
+      })
   }
 
   protected _resolveWaitingSessionIds(params: { forms?: unknown[]; permissions?: unknown[] }): Set<string> {
@@ -132,14 +114,14 @@ export class SessionsOpenCodeParserService {
   protected _resolveSessionEntries(params: {
     activeSessionIds: Set<string>
     nowMs: number
-    openTabSessionIds: Set<string>
     sessions: unknown
+    tuiDirectories: string[]
   }): OpenCodeSessionEntry[] {
-    const { activeSessionIds, nowMs, openTabSessionIds, sessions } = params
+    const { activeSessionIds, nowMs, sessions, tuiDirectories } = params
     const parsedEnvelope = openCodeSessionsEnvelopeSchema.parse(sessions)
 
     return parsedEnvelope.data.reduce<OpenCodeSessionEntry[]>((entries, rawEntry) => {
-      return this._appendVisibleSessionEntry({ activeSessionIds, entries, nowMs, openTabSessionIds, rawEntry })
+      return this._appendVisibleSessionEntry({ activeSessionIds, entries, nowMs, rawEntry, tuiDirectories })
     }, [])
   }
 
@@ -147,15 +129,15 @@ export class SessionsOpenCodeParserService {
     activeSessionIds: Set<string>
     entries: OpenCodeSessionEntry[]
     nowMs: number
-    openTabSessionIds: Set<string>
     rawEntry: unknown
+    tuiDirectories: string[]
   }): OpenCodeSessionEntry[] {
-    const { activeSessionIds, entries, nowMs, openTabSessionIds, rawEntry } = params
+    const { activeSessionIds, entries, nowMs, rawEntry, tuiDirectories } = params
     const parsedEntry = openCodeSessionEntrySchema.safeParse(rawEntry)
 
     if (
       !parsedEntry.success ||
-      !this._isVisibleEntry({ activeSessionIds, entry: parsedEntry.data, nowMs, openTabSessionIds })
+      !this._isVisibleEntry({ activeSessionIds, entry: parsedEntry.data, nowMs, tuiDirectories })
     ) {
       return entries
     }
@@ -167,9 +149,9 @@ export class SessionsOpenCodeParserService {
     activeSessionIds: Set<string>
     entry: OpenCodeSessionEntry
     nowMs: number
-    openTabSessionIds: Set<string>
+    tuiDirectories: string[]
   }): boolean {
-    const { activeSessionIds, entry, nowMs, openTabSessionIds } = params
+    const { activeSessionIds, entry, nowMs, tuiDirectories } = params
 
     if (entry.parentID !== undefined || entry.time.archived !== undefined) {
       return false
@@ -179,22 +161,38 @@ export class SessionsOpenCodeParserService {
       return true
     }
 
-    if (openTabSessionIds.has(entry.id)) {
-      return true
-    }
-
-    return this._isRecentlyUpdated({ entry, nowMs })
+    return this._isRecentlyUsedInTuiDirectory({ entry, nowMs, tuiDirectories })
   }
 
-  protected _isRecentlyUpdated(params: { entry: OpenCodeSessionEntry; nowMs: number }): boolean {
-    const { entry, nowMs } = params
+  protected _isRecentlyUsedInTuiDirectory(params: {
+    entry: OpenCodeSessionEntry
+    nowMs: number
+    tuiDirectories: string[]
+  }): boolean {
+    const { entry, nowMs, tuiDirectories } = params
     const updated = entry.time.updated
 
     if (updated === undefined) {
       return false
     }
 
-    return nowMs - updated <= constant.sessions.opencodeQuery.recentSessionWindowMs
+    if (nowMs - updated > constant.sessions.opencodeQuery.recentSessionWindowMs) {
+      return false
+    }
+
+    if (tuiDirectories.length === 0) {
+      return true
+    }
+
+    return tuiDirectories.some((tuiDirectory) => {
+      return this._isDirectoryInside({ directory: entry.location.directory, tuiDirectory })
+    })
+  }
+
+  protected _isDirectoryInside(params: { directory: string; tuiDirectory: string }): boolean {
+    const { directory, tuiDirectory } = params
+
+    return directory === tuiDirectory || directory.startsWith(`${tuiDirectory}/`)
   }
 
   protected _buildSessionInfo(params: {

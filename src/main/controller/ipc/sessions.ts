@@ -32,7 +32,7 @@ export const ipcSessions = {
   },
 
   list: async (): Promise<SessionSnapshot> => {
-    return await sessionsPollServiceSingleton().refreshNow()
+    return await sessionsPollServiceSingleton().refreshNow({ isRemoteCacheSkipped: true })
   },
 
   testSshHost: async (_event: IpcMainInvokeEvent, rawParams: unknown): Promise<void> => {

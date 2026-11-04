@@ -75,14 +75,15 @@ export class _SessionsPollService {
     }
   }
 
-  async refreshNow(): Promise<SessionSnapshot> {
+  async refreshNow(params: { isRemoteCacheSkipped?: boolean } = {}): Promise<SessionSnapshot> {
+    const { isRemoteCacheSkipped } = params
     const inFlightRefresh = this._refreshInFlight
 
     if (inFlightRefresh !== undefined) {
       return await inFlightRefresh
     }
 
-    const refresh = this._refreshSnapshot().finally(() => {
+    const refresh = this._refreshSnapshot({ isRemoteCacheSkipped }).finally(() => {
       this._refreshInFlight = undefined
     })
 
@@ -138,7 +139,8 @@ export class _SessionsPollService {
     return resumeDelayMs
   }
 
-  protected async _refreshSnapshot(): Promise<SessionSnapshot> {
+  protected async _refreshSnapshot(params: { isRemoteCacheSkipped?: boolean }): Promise<SessionSnapshot> {
+    const { isRemoteCacheSkipped } = params
     const settings = this._settings
 
     if (settings === undefined) {
@@ -146,7 +148,7 @@ export class _SessionsPollService {
     }
 
     try {
-      const snapshot = await this._fetchSnapshot({ settings })
+      const snapshot = await this._fetchSnapshot({ isRemoteCacheSkipped, settings })
 
       this._snapshot = snapshot
       appEventBusSingleton().emit({ payload: snapshot, type: AppEventType.SESSIONS_SNAPSHOT })
@@ -162,11 +164,17 @@ export class _SessionsPollService {
     }
   }
 
-  protected async _fetchSnapshot(params: { settings: SettingsModel }): Promise<SessionSnapshot> {
-    const { settings } = params
+  protected async _fetchSnapshot(params: {
+    isRemoteCacheSkipped?: boolean
+    settings: SettingsModel
+  }): Promise<SessionSnapshot> {
+    const { isRemoteCacheSkipped, settings } = params
     const [localSnapshot, remoteResults] = await Promise.all([
       this._sessionsService.listSessions(),
-      this._sshSessionsService.listRemoteSessions({ hosts: settings.sshHosts }),
+      this._sshSessionsService.listRemoteSessions({
+        hosts: settings.sshHosts,
+        isCacheSkipped: isRemoteCacheSkipped,
+      }),
     ])
     const mergedSnapshot = this._sshSessionsService.mergeSessionSnapshots({ localSnapshot, remoteResults })
     const sessions = await this._sessionTranscriptService

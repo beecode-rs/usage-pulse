@@ -214,8 +214,21 @@
 
 .session-provider-chip {
   align-items: center;
+  border-radius: 999px;
   display: inline-flex;
   gap: 4px;
+  line-height: 1;
+  padding: 2px 8px;
+}
+
+.session-provider-chip.is-claude-code {
+  background: color-mix(in srgb, #d97757 50%, transparent);
+  color: #fdfcfc;
+}
+
+.session-provider-chip.is-opencode {
+  background: color-mix(in srgb, #cfcecd 50%, transparent);
+  color: #fdfcfc;
 }
 
 .session-host-chip {

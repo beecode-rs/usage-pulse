@@ -26,7 +26,6 @@ export class SessionsOpenCodeQueryService {
     | {
         active: unknown
         forms: unknown[]
-        openTabs: unknown
         permissions: unknown[]
         sessions: unknown
       }
@@ -42,7 +41,6 @@ export class SessionsOpenCodeQueryService {
   protected async _fetchSessions(): Promise<{
     active: unknown
     forms: unknown[]
-    openTabs: unknown
     permissions: unknown[]
     sessions: unknown
   }> {
@@ -50,7 +48,7 @@ export class SessionsOpenCodeQueryService {
     const headers = Object.fromEntries([
       ['Authorization', this._resolveAuthorizationHeader({ password: service.password })],
     ])
-    const [sessions, active, openTabs] = await Promise.all([
+    const [sessions, active] = await Promise.all([
       httpUtil.fetchJson({
         headers,
         timeoutMs: constant.sessions.opencodeQuery.timeoutMs,
@@ -61,7 +59,6 @@ export class SessionsOpenCodeQueryService {
         timeoutMs: constant.sessions.opencodeQuery.timeoutMs,
         url: `${service.url}${constant.sessions.opencodeQuery.activePath}`,
       }),
-      this._readTabsFile(),
     ])
     const activeSessionIds = this._resolveActiveSessionIds({ active })
     const [forms, permissions] = await Promise.all([
@@ -79,7 +76,7 @@ export class SessionsOpenCodeQueryService {
       }),
     ])
 
-    return { active, forms, openTabs, permissions, sessions }
+    return { active, forms, permissions, sessions }
   }
 
   protected _resolveActiveSessionIds(params: { active: unknown }): string[] {
@@ -152,17 +149,6 @@ export class SessionsOpenCodeQueryService {
     }
 
     return parsedService.data
-  }
-
-  protected async _readTabsFile(): Promise<unknown> {
-    try {
-      const filePath = join(this._resolveStateHomeDir(), ...constant.sessions.opencodeQuery.tabsFilePathSegments)
-      const content = await readFile(filePath, 'utf8')
-
-      return JSON.parse(content)
-    } catch {
-      return undefined
-    }
   }
 
   protected _resolveStateHomeDir(): string {

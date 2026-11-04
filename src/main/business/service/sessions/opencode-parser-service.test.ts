@@ -6,8 +6,8 @@
 // so nested session objects and transcript stats collapse to opaque shapes and
 // the yaml terms only assert session counts. These tests pin every mapped
 // field, the transcript signal rules, the visibility filter (top-level, not
-// archived, and active or recently updated) and the
-// parseRemoteEnvelope -> parseSessions composition of the ssh flow.
+// archived, and active or recently updated inside a running tui directory)
+// and the parseRemoteEnvelope -> parseSessions composition of the ssh flow.
 
 import { describe, expect, it } from 'vitest'
 
@@ -57,9 +57,9 @@ const parseSessions = (params: {
   active: unknown
   forms?: unknown[]
   nowMs: number
-  openTabs?: unknown
   permissions?: unknown[]
   sessions: unknown
+  tuiDirectories?: string[]
 }): SessionInfo[] => {
   return new SessionsOpenCodeParserService().parseSessions(params)
 }
@@ -313,22 +313,41 @@ describe('SessionsOpenCodeParserService [contract supplement]', () => {
     expect(sessions[0]?.transcript?.lastActivityAt).toBeUndefined()
   })
 
-  it('keeps a stale idle session visible while its tab is open in a tui', () => {
+  it('keeps a recent idle session visible while its directory hosts a running tui', () => {
     const sessions = parseSessions({
       active: { data: {} },
-      nowMs: staleNowMs,
-      openTabs: {
-        cwd: {
-          '/Users/milos/Nextcloud/box/ai/opencode': {
-            tabs: [{ sessionID: liveRunningEntry.id, title: 'Opencode and SSH session provider support' }],
-          },
-        },
-        global: { tabs: [], unread: {} },
-      },
+      nowMs,
       sessions: { data: [liveRunningEntry] },
+      tuiDirectories: ['/Users/milos/code/usage-pulse'],
     })
 
     expect(sessions).toEqual([{ ...expectedLiveRunningSession, status: SessionStatusMapper.IDLE }])
+  })
+
+  it('keeps a recent idle session visible inside a nested directory of a running tui', () => {
+    const sessions = parseSessions({
+      active: { data: {} },
+      nowMs,
+      sessions: {
+        data: [{ ...liveRunningEntry, location: { directory: '/Users/milos/code/usage-pulse/sub' } }],
+      },
+      tuiDirectories: ['/Users/milos/code/usage-pulse'],
+    })
+
+    expect(sessions).toEqual([
+      { ...expectedLiveRunningSession, cwd: '/Users/milos/code/usage-pulse/sub', status: SessionStatusMapper.IDLE },
+    ])
+  })
+
+  it('drops a recent idle session when its directory hosts no running tui', () => {
+    const sessions = parseSessions({
+      active: { data: {} },
+      nowMs,
+      sessions: { data: [liveRunningEntry] },
+      tuiDirectories: ['/Users/milos/elsewhere'],
+    })
+
+    expect(sessions).toEqual([])
   })
 
   it('marks a session waiting when a question form is pending for it', () => {
@@ -352,9 +371,6 @@ describe('SessionsOpenCodeParserService [contract supplement]', () => {
     const sessions = parseSessions({
       active: { data: {} },
       nowMs,
-      openTabs: {
-        cwd: { '/w': { tabs: [{ sessionID: liveRunningEntry.id, title: 't' }] } },
-      },
       permissions: [{ action: 'bash', sessionID: liveRunningEntry.id }],
       sessions: { data: [liveRunningEntry] },
     })
@@ -373,12 +389,11 @@ describe('SessionsOpenCodeParserService [contract supplement]', () => {
     expect(sessions).toEqual([{ ...expectedLiveRunningSession, status: SessionStatusMapper.WAITING }])
   })
 
-  it('tolerates junk tabs and waiting payloads without throwing', () => {
+  it('tolerates junk waiting payloads without throwing', () => {
     const sessions = parseSessions({
       active: { data: { ses_e96acc339ffegA84VkCje3KC7g: { type: 'running' } } },
       forms: [42, 'nope'],
       nowMs: staleNowMs,
-      openTabs: 42,
       permissions: [{ sessionID: 7 }],
       sessions: { data: [liveRunningEntry] },
     })
@@ -393,11 +408,18 @@ describe('SessionsOpenCodeParserService [contract supplement]', () => {
       id: 'ses_stale',
       time: { created: 1792760000000, updated: 1792760000000 },
     }
-    const openTabEntry = {
+    const otherDirectoryEntry = {
       ...liveRunningEntry,
-      id: 'ses_open_tab',
-      time: { created: 1792760000001, updated: 1792760000001 },
-      title: 'Old but open in a tui tab',
+      id: 'ses_other_dir',
+      location: { directory: '/tmp/other' },
+      time: { created: staleNowMs - 120_000, updated: staleNowMs - 60_000 },
+      title: 'Elsewhere',
+    }
+    const tuiIdleEntry = {
+      ...liveRunningEntry,
+      id: 'ses_tui_idle',
+      time: { created: staleNowMs - 120_000, updated: staleNowMs - 60_000 },
+      title: 'Idle in tui',
     }
     const quizEntry = {
       ...liveRunningEntry,
@@ -406,15 +428,15 @@ describe('SessionsOpenCodeParserService [contract supplement]', () => {
       title: 'Quiz question',
     }
     const stdout = [
-      `{"data":[${JSON.stringify(liveRunningEntry)},${JSON.stringify(staleEntry)},${JSON.stringify(openTabEntry)},${JSON.stringify(quizEntry)}]}`,
+      `{"data":[${JSON.stringify(liveRunningEntry)},${JSON.stringify(staleEntry)},${JSON.stringify(otherDirectoryEntry)},${JSON.stringify(tuiIdleEntry)},${JSON.stringify(quizEntry)}]}`,
       constant.sessions.ssh.openCodeEnvelopeMarker,
       `{"data":{"${liveRunningEntry.id}":{"type":"running"},"ses_quiz":{"type":"running"}}}`,
-      constant.sessions.ssh.openCodeEnvelopeMarker,
-      '{"cwd":{"/w":{"tabs":[{"sessionID":"ses_open_tab","title":"Old but open in a tui tab"}]}}}',
       constant.sessions.ssh.openCodeEnvelopeMarker,
       `[{"data":[]},{"data":[{"metadata":{"kind":"question"},"sessionID":"ses_quiz","title":"Questions"}]}]`,
       constant.sessions.ssh.openCodeEnvelopeMarker,
       '[]',
+      constant.sessions.ssh.openCodeEnvelopeMarker,
+      liveRunningEntry.location.directory,
     ].join('\n')
 
     const envelope = parser.parseRemoteEnvelope({ stdout })
@@ -424,11 +446,11 @@ describe('SessionsOpenCodeParserService [contract supplement]', () => {
       expectedLiveRunningSession,
       {
         ...expectedLiveRunningSession,
-        name: 'Old but open in a tui tab',
-        sessionId: 'ses_open_tab',
-        startedAt: 1792760000001,
+        name: 'Idle in tui',
+        sessionId: 'ses_tui_idle',
+        startedAt: staleNowMs - 120_000,
         status: SessionStatusMapper.IDLE,
-        transcript: { ...expectedLiveRunningSession.transcript, lastActivityAt: 1792760000001 },
+        transcript: { ...expectedLiveRunningSession.transcript, lastActivityAt: staleNowMs - 60_000 },
       },
       {
         ...expectedLiveRunningSession,
@@ -448,11 +470,10 @@ describe('SessionsOpenCodeParserService [contract supplement]', () => {
       constant.sessions.ssh.openCodeEnvelopeMarker,
       '{"data":{}}',
       constant.sessions.ssh.openCodeEnvelopeMarker,
-      '{}',
-      constant.sessions.ssh.openCodeEnvelopeMarker,
       '[]',
       constant.sessions.ssh.openCodeEnvelopeMarker,
       '[]',
+      constant.sessions.ssh.openCodeEnvelopeMarker,
     ].join('\n')
     const envelope = parser.parseRemoteEnvelope({ stdout })
     const sessions = parser.parseSessions({ ...envelope, nowMs })

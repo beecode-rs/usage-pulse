@@ -1,0 +1,7 @@
+.session-provider-icon {
+  flex: none;
+}
+
+.session-provider-icon svg {
+  display: block;
+}

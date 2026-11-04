@@ -196,7 +196,7 @@ export const SessionsSessionCard = (props: {
       {transcript !== undefined && <SessionsSessionTranscriptChips nowMs={nowMs} transcript={transcript} />}
       {isExpanded && transcript !== undefined && renderTranscriptDetails({ session, transcript })}
       <footer className="session-card-footer">
-        <span className="session-card-meta session-provider-chip">
+        <span className={`session-card-meta session-provider-chip is-${session.provider}`}>
           <SessionsProviderIcon provider={session.provider} size={14} />
           {sessionPresentationService.resolveProviderLabel({ provider: session.provider })}
         </span>

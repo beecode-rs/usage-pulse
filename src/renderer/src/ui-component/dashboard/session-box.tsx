@@ -59,7 +59,7 @@ export const DashboardSessionBox = (props: {
           <span className="dashboard-session-box-origin">
             <SessionsSessionOriginIcon isRemote={session.hostId !== undefined} />
           </span>
-          <span className="session-card-meta session-provider-chip">
+          <span className={`session-card-meta session-provider-chip is-${session.provider}`}>
             <SessionsProviderIcon provider={session.provider} size={14} />
             {sessionPresentationService.resolveProviderLabel({ provider: session.provider })}
           </span>

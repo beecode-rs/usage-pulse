@@ -67,7 +67,6 @@ type FetchSessionsOutcome = {
   activeJson?: string
   fetchCalls: string[]
   formsJson?: string
-  openTabsJson?: string
   permissionsJson?: string
   resolved: 'payloads' | 'undefined'
   sessionsJson?: string
@@ -81,7 +80,6 @@ type FetchSessionsScenario = {
   rejectSessionsPath?: boolean
   serviceFileContent?: string
   sessionsResponse?: unknown
-  tabsFileContent?: string
   useXdgStateHome?: boolean
 }
 
@@ -211,19 +209,6 @@ const resolveXdgStateHomeDir = async (params: { useXdgStateHome: boolean }): Pro
   return await mkdtemp(join(tmpdir(), 'usage-pulse-opencode-xdg-'))
 }
 
-const writeTabsFile = async (params: {
-  tabsFileContent: string
-  xdgStateHome: string | undefined
-  homeDir: string
-}): Promise<void> => {
-  const { homeDir, tabsFileContent, xdgStateHome } = params
-  const stateHomeDir = xdgStateHome ?? join(homeDir, '.local', 'state')
-  const tabsFilePath = join(stateHomeDir, ...constant.sessions.opencodeQuery.tabsFilePathSegments)
-
-  await mkdir(dirname(tabsFilePath), { recursive: true })
-  await writeFile(tabsFilePath, tabsFileContent, 'utf8')
-}
-
 const runFetchSessionsScenario = async (params: {
   scenario: FetchSessionsScenario
   useDefaultHome: boolean
@@ -237,7 +222,6 @@ const runFetchSessionsScenario = async (params: {
     rejectSessionsPath,
     serviceFileContent,
     sessionsResponse,
-    tabsFileContent,
     useXdgStateHome,
   } = scenario
   const tempHomeDir = await mkdtemp(join(tmpdir(), 'usage-pulse-opencode-home-'))
@@ -263,10 +247,6 @@ const runFetchSessionsScenario = async (params: {
     }
   }
 
-  if (tabsFileContent !== undefined) {
-    await writeTabsFile({ homeDir: tempHomeDir, tabsFileContent, xdgStateHome: xdgStateHomeDir })
-  }
-
   try {
     if (useDefaultHome) {
       process.env.HOME = tempHomeDir
@@ -284,7 +264,6 @@ const runFetchSessionsScenario = async (params: {
       activeJson: sortedJsonUtil.stringify({ value: payload.active }),
       fetchCalls: resolveFetchCallSummaries(),
       formsJson: sortedJsonUtil.stringify({ value: payload.forms }),
-      openTabsJson: sortedJsonUtil.stringify({ value: payload.openTabs ?? null }),
       permissionsJson: sortedJsonUtil.stringify({ value: payload.permissions }),
       resolved: 'payloads',
       sessionsJson: sortedJsonUtil.stringify({ value: payload.sessions }),

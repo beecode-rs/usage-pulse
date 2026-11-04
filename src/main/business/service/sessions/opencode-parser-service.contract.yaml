@@ -3,11 +3,14 @@
 # ssh remote envelope). parseSessions keeps only visible top-level sessions:
 # entries with a time.archived stamp or a parentID (task-tool subagent child
 # sessions) are dropped, and a top-level entry is visible only while it is
-# actively running (its id is a key in the active envelope's data), has its tab
-# open in a tui (its id appears in the tabs file's cwd/global tab lists), or
-# was updated within constant.sessions.opencodeQuery.recentSessionWindowMs of
+# actively running (its id is a key in the active envelope's data) or was
+# updated within constant.sessions.opencodeQuery.recentSessionWindowMs of
 # the nowMs clock (the harness defaults the clock to 1792768656239; pass nowMs
-# to shift it). The outcome field is ignored: the daemon stamps it after every
+# to shift it) while also sitting, whenever the tuiDirectories list is
+# non-empty, inside one of those directories (the working directories of
+# running opencode tui processes, collected by the remote ssh command; an
+# empty list, as produced by the local query or a remote without /proc,
+# skips the directory gate). The outcome field is ignored: the daemon stamps it after every
 # completed turn, so it says nothing about liveness. A pending question form
 # or permission request (per active session, flattened entry arrays) marks the
 # session waiting (over the busy of an active run), and an entry neither
@@ -128,6 +131,39 @@ methods:
               sessionId: ses_idle
               startedAt: 1792760000004
               status: idle
+      # Directory gate: with tuiDirectories collected from running tui
+      # processes, a recently updated session inside one of those directories
+      # stays visible while an equally recent session elsewhere is dropped.
+      - params:
+          - active:
+              data: {}
+            sessions:
+              data:
+                - id: ses_in_tui
+                  location:
+                    directory: /w/project
+                  time:
+                    created: 1792768425216
+                    updated: 1792768596239
+                  title: Inside tui
+                - id: ses_outside
+                  location:
+                    directory: /elsewhere
+                  time:
+                    created: 1792768425216
+                    updated: 1792768596239
+                  title: Outside tui
+            tuiDirectories:
+              - /w
+        result:
+          sessions:
+            - cwd: /w/project
+              kind: ''
+              name: Inside tui
+              provider: opencode
+              sessionId: ses_in_tui
+              startedAt: 1792768425216
+              status: idle
       # Drop-invalid: a scalar entry, a non-string id, a non-number
       # time.created and a missing time object are all dropped while the valid
       # sibling survives (visible via the active envelope) with the default ''
@@ -207,8 +243,9 @@ methods:
   parseRemoteEnvelope:
     terms:
       # A normal two-section ssh stdout: the sessions JSON before the marker
-      # and the active JSON after it are recovered verbatim; the tabs, forms
-      # and permissions sections are absent, so they fall back to empty.
+      # and the active JSON after it are recovered verbatim; the forms,
+      # permissions and tui directories sections are absent, so they fall
+      # back to empty.
       - params:
           - stdout: |-
               {"data":[{"id":"ses_a","location":{"directory":"/w"},"time":{"created":1},"title":"t"}]}
@@ -217,30 +254,32 @@ methods:
         result:
           activeJson: '{"data":{"ses_a":{"type":"running"}}}'
           formsJson: '[]'
-          openTabsJson: '{}'
           permissionsJson: '[]'
           sessionsJson: '{"data":[{"id":"ses_a","location":{"directory":"/w"},"time":{"created":1},"title":"t"}]}'
+          tuiDirectoriesJson: '[]'
       # The full five-section envelope of the current remote command: sessions,
-      # active, the tui tabs file, and the per-active-session form and
-      # permission envelope arrays each land in their positional section; the
-      # form entries are flattened out of their per-session data wrappers.
+      # active, the per-active-session form and permission envelope arrays, and
+      # the newline-separated working directories of running tui processes each
+      # land in their positional section; the form entries are flattened out of
+      # their per-session data wrappers.
       - params:
           - stdout: |-
               {"data":[{"id":"ses_a","time":{"created":1,"updated":2}},{"id":"ses_b","time":{"created":1,"updated":2}}]}
               __USAGE_PULSE_OPENCODE_ACTIVE__
               {"data":{"ses_a":{"type":"running"},"ses_b":{"type":"running"}}}
               __USAGE_PULSE_OPENCODE_ACTIVE__
-              {"cwd":{"/w":{"tabs":[{"sessionID":"ses_a","title":"t"}]}}}
-              __USAGE_PULSE_OPENCODE_ACTIVE__
               [{"data":[]},{"data":[{"metadata":{"kind":"question"},"sessionID":"ses_b","title":"Questions"}]}]
               __USAGE_PULSE_OPENCODE_ACTIVE__
               [{"data":[{"action":"bash","sessionID":"ses_a"}]},{"data":[]}]
+              __USAGE_PULSE_OPENCODE_ACTIVE__
+              /w
+              /home/user/other project
         result:
           activeJson: '{"data":{"ses_a":{"type":"running"},"ses_b":{"type":"running"}}}'
           formsJson: '[{"metadata":{"kind":"question"},"sessionID":"ses_b","title":"Questions"}]'
-          openTabsJson: '{"cwd":{"/w":{"tabs":[{"sessionID":"ses_a","title":"t"}]}}}'
           permissionsJson: '[{"action":"bash","sessionID":"ses_a"}]'
           sessionsJson: '{"data":[{"id":"ses_a","time":{"created":1,"updated":2}},{"id":"ses_b","time":{"created":1,"updated":2}}]}'
+          tuiDirectoriesJson: '["/w","/home/user/other project"]'
       # Remote-shell noise around each section's JSON is discarded by slicing
       # from the first '{' to the last '}'.
       - params:
@@ -253,18 +292,18 @@ methods:
         result:
           activeJson: '{"data":{"ses_a":{"type":"running"}}}'
           formsJson: '[]'
-          openTabsJson: '{}'
           permissionsJson: '[]'
           sessionsJson: '{"data":[{"id":"ses_a","time":{"created":1}}]}'
+          tuiDirectoriesJson: '[]'
       # No marker at all: every payload falls back to its empty shape.
       - params:
           - stdout: '{"data":[{"id":"ses_a","time":{"created":1}}]}'
         result:
           activeJson: '{"data":{}}'
           formsJson: '[]'
-          openTabsJson: '{}'
           permissionsJson: '[]'
           sessionsJson: '{"data":[]}'
+          tuiDirectoriesJson: '[]'
       # Marker present but the sessions section is unrecoverable garbage: only
       # that section falls back to the empty list while the active section
       # still parses.
@@ -276,9 +315,9 @@ methods:
         result:
           activeJson: '{"data":{"ses_a":{"type":"running"}}}'
           formsJson: '[]'
-          openTabsJson: '{}'
           permissionsJson: '[]'
           sessionsJson: '{"data":[]}'
+          tuiDirectoriesJson: '[]'
       # Mirror case: the active section is garbage, the sessions section still
       # parses.
       - params:
@@ -289,9 +328,9 @@ methods:
         result:
           activeJson: '{"data":{}}'
           formsJson: '[]'
-          openTabsJson: '{}'
           permissionsJson: '[]'
           sessionsJson: '{"data":[{"id":"ses_a","time":{"created":1}}]}'
+          tuiDirectoriesJson: '[]'
       # The stopped-service fallback output of the remote command parses to
       # every empty payload.
       - params:
@@ -300,14 +339,13 @@ methods:
               __USAGE_PULSE_OPENCODE_ACTIVE__
               {"data":{}}
               __USAGE_PULSE_OPENCODE_ACTIVE__
-              {}
-              __USAGE_PULSE_OPENCODE_ACTIVE__
               []
               __USAGE_PULSE_OPENCODE_ACTIVE__
               []
+              __USAGE_PULSE_OPENCODE_ACTIVE__
         result:
           activeJson: '{"data":{}}'
           formsJson: '[]'
-          openTabsJson: '{}'
           permissionsJson: '[]'
           sessionsJson: '{"data":[]}'
+          tuiDirectoriesJson: '[]'
