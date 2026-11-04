@@ -11,7 +11,7 @@ import { errorUtil } from '#src/shared/util/error-util'
 
 const execFileAsync = promisify(execFile)
 
-type SshTarget = {
+export type SshTarget = {
   destination: string
   port?: number
   user?: string
@@ -88,6 +88,14 @@ export class _SessionsSshService {
       }),
       unreachableHosts,
     }
+  }
+
+  execCommand(params: { command: string; target: SshTarget; timeoutMs: number }): Promise<string> {
+    return this._execSshCommand(params)
+  }
+
+  parseHostUrl(params: { url: string }): SshTarget | undefined {
+    return this._parseHostUrl(params)
   }
 
   async testHost(params: { url: string }): Promise<void> {

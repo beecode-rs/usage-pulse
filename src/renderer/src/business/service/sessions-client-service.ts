@@ -1,7 +1,7 @@
 import type { SessionSnapshot, SessionsUpdateListener } from '#src/shared/business/model/session-model'
 
 export const sessionsClientService = {
-  focusSession: (params: { cwd: string; pid: number }): Promise<void> => {
+  focusSession: (params: { cwd: string; hostId?: string; name?: string; pid?: number }): Promise<void> => {
     return window.usageApi.focusSession(params)
   },
   getSessionsSnapshot: (): Promise<SessionSnapshot | undefined> => {

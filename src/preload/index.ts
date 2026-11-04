@@ -37,7 +37,7 @@ const usageApi: UsageApiClient = {
   downloadUpdate: (): Promise<UpdateDownloadResult> => {
     return ipcRenderer.invoke(IpcChannelMapper.UPDATE_DOWNLOAD)
   },
-  focusSession: (params: { cwd: string; pid: number }): Promise<void> => {
+  focusSession: (params: { cwd: string; hostId?: string; name?: string; pid?: number }): Promise<void> => {
     return ipcRenderer.invoke(IpcChannelMapper.SESSIONS_FOCUS, params)
   },
   getMobileDevices: (): Promise<MobileConnectedDevice[]> => {

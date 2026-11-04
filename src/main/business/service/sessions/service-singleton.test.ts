@@ -17,6 +17,14 @@
 //   focused terminal never becomes the front window (no Space switch possible)
 // - the focus-support flow: the once-per-run xdotool presence check, the unsupported
 //   flag, and the install-then-refresh path (pkexec never runs; the harness stubs it)
+// - the remote focus flow: the ssh host lookup, the tmux session resolution with and
+//   without a pid, and the tmux-companion handoff (the harness stubs both)
+// - the local tmux fallback: when no terminal app bundle is found the attached tmux
+//   clients are tried in Ghostty > Terminal.app > VS Code order, with the
+//   tmux-companion app as the last resort (the harness stubs the locate calls)
+// - the pid-less local flow: opencode sessions without a pid resolve their process
+//   by working directory first, then fall back to the tmux cwd match (the harness
+//   stubs the process resolution)
 
 import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -415,6 +423,194 @@ describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)('SessionsService [contr
     await expect(service.focusSession({ cwd: 'C:\\Users\\user\\project', pid: 4242 })).rejects.toThrow(
       'focusing a session terminal is only supported on macOS and Linux',
     )
+  })
+
+  it('rejects focusing a local session when no pid or working directory is known', async () => {
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+
+    await expect(service.focusSession({ cwd: '' })).rejects.toThrow(
+      'focusing a local session terminal requires a session pid or working directory',
+    )
+  })
+
+  it('resolves a pid-less local session by its working directory before the bundle walk', async () => {
+    const service = new SessionsServiceContractHarness({
+      focusPlatform: OS.MACOS,
+      macOsBundlePath: '/Applications/Ghostty.app',
+    })
+    service.localPidByCwd = 555
+
+    await service.focusSession({ cwd: '/Users/user/project' })
+
+    expect(service.localPidByCwdResolveCalls).toEqual([{ cwd: '/Users/user/project' }])
+    expect(service.macOsBundleResolveCalls).toEqual([{ hopCount: 0, pid: 555 }])
+    expect(service.macOsTabFocusCalls).toEqual([{ cwd: '/Users/user/project', matchRank: 0 }])
+    expect(service.localTmuxSessionResolveCalls).toEqual([{ cwd: '/Users/user/project', pid: undefined }])
+  })
+
+  it('passes the session name into the tmux pane title match for a pid-less session', async () => {
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+    service.localTmuxSessionName = 'usage-pulse01'
+
+    await service.focusSession({ cwd: '/Users/milos/code/usage-pulse', name: 'Red progress at 100% usage' })
+
+    expect(service.localTmuxSessionResolveCalls).toEqual([
+      { cwd: '/Users/milos/code/usage-pulse', name: 'Red progress at 100% usage', pid: undefined },
+    ])
+    expect(service.companionFocusCalls).toEqual([{ host: undefined, sessionName: 'usage-pulse01' }])
+    expect(service.localPidByCwdResolveCalls).toEqual([])
+  })
+
+  it('falls back to the tmux cwd match when no local pid can be resolved', async () => {
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+    service.localPidByCwd = undefined
+    service.localTmuxSessionName = 's07'
+
+    await service.focusSession({ cwd: '/Users/user/project' })
+
+    expect(service.localTmuxSessionResolveCalls).toEqual([{ cwd: '/Users/user/project', pid: undefined }])
+    expect(service.companionFocusCalls).toEqual([{ host: undefined, sessionName: 's07' }])
+    expect(service.macOsBundleResolveCalls).toEqual([])
+  })
+
+  it('rejects when a pid-less local session has neither a process nor a tmux session', async () => {
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+    service.localPidByCwd = undefined
+    service.localTmuxSessionName = undefined
+
+    await expect(service.focusSession({ cwd: '/Users/user/project' })).rejects.toThrow(
+      'could not find a terminal app or a tmux session hosting the session process',
+    )
+  })
+
+  it('focuses a remote session through the tmux-companion app', async () => {
+    const host = { id: 'host-1', isEnabled: true, url: 'ssh://user@remote.example:2222' }
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+    service.sshHostsById['host-1'] = host
+    service.remoteTmuxSessionName = 's03'
+
+    await service.focusSession({ cwd: '/home/user/project', hostId: 'host-1', pid: 7 })
+
+    expect(service.remoteTmuxSessionResolveCalls).toEqual([{ cwd: '/home/user/project', host, pid: 7 }])
+    expect(service.companionFocusCalls).toEqual([{ host, sessionName: 's03' }])
+  })
+
+  it('focuses a remote session without a pid by matching the tmux pane cwd', async () => {
+    const host = { id: 'host-1', isEnabled: true, url: 'remote.example' }
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+    service.sshHostsById['host-1'] = host
+    service.remoteTmuxSessionName = 's01'
+
+    await service.focusSession({ cwd: '/home/user/project', hostId: 'host-1' })
+
+    expect(service.remoteTmuxSessionResolveCalls).toEqual([{ cwd: '/home/user/project', host, pid: undefined }])
+    expect(service.companionFocusCalls).toEqual([{ host, sessionName: 's01' }])
+  })
+
+  it('rejects focusing a remote session when no tmux session hosts it', async () => {
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+    service.sshHostsById['host-1'] = { id: 'host-1', isEnabled: true, url: 'remote.example' }
+    service.remoteTmuxSessionName = undefined
+
+    await expect(service.focusSession({ cwd: '/home/user/project', hostId: 'host-1', pid: 7 })).rejects.toThrow(
+      'could not find a tmux session hosting the session on the remote machine',
+    )
+
+    expect(service.companionFocusCalls).toEqual([])
+  })
+
+  it('rejects focusing a remote session whose ssh host is no longer configured', async () => {
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+
+    await expect(service.focusSession({ cwd: '/home/user/project', hostId: 'host-gone', pid: 7 })).rejects.toThrow(
+      "cannot focus the remote session: the ssh host 'host-gone' is no longer configured",
+    )
+  })
+
+  it('falls back to the tmux-companion app when no terminal app bundle hosts the session', async () => {
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+    service.macOsBundleResolveError = new Error('could not find an application bundle for the session process')
+    service.localTmuxSessionName = 's05'
+
+    await service.focusSession({ cwd: '/Users/user/project', pid: 4242 })
+
+    expect(service.localTmuxSessionResolveCalls).toEqual([{ cwd: '/Users/user/project', pid: 4242 }])
+    expect(service.companionFocusCalls).toEqual([{ host: undefined, sessionName: 's05' }])
+    expect(service.macOsBundleActivateCalls).toEqual([])
+  })
+
+  it('focuses the Ghostty terminal hosting the attached tmux client', async () => {
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+    service.macOsBundleResolveError = new Error('could not find an application bundle for the session process')
+    service.localTmuxSessionName = 's05'
+    service.localTmuxClientTtys = ['/dev/ttys009']
+    service.macOsTmuxClientBundlePathByTty['/dev/ttys009'] = '/Applications/Ghostty.app'
+    service.macOsGhosttyTtyFocusOutcome = GhosttyFocusOutcomeMapper.FOCUSED
+
+    await service.focusSession({ cwd: '/Users/user/project', pid: 4242 })
+
+    expect(service.macOsTtyFocusCalls).toEqual([{ sessionTty: '/dev/ttys009' }])
+    expect(service.companionFocusCalls).toEqual([])
+  })
+
+  it('skips a missing Ghostty tmux client and activates the next known terminal app', async () => {
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+    service.macOsBundleResolveError = new Error('could not find an application bundle for the session process')
+    service.localTmuxSessionName = 's05'
+    service.localTmuxClientTtys = ['/dev/ttys009', '/dev/ttys010']
+    service.macOsTmuxClientBundlePathByTty['/dev/ttys009'] = '/Applications/Ghostty.app'
+    service.macOsTmuxClientBundlePathByTty['/dev/ttys010'] = '/System/Applications/Utilities/Terminal.app'
+    service.macOsGhosttyTtyFocusOutcome = GhosttyFocusOutcomeMapper.MISSING
+
+    await service.focusSession({ cwd: '/Users/user/project', pid: 4242 })
+
+    expect(service.macOsTtyFocusCalls).toEqual([{ sessionTty: '/dev/ttys009' }])
+    expect(service.macOsBundleActivateCalls).toEqual([{ bundlePath: '/System/Applications/Utilities/Terminal.app' }])
+    expect(service.companionFocusCalls).toEqual([])
+  })
+
+  it('prefers the Ghostty tmux client over a Terminal.app client regardless of order', async () => {
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+    service.macOsBundleResolveError = new Error('could not find an application bundle for the session process')
+    service.localTmuxSessionName = 's05'
+    service.localTmuxClientTtys = ['/dev/ttys010', '/dev/ttys009']
+    service.macOsTmuxClientBundlePathByTty['/dev/ttys009'] = '/Applications/Ghostty.app'
+    service.macOsTmuxClientBundlePathByTty['/dev/ttys010'] = '/System/Applications/Utilities/Terminal.app'
+    service.macOsGhosttyTtyFocusOutcome = GhosttyFocusOutcomeMapper.FOCUSED
+
+    await service.focusSession({ cwd: '/Users/user/project', pid: 4242 })
+
+    expect(service.macOsTtyFocusCalls).toEqual([{ sessionTty: '/dev/ttys009' }])
+    expect(service.macOsBundleActivateCalls).toEqual([])
+  })
+
+  it('rejects with the ancestry error when neither a terminal app nor a tmux session hosts the session', async () => {
+    const service = new SessionsServiceContractHarness({ focusPlatform: OS.MACOS })
+    service.macOsBundleResolveError = new Error('could not find process 4242; the session may have ended')
+    service.localTmuxSessionName = undefined
+
+    await expect(service.focusSession({ cwd: '/Users/user/project', pid: 4242 })).rejects.toThrow(
+      'could not find process 4242; the session may have ended',
+    )
+
+    expect(service.companionFocusCalls).toEqual([])
+  })
+
+  it('falls back to the tmux-companion app on Linux when no X11 window hosts the session', async () => {
+    const shim = await installLinuxFocusShims()
+    shim.setPsPpidByPid({ ppidByPid: { '4242': '1' } })
+
+    try {
+      const service = new SessionsServiceContractHarness({ focusPlatform: OS.LINUX, isWaylandSession: false })
+      service.localTmuxSessionName = 's02'
+
+      await service.focusSession({ cwd: '/home/user/project', pid: 4242 })
+
+      expect(service.localTmuxSessionResolveCalls).toEqual([{ cwd: '/home/user/project', pid: 4242 }])
+      expect(service.companionFocusCalls).toEqual([{ host: undefined, sessionName: 's02' }])
+    } finally {
+      await shim.restoreEnvironment()
+    }
   })
 
   it('routes a macos platform into the bundle flow and focuses the matching Ghostty tab', async () => {

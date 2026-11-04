@@ -6,6 +6,9 @@
 # passes) walks five solid red steps toward the extreme of a full quota burned on a fresh
 # window; negative drift (resetting faster than using) walks five solid green steps toward
 # the extreme of an untouched quota on a fully elapsed window.
+# A fully used quota (usedPercent >= 100) is pinned to the critical red and skips the pace
+# math entirely: the usage and reset bars must stay red no matter how much of the window
+# has elapsed, instead of cooling back toward blue as time catches up.
 # All terms use now: 0 and windowMs: 3600000, so resetAt encodes the elapsed share directly
 # (elapsed percent = 100 - resetAt / windowMs * 100).
 subject: UsagePaceUtil
@@ -149,22 +152,47 @@ methods:
             usedPercent: 26
             windowMs: 3600000
         result: var(--pace-red-2)
-      # Elapsed 40%, used 100%: drift +60 reaches red step 3.
+      # Elapsed 40%, used 100%: quota burned, so the critical red wins even though drift +60
+      # would otherwise land in red step 3.
       - constructorParams: []
         params:
           - now: 0
             resetAt: 2160000
             usedPercent: 100
             windowMs: 3600000
-        result: var(--pace-red-3)
-      # Full quota burned on a freshly reset window (elapsed 0%): drift +100 is red step 5.
+        result: var(--meter-critical)
+      # Quota burned late in the window (elapsed 95%): drift +5 would sit inside the blue
+      # on-pace band, but an exhausted quota stays critical red.
+      - constructorParams: []
+        params:
+          - now: 0
+            resetAt: 180000
+            usedPercent: 100
+            windowMs: 3600000
+        result: var(--meter-critical)
+      # Full quota burned on a freshly reset window (elapsed 0%): critical red, no pace steps.
       - constructorParams: []
         params:
           - now: 0
             resetAt: 3600000
             usedPercent: 100
             windowMs: 3600000
-        result: var(--pace-red-5)
+        result: var(--meter-critical)
+      # A burned quota stays critical red even without a reset time to pace against.
+      - constructorParams: []
+        params:
+          - now: 0
+            usedPercent: 100
+            windowMs: 3600000
+        result: var(--meter-critical)
+      # Elapsed 30%, used 90%: drift +60 reaches red step 3 while the quota still has room.
+      - constructorParams: []
+        params:
+          - now: 0
+            resetAt: 2520000
+            usedPercent: 90
+            windowMs: 3600000
+        result: var(--pace-red-3)
       # Drift -6 is the first point outside the blue band, green step 1.
       - constructorParams: []
         params:

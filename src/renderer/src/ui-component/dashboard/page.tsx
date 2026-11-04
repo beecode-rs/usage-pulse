@@ -50,10 +50,10 @@ export const DashboardPage = (props: {
     }
   }
 
-  const focusSession = async (params: { cwd: string; pid: number }): Promise<void> => {
-    const { cwd, pid } = params
+  const focusSession = async (params: { cwd: string; hostId?: string; name?: string; pid?: number }): Promise<void> => {
+    const { cwd, hostId, name, pid } = params
     try {
-      await sessionsClientService.focusSession({ cwd, pid })
+      await sessionsClientService.focusSession({ cwd, hostId, name, pid })
 
       setFocusErrorMessage('')
     } catch (error) {
@@ -150,11 +150,11 @@ export const DashboardPage = (props: {
               finishedAtMs={finishedAtBySessionId[session.sessionId]}
               key={sessionPresentationService.resolveSessionKey({ session })}
               onFocus={() => {
-                if (session.pid === undefined) {
+                if (session.pid === undefined && session.hostId === undefined && session.cwd === '') {
                   return
                 }
 
-                void focusSession({ cwd: session.cwd, pid: session.pid })
+                void focusSession({ cwd: session.cwd, hostId: session.hostId, name: session.name, pid: session.pid })
               }}
               pulseMs={pulseMs}
               session={session}

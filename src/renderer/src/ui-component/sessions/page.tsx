@@ -177,11 +177,11 @@ export const SessionsPage = (props: {
     }
   }
 
-  const focusSession = async (params: { cwd: string; pid: number }): Promise<void> => {
-    const { cwd, pid } = params
+  const focusSession = async (params: { cwd: string; hostId?: string; name?: string; pid?: number }): Promise<void> => {
+    const { cwd, hostId, name, pid } = params
 
     try {
-      await sessionsClientService.focusSession({ cwd, pid })
+      await sessionsClientService.focusSession({ cwd, hostId, name, pid })
     } catch (error) {
       setErrorMessage(errorUtil.resolveMessage(error))
     }
@@ -305,11 +305,11 @@ export const SessionsPage = (props: {
               key={sessionKey}
               nowMs={nowMs}
               onFocus={() => {
-                if (session.pid === undefined) {
+                if (session.pid === undefined && session.hostId === undefined && session.cwd === '') {
                   return
                 }
 
-                void focusSession({ cwd: session.cwd, pid: session.pid })
+                void focusSession({ cwd: session.cwd, hostId: session.hostId, name: session.name, pid: session.pid })
               }}
               onToggle={() => {
                 handleToggleSession({ key: sessionKey })

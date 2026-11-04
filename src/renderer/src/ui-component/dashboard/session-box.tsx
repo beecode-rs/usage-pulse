@@ -22,6 +22,15 @@ const resolveBoxClassName = (params: { isRemote: boolean; status: SessionStatusM
   return classNames.join(' ')
 }
 
+const resolveFocusButtonLabel = (params: { session: SessionInfo; title: string }): string => {
+  const { session, title } = params
+  if (session.hostId !== undefined) {
+    return `Focus tmux-companion for ${title}`
+  }
+
+  return `Focus terminal for ${title}`
+}
+
 export const DashboardSessionBox = (props: {
   finishedAtMs?: number
   onFocus: () => void
@@ -74,8 +83,11 @@ export const DashboardSessionBox = (props: {
             <span className={statusPresentation.dotClassName} />
             {statusPresentation.label}
           </span>
-          {session.hostId === undefined && session.pid !== undefined && (
-            <SessionsSessionFocusButton label={`Focus terminal for ${sessionTitle}`} onClick={onFocus} />
+          {(session.pid !== undefined || session.hostId !== undefined || session.cwd !== '') && (
+            <SessionsSessionFocusButton
+              label={resolveFocusButtonLabel({ session, title: sessionTitle })}
+              onClick={onFocus}
+            />
           )}
         </div>
       </header>

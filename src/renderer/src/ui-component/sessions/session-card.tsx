@@ -67,6 +67,15 @@ const resolveExpandButtonLabel = (params: { isExpanded: boolean; title: string }
   return `Expand details for ${title}`
 }
 
+const resolveFocusButtonLabel = (params: { session: SessionInfo; title: string }): string => {
+  const { session, title } = params
+  if (session.hostId !== undefined) {
+    return `Focus tmux-companion for ${title}`
+  }
+
+  return `Focus terminal for ${title}`
+}
+
 const renderTranscriptStat = (params: { label: string; value: string; valueTitle: string }): ReactElement => {
   const { label, value, valueTitle } = params
 
@@ -179,8 +188,11 @@ export const SessionsSessionCard = (props: {
           <span className={statusPresentation.dotClassName} />
           {statusPresentation.label}
         </span>
-        {session.hostId === undefined && session.pid !== undefined && (
-          <SessionsSessionFocusButton label={`Focus terminal for ${sessionTitle}`} onClick={onFocus} />
+        {(session.pid !== undefined || session.hostId !== undefined || session.cwd !== '') && (
+          <SessionsSessionFocusButton
+            label={resolveFocusButtonLabel({ session, title: sessionTitle })}
+            onClick={onFocus}
+          />
         )}
         {transcript !== undefined && (
           <SessionsSessionExpandButton

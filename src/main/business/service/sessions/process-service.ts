@@ -1,7 +1,10 @@
 import { execFile } from 'node:child_process'
+import { readdir, readlink } from 'node:fs/promises'
 import { promisify } from 'node:util'
 
 import { constant } from '#src/main/util/constant'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
 
 const execFileAsync = promisify(execFile)
 
@@ -66,6 +69,34 @@ export class SessionsProcessService {
     }
   }
 
+  async resolveMostRecentPidByCwd(params: { cwd: string }): Promise<number | undefined> {
+    const { cwd } = params
+    const pids = await this.resolvePidsByCwd({ cwd })
+
+    if (pids.length === 0) {
+      return undefined
+    }
+
+    return await this._resolveMostRecentPid({ pids })
+  }
+
+  async resolvePidsByCwd(params: { cwd: string }): Promise<number[]> {
+    const { cwd } = params
+    switch (osUtil.resolvePlatform()) {
+      case OS.LINUX: {
+        return await this._resolveLinuxPidsByCwd({ cwd })
+      }
+
+      case OS.MACOS: {
+        return await this._resolveMacOsPidsByCwd({ cwd })
+      }
+
+      default: {
+        return []
+      }
+    }
+  }
+
   async resolveProcessStartTime(params: { pid: number }): Promise<number | undefined> {
     const { pid } = params
     try {
@@ -112,6 +143,95 @@ export class SessionsProcessService {
     }
 
     return { comm, ppid: Number(match[1]) }
+  }
+
+  parseLsofPidLine(params: { line: string }): number | undefined {
+    const match = constant.lsofPidLineRegex.exec(params.line)
+
+    if (match === null) {
+      return undefined
+    }
+
+    const pid = Number(match[1])
+
+    if (!Number.isInteger(pid) || pid <= 0) {
+      return undefined
+    }
+
+    return pid
+  }
+
+  parseLsofPidLines(params: { stdout: string }): number[] {
+    const { stdout } = params
+
+    return stdout
+      .trim()
+      .split('\n')
+      .map((line) => {
+        return this.parseLsofPidLine({ line })
+      })
+      .filter((pid): pid is number => {
+        return pid !== undefined
+      })
+  }
+
+  protected async _resolveLinuxPidsByCwd(params: { cwd: string }): Promise<number[]> {
+    const procEntries = await readdir(constant.linuxProcDir).catch(() => {
+      return [] as string[]
+    })
+    const pidEntries = procEntries.filter((entry) => {
+      return constant.digitsOnlyRegex.test(entry)
+    })
+    const matchedPids = await Promise.all(
+      pidEntries.map(async (pidEntry) => {
+        const linkedCwd = await readlink(`${constant.linuxProcDir}/${pidEntry}/cwd`).catch(() => {
+          return undefined
+        })
+
+        if (linkedCwd === params.cwd) {
+          return Number(pidEntry)
+        }
+
+        return undefined
+      }),
+    )
+
+    return matchedPids.filter((pid): pid is number => {
+      return pid !== undefined
+    })
+  }
+
+  protected async _resolveMacOsPidsByCwd(params: { cwd: string }): Promise<number[]> {
+    try {
+      const { stdout } = await execFileAsync('lsof', ['-a', '-d', 'cwd', '-F', 'p', params.cwd], {
+        timeout: constant.sessions.psQuery.timeoutMs,
+      })
+
+      return this.parseLsofPidLines({ stdout })
+    } catch {
+      return []
+    }
+  }
+
+  protected async _resolveMostRecentPid(params: { pids: number[] }): Promise<number | undefined> {
+    const pidStarts = await Promise.all(
+      params.pids.map(async (pid) => {
+        return { pid, startedAtMs: await this.resolveProcessStartTime({ pid }) }
+      }),
+    )
+    const orderedPidStarts = [...pidStarts].sort((left, right) => {
+      return this._resolvePidStartRank(right) - this._resolvePidStartRank(left)
+    })
+
+    return orderedPidStarts[0]?.pid
+  }
+
+  protected _resolvePidStartRank(params: { startedAtMs?: number }): number {
+    if (params.startedAtMs === undefined) {
+      return 0
+    }
+
+    return params.startedAtMs
   }
 
   protected _parseStartTime(params: { stdout: string }): number | undefined {

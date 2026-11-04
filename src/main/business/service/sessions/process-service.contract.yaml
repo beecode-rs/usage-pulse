@@ -1,6 +1,6 @@
 # Contract for the ps-output helpers of SessionsProcessService: the ppid/comm line
-# parser feeding the ancestor walks and the .app bundle extraction from a macOS ps
-# comm column.
+# parser feeding the ancestor walks, the .app bundle extraction from a macOS ps
+# comm column, and the lsof pid-line parser feeding the cwd-to-pid resolution.
 subject: SessionsProcessService
 module: ./process-service.js
 subjectType: class
@@ -11,6 +11,37 @@ constructor:
       result:
         {}
 methods:
+  parseLsofPidLine:
+    terms:
+      # lsof -F p prints one pid per line prefixed with p.
+      - constructorParams: []
+        params:
+          - line: p501
+        result: 501
+      # Non-pid field lines do not match.
+      - constructorParams: []
+        params:
+          - line: fcwd
+        result: !undefined
+      # Bare numbers without the p prefix do not match.
+      - constructorParams: []
+        params:
+          - line: '501'
+        result: !undefined
+  parseLsofPidLines:
+    terms:
+      # A full lsof run parses into the pid list, dropping non-pid lines.
+      - constructorParams: []
+        params:
+          - stdout: "p501\np502\nfcwd\n"
+        result:
+          - 501
+          - 502
+      # Empty lsof output yields no pids.
+      - constructorParams: []
+        params:
+          - stdout: ""
+        result: []
   _parseProcessLine:
     terms:
       # ps ppid/comm output for a live process parses into an entry.

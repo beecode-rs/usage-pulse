@@ -10,15 +10,17 @@ const execFileAsync = promisify(execFile)
 export class SessionsFocusLinuxService {
   protected readonly _processService = new SessionsProcessService()
 
-  async focusSession(params: { isWaylandSession: boolean; pid: number }): Promise<void> {
-    const { isWaylandSession, pid } = params
+  async tryFocusSession(params: { pid: number }): Promise<boolean> {
+    const { pid } = params
     const windowId = await this._resolveLinuxWindowId({ hopCount: 0, pid })
 
     if (windowId === undefined) {
-      throw new Error(this._resolveWindowNotFoundMessage({ isWaylandSession }))
+      return false
     }
 
     await this._activateLinuxWindow({ windowId })
+
+    return true
   }
 
   async isFocusToolInstalled(): Promise<boolean> {
@@ -42,7 +44,7 @@ export class SessionsFocusLinuxService {
     })
   }
 
-  protected _resolveWindowNotFoundMessage(params: { isWaylandSession: boolean }): string {
+  resolveWindowNotFoundMessage(params: { isWaylandSession: boolean }): string {
     const { isWaylandSession } = params
     if (isWaylandSession) {
       return 'focusing a session terminal on Linux is not supported on Wayland yet; the session has no X11 window'

@@ -18,6 +18,12 @@ export class UsagePaceUtil {
     usedPercent: number
     windowMs: number
   }): string | undefined {
+    const { usedPercent } = params
+
+    if (usedPercent >= 100) {
+      return 'var(--meter-critical)'
+    }
+
     const diffPercent = this._resolveDiffPercent(params)
 
     if (diffPercent === undefined) {

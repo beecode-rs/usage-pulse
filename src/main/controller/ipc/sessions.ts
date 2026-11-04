@@ -7,16 +7,21 @@ import { sessionsSshServiceSingleton } from '#src/main/business/service/sessions
 import { validationUtil } from '#src/main/util/validation-util'
 import { type SessionSnapshot } from '#src/shared/business/model/session-model'
 
-const sessionsFocusParamsSchema = z.object({ cwd: z.string(), pid: z.number() })
+const sessionsFocusParamsSchema = z.object({
+  cwd: z.string(),
+  hostId: z.string().optional(),
+  name: z.string().optional(),
+  pid: z.number().optional(),
+})
 const sessionsTestSshHostParamsSchema = z.object({
   url: z.string().trim().min(1, { message: 'an ssh host url is required' }),
 })
 
 export const ipcSessions = {
   focus: async (_event: IpcMainInvokeEvent, rawParams: unknown): Promise<void> => {
-    const { cwd, pid } = validationUtil.parse(rawParams, sessionsFocusParamsSchema)
+    const { cwd, hostId, name, pid } = validationUtil.parse(rawParams, sessionsFocusParamsSchema)
 
-    await sessionsServiceSingleton().focusSession({ cwd, pid })
+    await sessionsServiceSingleton().focusSession({ cwd, hostId, name, pid })
   },
 
   getSnapshot: (): SessionSnapshot | undefined => {

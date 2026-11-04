@@ -140,6 +140,8 @@ end run`
 export const constant = {
   appBundleRegex: /^(?:-)?(.*?\/[^/]+\.app)\//,
   digitsOnlyRegex: /^\d+$/,
+  linuxProcDir: '/proc',
+  lsofPidLineRegex: /^p(\d+)$/,
   processLineRegex: /^\s*(\d+)\s+(.+)$/,
   scheduleTrigger: {
     gracePeriodMs: 5_000,
@@ -209,6 +211,23 @@ end tell`,
       },
       macOs: {
         openAppTimeoutMs: 5_000,
+        terminalAppBundleBasename: 'Terminal.app',
+      },
+      tmux: {
+        clientTtyListFormat: '#{client_tty}',
+        companionApi: {
+          discoveryFileRelativePath: '.tmux-companion/api.json',
+          focusTimeoutMs: 2_000,
+          host: '127.0.0.1',
+          path: '/api/focus',
+        },
+        companionOpenTimeoutMs: 5_000,
+        companionScheme: 'tmux-companion',
+        listPanesFormat: '#{session_name}\t#{pane_pid}\t#{pane_current_path}\t#{session_activity}\t#{pane_title}',
+        localSessionNotFoundMessage: 'could not find a terminal app or a tmux session hosting the session process',
+        queryTimeoutMs: 5_000,
+        remoteSessionNotFoundMessage:
+          'could not find a tmux session hosting the session on the remote machine; remote focus supports sessions running inside tmux',
       },
       vscode: {
         accessibilityDeniedMessage:
@@ -270,6 +289,8 @@ end tell`,
     max: 65_535,
     min: 1,
   },
+  tmuxProcessLineRegex: /^\s*(\d+)\s+(\d+)\s*$/,
+  tmuxProcessTtyLineRegex: /^\s*(\d+)\s+(\S+)\s*$/,
   twoDigitTimeRegex: /^([0-9]{2}):([0-9]{2})$/,
   update: {
     assetSuffixesByInstallType,

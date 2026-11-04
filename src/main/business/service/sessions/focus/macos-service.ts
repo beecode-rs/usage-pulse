@@ -23,6 +23,12 @@ export class SessionsFocusMacOsService {
     return basename(bundlePath) === 'Ghostty.app'
   }
 
+  isTerminalAppBundle(params: { bundlePath: string }): boolean {
+    const { bundlePath } = params
+
+    return basename(bundlePath) === constant.sessions.focus.macOs.terminalAppBundleBasename
+  }
+
   isVsCodeBundle(params: { bundlePath: string }): boolean {
     const { bundlePath } = params
 

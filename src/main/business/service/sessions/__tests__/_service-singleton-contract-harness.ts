@@ -1,8 +1,9 @@
 import { GhosttyFocusOutcomeMapper } from '#src/main/business/enum/ghostty-focus-outcome-mapper-enum'
 import { type SessionsFocusGhosttyPeer } from '#src/main/business/service/sessions/focus/ghostty-service'
-import { _SessionsService } from '#src/main/business/service/sessions/service-singleton'
+import { type SessionsTmuxClientOwner, _SessionsService } from '#src/main/business/service/sessions/service-singleton'
 import { type OS } from '#src/shared/business/enum/os-enum'
 import { type SessionInfo } from '#src/shared/business/model/session-model'
+import { type SshHostConfig } from '#src/shared/business/model/settings-model'
 
 export class SessionsServiceContractHarness extends _SessionsService {
   isLinuxFocusToolInstalled: boolean | undefined
@@ -11,18 +12,29 @@ export class SessionsServiceContractHarness extends _SessionsService {
   isMacOsWindowFocusStubbed = true
   linuxFocusToolInstallAttemptCount = 0
   linuxFocusToolInstallError: Error | undefined
+  localPidByCwd: number | undefined
+  localTmuxClientTtys: string[] = []
+  localTmuxSessionName: string | undefined
   macOsAgentsQueryStdout: string | undefined
+  macOsBundleResolveError: Error | undefined
   macOsGhosttyFocusPeers: SessionsFocusGhosttyPeer[] = []
   macOsGhosttySessionTty: string | undefined
   macOsGhosttyTabFocusOutcome: GhosttyFocusOutcomeMapper = GhosttyFocusOutcomeMapper.FOCUSED
   macOsGhosttyTtyFocusOutcome: GhosttyFocusOutcomeMapper = GhosttyFocusOutcomeMapper.MISSING
   macOsGhosttyTtySupport = false
+  macOsTmuxClientBundlePathByTty: Record<string, string> = {}
   openCodeSessions: SessionInfo[] | undefined
+  readonly companionFocusCalls: { host?: SshHostConfig; sessionName: string }[] = []
+  readonly localPidByCwdResolveCalls: { cwd: string }[] = []
+  readonly localTmuxSessionResolveCalls: { cwd: string; name?: string; pid?: number }[] = []
   readonly macOsBundleActivateCalls: { bundlePath: string }[] = []
   readonly macOsBundleResolveCalls: { hopCount: number; pid: number }[] = []
   readonly macOsTabFocusCalls: { cwd: string; matchRank: number }[] = []
   readonly macOsTtyFocusCalls: { sessionTty: string }[] = []
   readonly macOsWindowFocusCalls: { bundlePath: string; cwd: string }[] = []
+  readonly remoteTmuxSessionResolveCalls: { cwd: string; host: SshHostConfig; name?: string; pid?: number }[] = []
+  remoteTmuxSessionName: string | undefined
+  sshHostsById: Record<string, SshHostConfig> = {}
   protected readonly _focusPlatformOverride: OS | undefined
   protected readonly _macOsBundlePath: string
 
@@ -46,6 +58,76 @@ export class SessionsServiceContractHarness extends _SessionsService {
     this.macOsBundleActivateCalls.push({ bundlePath })
 
     return Promise.resolve()
+  }
+
+  protected override _resolveAppBundlePath(params: { hopCount: number; pid: number }): Promise<string> {
+    const { hopCount, pid } = params
+    this.macOsBundleResolveCalls.push({ hopCount, pid })
+
+    if (this.macOsBundleResolveError !== undefined) {
+      return Promise.reject(this.macOsBundleResolveError)
+    }
+
+    return Promise.resolve(this._macOsBundlePath)
+  }
+
+  protected override _resolveLocalPidByCwd(params: { cwd: string }): Promise<number | undefined> {
+    this.localPidByCwdResolveCalls.push(params)
+
+    return Promise.resolve(this.localPidByCwd)
+  }
+
+  protected override _resolveLocalTmuxSessionName(params: {
+    cwd: string
+    name?: string
+    pid?: number
+  }): Promise<string | undefined> {
+    this.localTmuxSessionResolveCalls.push(params)
+
+    return Promise.resolve(this.localTmuxSessionName)
+  }
+
+  protected override _resolveRemoteTmuxSessionName(params: {
+    cwd: string
+    host: SshHostConfig
+    name?: string
+    pid?: number
+  }): Promise<string | undefined> {
+    this.remoteTmuxSessionResolveCalls.push(params)
+
+    return Promise.resolve(this.remoteTmuxSessionName)
+  }
+
+  protected override _focusTmuxCompanionSession(params: { host?: SshHostConfig; sessionName: string }): Promise<void> {
+    this.companionFocusCalls.push(params)
+
+    return Promise.resolve()
+  }
+
+  protected override _listTmuxClientTtys(params: { sessionName: string }): Promise<string[]> {
+    return Promise.resolve(this.localTmuxClientTtys)
+  }
+
+  protected override _resolveTmuxClientOwner(params: {
+    clientTty: string
+  }): Promise<SessionsTmuxClientOwner | undefined> {
+    const bundlePath = this.macOsTmuxClientBundlePathByTty[params.clientTty]
+
+    if (bundlePath === undefined) {
+      return Promise.resolve(undefined)
+    }
+
+    return Promise.resolve({ bundlePath, clientTty: params.clientTty })
+  }
+
+  protected override _resolveSshHost(params: { hostId: string }): SshHostConfig {
+    const host = this.sshHostsById[params.hostId]
+
+    if (host === undefined) {
+      throw new Error(`cannot focus the remote session: the ssh host '${params.hostId}' is no longer configured`)
+    }
+
+    return host
   }
 
   protected override async _runAgentsQuery(): Promise<string> {
@@ -128,12 +210,5 @@ export class SessionsServiceContractHarness extends _SessionsService {
     }
 
     return Promise.resolve(this.isLinuxFocusToolInstalled)
-  }
-
-  protected override _resolveAppBundlePath(params: { hopCount: number; pid: number }): Promise<string> {
-    const { hopCount, pid } = params
-    this.macOsBundleResolveCalls.push({ hopCount, pid })
-
-    return Promise.resolve(this._macOsBundlePath)
   }
 }
