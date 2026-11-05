@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
-import { processEnvWithUserLocalBinPath } from '#src/main/util/config'
+import { processEnvWithUserBinDirPaths } from '#src/main/util/config'
 import { constant } from '#src/main/util/constant'
 import { errorUtil } from '#src/shared/util/error-util'
 
@@ -11,7 +11,7 @@ export class SessionsClaudeQueryService {
   async runAgentsQuery(): Promise<string> {
     try {
       const { stdout } = await execFileAsync('claude', ['agents', '--json'], {
-        env: processEnvWithUserLocalBinPath(),
+        env: processEnvWithUserBinDirPaths(),
         timeout: constant.sessions.claudeQuery.timeoutMs,
       })
 

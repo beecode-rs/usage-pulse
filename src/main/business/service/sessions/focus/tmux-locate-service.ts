@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 import { sessionsSshServiceSingleton } from '#src/main/business/service/sessions/ssh-service-singleton'
+import { processEnvWithUserBinDirPaths } from '#src/main/util/config'
 import { constant } from '#src/main/util/constant'
 import { type SshHostConfig } from '#src/shared/business/model/settings-model'
 
@@ -361,6 +362,7 @@ export class SessionsFocusTmuxLocateService {
   protected async _runLocalTmux(params: { args: string[] }): Promise<string> {
     try {
       const { stdout } = await execFileAsync('tmux', params.args, {
+        env: processEnvWithUserBinDirPaths(),
         timeout: constant.sessions.focus.tmux.queryTimeoutMs,
       })
 

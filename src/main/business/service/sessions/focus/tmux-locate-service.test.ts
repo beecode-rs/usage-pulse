@@ -1,6 +1,25 @@
+// Supplements: the pure parser contracts cover the list-panes and client-tty
+// line shapes; the seam no contract yaml reaches is the local tmux spawn
+// itself. A packaged app launched from Finder or the Dock inherits only
+// /usr/bin:/bin:/usr/sbin:/sbin, where a tmux installed into ~/.local/bin or
+// Homebrew is unreachable, so the local tmux lookup silently finds nothing and
+// focus falls back to the terminal-app error. The fake tmux shim below is only
+// reachable through the user bin dirs prepended to the child PATH, with HOME
+// pointed at a temp dir and PATH reduced to the packaged-app default, so the
+// test fails whenever the env enrichment is dropped from the tmux spawn.
+
+import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { SessionsFocusTmuxLocateService } from '#src/main/business/service/sessions/focus/tmux-locate-service'
+import { osUtil } from '#src/main/util/os-util'
+import { OS } from '#src/shared/business/enum/os-enum'
+
+const fakeTmuxScript = `#!/bin/sh
+printf 's09\\t4242\\t/home/user/project\\t5\\tOC | tmux focus via user bin dirs\\n'
+`
 
 describe('SessionsFocusTmuxLocateService', () => {
   const service = new SessionsFocusTmuxLocateService()
@@ -219,3 +238,38 @@ describe('SessionsFocusTmuxLocateService', () => {
     expect(service.resolveSessionNameByTitle({ cwd: '/home/user/project', name: 'shared title', paneRows })).toBe('s02')
   })
 })
+
+describe.skipIf(osUtil.resolvePlatform() === OS.WINDOWS)(
+  'SessionsFocusTmuxLocateService local tmux lookup [contract supplement]',
+  () => {
+    it('resolves the local tmux session through the user bin dirs missing from a packaged app PATH', async () => {
+      const homeDir = await mkdtemp(join(tmpdir(), 'usage-pulse-tmux-home-'))
+      const originalHome = process.env.HOME
+      const originalPath = process.env.PATH
+      const userBinDir = join(homeDir, '.local', 'bin')
+
+      await mkdir(userBinDir, { recursive: true })
+      await writeFile(join(userBinDir, 'tmux'), fakeTmuxScript, 'utf8')
+      await chmod(join(userBinDir, 'tmux'), 0o755)
+      process.env.HOME = homeDir
+      process.env.PATH = '/usr/bin:/bin:/usr/sbin:/sbin'
+
+      try {
+        const sessionName = await new SessionsFocusTmuxLocateService().resolveLocalSessionName({
+          cwd: '/home/user/project',
+        })
+
+        expect(sessionName).toBe('s09')
+      } finally {
+        if (originalHome === undefined) {
+          delete process.env.HOME
+        } else {
+          process.env.HOME = originalHome
+        }
+
+        process.env.PATH = originalPath
+        await rm(homeDir, { force: true, recursive: true })
+      }
+    })
+  },
+)

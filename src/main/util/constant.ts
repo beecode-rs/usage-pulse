@@ -305,4 +305,5 @@ end tell`,
     [UsageSeverityLevel.LIMIT_REACHED]: 3,
     [UsageSeverityLevel.NONE]: 0,
   },
+  userBinDirPaths: ['~/.local/bin', '/opt/homebrew/bin', '/usr/local/bin'],
 }

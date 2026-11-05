@@ -2,6 +2,8 @@ import { mshEnv, mshEnvResolver } from '@beecode/msh-env'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
+import { constant } from '#src/main/util/constant'
+
 const env = mshEnv()
 
 export const config = mshEnvResolver({
@@ -22,10 +24,17 @@ export const config = mshEnvResolver({
   },
 })
 
-export const processEnvWithUserLocalBinPath = (): NodeJS.ProcessEnv => {
+export const processEnvWithUserBinDirPaths = (): NodeJS.ProcessEnv => {
   const childEnv: NodeJS.ProcessEnv = { ...process.env }
+  const userBinDirPaths = constant.userBinDirPaths.map((binDirPath) => {
+    if (binDirPath.startsWith('~/')) {
+      return join(homedir(), binDirPath.slice(2))
+    }
 
-  childEnv.PATH = [join(homedir(), '.local', 'bin'), childEnv.PATH].filter(Boolean).join(':')
+    return binDirPath
+  })
+
+  childEnv.PATH = [...userBinDirPaths, childEnv.PATH].filter(Boolean).join(':')
 
   return childEnv
 }
